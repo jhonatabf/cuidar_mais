@@ -1,1 +1,447 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f1f8ed;
+  --color-primary: #0b7a3b;
+  --color-primary-strong: #07582d;
+  --color-primary-deep: #064322;
+  --color-primary-soft: #e4f2df;
+  --color-accent: #77bd83;
+  --color-mint: #dcefd4;
+  --color-ink: #102a24;
+  --color-muted: #52665d;
+  --color-border: #dce9d8;
+  --shadow-soft: 0 20px 60px rgba(16, 82, 43, 0.12);
+  --shadow-card: 0 14px 34px rgba(15, 91, 49, 0.08);
+  --radius: 18px;
+  --container: 1080px;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--color-ink);
+  background: var(--color-background);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  color: var(--color-ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 28rem),
+    radial-gradient(circle at top right, rgba(186, 219, 176, 0.45), transparent 34rem),
+    var(--color-background);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  width: min(var(--container), calc(100% - 48px));
+  margin-inline: auto;
+  padding: 48px 0;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  align-items: center;
+  gap: 34px;
+  min-height: 470px;
+  padding-top: 26px;
+}
+
+.hero-compact {
+  min-height: 330px;
+  padding-top: 46px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 0 18px;
+  padding: 8px 14px;
+  border: 1px solid rgba(11, 122, 59, 0.16);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 720px;
+  margin-bottom: 20px;
+  color: var(--color-ink);
+  font-size: clamp(2.35rem, 5vw, 4.55rem);
+  line-height: 1.03;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin-bottom: 18px;
+  color: var(--color-primary-strong);
+  font-size: clamp(1.55rem, 2.4vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+h3 {
+  margin-bottom: 10px;
+  color: var(--color-ink);
+  font-size: 1.08rem;
+}
+
+.lead {
+  max-width: 610px;
+  color: var(--color-ink);
+  font-size: clamp(1.04rem, 1.6vw, 1.28rem);
+  line-height: 1.55;
+}
+
+.muted {
+  color: var(--color-muted);
+  line-height: 1.62;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.button,
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-weight: 850;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(11, 122, 59, 0.22);
+}
+
+.button:hover {
+  background: var(--color-primary-strong);
+}
+
+.button-secondary {
+  border-color: var(--color-primary);
+  background: #fff;
+  color: var(--color-primary-strong);
+}
+
+.button-small {
+  min-height: 42px;
+  padding-inline: 20px;
+  font-size: 0.92rem;
+}
+
+.section {
+  padding: 28px 0;
+}
+
+.section-header {
+  max-width: 760px;
+  margin-inline: auto;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card {
+  border: 1px solid rgba(220, 233, 216, 0.78);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(244, 250, 241, 0.94), rgba(255, 255, 255, 0.94));
+  box-shadow: var(--shadow-card);
+}
+
+.card-body {
+  padding: 28px;
+}
+
+.feature-card {
+  min-height: 100%;
+  padding: 26px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.stat {
+  padding: 18px;
+  border: 1px solid rgba(11, 122, 59, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.stat strong {
+  display: block;
+  color: var(--color-primary-strong);
+  font-size: 1.55rem;
+}
+
+.visual-panel {
+  position: relative;
+  min-height: 430px;
+  padding: 24px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 52% 55%, rgba(190, 221, 181, 0.88) 0 34%, transparent 35%),
+    linear-gradient(135deg, rgba(242, 249, 238, 0.88), rgba(255, 255, 255, 0.96)),
+    url("https://images.unsplash.com/photo-1576765608866-5b51046452be?auto=format&fit=crop&w=1200&q=80")
+      center/cover;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.visual-card {
+  max-width: 360px;
+  margin-left: auto;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+}
+
+.profile-list,
+.timeline,
+.check-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-list li,
+.timeline li,
+.check-list li {
+  padding: 16px;
+  border: 1px solid rgba(220, 233, 216, 0.78);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-muted);
+  font-weight: 750;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-ink);
+  padding: 13px 14px;
+}
+
+.form-grid textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.form-message {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+.error-message {
+  border: 1px solid #f0b7b7;
+  background: #fff2f2;
+  color: #9f2424;
+}
+
+.success-message {
+  border: 1px solid #b8dfbd;
+  background: #edf9ef;
+  color: var(--color-primary-strong);
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.dashboard-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 116px;
+  padding: 18px;
+}
+
+.sidebar a {
+  display: block;
+  padding: 12px;
+  border-radius: 14px;
+  color: var(--color-muted);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sidebar a:first-of-type,
+.sidebar a:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.table-like {
+  display: grid;
+  gap: 10px;
+}
+
+.table-like article {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(220, 233, 216, 0.88);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.legal-content {
+  max-width: 860px;
+  color: var(--color-muted);
+  line-height: 1.75;
+}
+
+.legal-content h2 {
+  margin-top: 34px;
+  color: var(--color-primary-strong);
+  font-size: 1.55rem;
+}
+
+@media (max-width: 920px) {
+  .hero,
+  .grid-2,
+  .grid-3,
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+  }
+
+  .visual-panel {
+    min-height: 340px;
+  }
+
+  .sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: min(100% - 28px, var(--container));
+    padding-top: 32px;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 12vw, 3.1rem);
+  }
+
+  .stat-row,
+  .table-like article {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .button,
+  .button-secondary {
+    width: 100%;
+  }
+}

@@ -1,7 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Auth, CaregiverRegistration } from '../../core/services/auth';
+import { Auth, CaregiverProfileDocument, CaregiverRegistration } from '../../core/services/auth';
+
+const PROFILE_PHOTO_MAX_FILE_BYTES = 1024 * 1024;
+const PROFILE_PHOTO_MAX_FIRESTORE_BYTES = 800 * 1024;
+const PROFILE_PHOTO_MAX_DIMENSION = 1200;
+const PROFILE_PHOTO_MIN_QUALITY = 0.45;
 
 @Component({
   selector: 'app-become-caregiver',
@@ -45,8 +50,8 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <label>Email <strong>*</strong><input type="email" name="email" required readonly [value]="accountEmail()" /></label>
           </div>
           <div class="check-stack">
-            <label><input type="checkbox" name="acceptedTerms" required /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
-            <label><input type="checkbox" name="acceptedPrivacy" required /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
+            <label><input type="checkbox" name="acceptedTerms" required [checked]="hasExistingCaregiverProfile()" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
+            <label><input type="checkbox" name="acceptedPrivacy" required [checked]="hasExistingCaregiverProfile()" /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
           </div>
         </section>
 
@@ -59,10 +64,10 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" /></label>
-            <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required /></label>
+            <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" [value]="fieldValue('publicProfile.fullName')" /></label>
+            <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required [value]="fieldValue('private.birthDate')" /></label>
             <label>Sexo <strong>*</strong>
-              <select name="gender" required>
+              <select name="gender" required [value]="fieldValue('publicProfile.gender')">
                 <option value="">Selecionar</option>
                 <option>Feminino</option>
                 <option>Masculino</option>
@@ -70,11 +75,17 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
                 <option>Prefiro não indicar</option>
               </select>
             </label>
-            <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" /></label>
-            <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" /></label>
-            <label>Foto de perfil<input type="file" name="profilePhoto" accept="image/*" /></label>
-            <label>NIF <small>privado</small><input name="nif" inputmode="numeric" placeholder="Opcional nesta fase" /></label>
-            <label>Documento de identificação <small>privado</small><input name="idDocument" placeholder="Opcional nesta fase" /></label>
+            <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="fieldValue('publicProfile.nationality')" /></label>
+            <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="fieldValue('private.phone')" /></label>
+            <label>Foto de perfil
+              <input type="file" name="profilePhoto" accept="image/*" />
+              <small>Imagem até 1 MB. Será otimizada e gravada em base64 no Firestore.</small>
+              @if (fieldValue('publicProfile.profilePhoto.name')) {
+                <small>Foto atual: {{ fieldValue('publicProfile.profilePhoto.name') }}</small>
+              }
+            </label>
+            <label>NIF <small>privado</small><input name="nif" inputmode="numeric" placeholder="Opcional nesta fase" [value]="fieldValue('private.nif')" /></label>
+            <label>Documento de identificação <small>privado</small><input name="idDocument" placeholder="Opcional nesta fase" [value]="fieldValue('private.idDocument')" /></label>
           </div>
         </section>
 
@@ -87,11 +98,11 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Distrito <strong>*</strong><input name="district" required placeholder="Lisboa" /></label>
-            <label>Concelho <strong>*</strong><input name="county" required placeholder="Oeiras" /></label>
-            <label>Código Postal <strong>*</strong><input name="postalCode" required placeholder="0000-000" /></label>
+            <label>Distrito <strong>*</strong><input name="district" required placeholder="Lisboa" [value]="fieldValue('publicProfile.district')" /></label>
+            <label>Concelho <strong>*</strong><input name="county" required placeholder="Oeiras" [value]="fieldValue('publicProfile.county')" /></label>
+            <label>Código Postal <strong>*</strong><input name="postalCode" required placeholder="0000-000" [value]="fieldValue('private.postalCode')" /></label>
             <label>Raio máximo de deslocação
-              <select name="travelRadius">
+              <select name="travelRadius" [value]="fieldValue('publicProfile.travelRadius')">
                 <option>Até 5 km</option>
                 <option>Até 10 km</option>
                 <option>Até 15 km</option>
@@ -102,7 +113,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
                 <option>Até 50 km</option>
               </select>
             </label>
-            <label class="span-2">Morada completa <small>privada</small><input name="address" placeholder="Rua, número, localidade" /></label>
+            <label class="span-2">Morada completa <small>privada</small><input name="address" placeholder="Rua, número, localidade" [value]="fieldValue('private.address')" /></label>
           </div>
         </section>
 
@@ -115,14 +126,14 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid">
-            <label>Resumo profissional <strong>*</strong><textarea name="summary" required maxlength="650" placeholder="Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar."></textarea></label>
-            <label>Anos de experiência <strong>*</strong><input type="number" name="experienceYears" required min="0" max="60" placeholder="Ex.: 5" /></label>
+            <label>Resumo profissional <strong>*</strong><textarea name="summary" required maxlength="650" placeholder="Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.">{{ fieldValue('publicProfile.summary') }}</textarea></label>
+            <label>Anos de experiência <strong>*</strong><input type="number" name="experienceYears" required min="0" max="60" placeholder="Ex.: 5" [value]="fieldValue('publicProfile.experienceYears')" /></label>
           </div>
           <fieldset>
             <legend>Tipos de serviço prestados <strong>*</strong></legend>
             <div class="checkbox-grid">
               @for (service of serviceTypes; track service) {
-                <label><input type="checkbox" name="serviceTypes" [value]="service" /> {{ service }}</label>
+                <label><input type="checkbox" name="serviceTypes" [value]="service" [checked]="isChecked('publicProfile.serviceTypes', service)" /> {{ service }}</label>
               }
             </div>
           </fieldset>
@@ -140,14 +151,14 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <legend>Formação profissional</legend>
             <div class="checkbox-grid compact">
               @for (course of trainingTypes; track course) {
-                <label><input type="checkbox" name="trainingTypes" [value]="course" /> {{ course }}</label>
+                <label><input type="checkbox" name="trainingTypes" [value]="course" [checked]="isChecked('publicProfile.trainingTypes', course)" /> {{ course }}</label>
               }
             </div>
           </fieldset>
           <div class="form-grid three-columns training-details">
-            <label>Nome do curso<input name="courseName" placeholder="Ex.: Auxiliar de geriatria" /></label>
-            <label>Entidade formadora<input name="trainingEntity" placeholder="Nome da instituição" /></label>
-            <label>Ano de conclusão<input type="number" name="completionYear" min="1950" max="2030" placeholder="2024" /></label>
+            <label>Nome do curso<input name="courseName" placeholder="Ex.: Auxiliar de geriatria" [value]="fieldValue('private.training.courseName')" /></label>
+            <label>Entidade formadora<input name="trainingEntity" placeholder="Nome da instituição" [value]="fieldValue('private.training.trainingEntity')" /></label>
+            <label>Ano de conclusão<input type="number" name="completionYear" min="1950" max="2030" placeholder="2024" [value]="fieldValue('private.training.completionYear')" /></label>
           </div>
         </section>
 
@@ -163,7 +174,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <legend>Dias da semana <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (day of weekDays; track day) {
-                <label><input type="checkbox" name="weekDays" [value]="day" /> {{ day }}</label>
+                <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('publicProfile.availability.weekDays', day)" /> {{ day }}</label>
               }
             </div>
           </fieldset>
@@ -171,7 +182,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <legend>Períodos <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (period of periods; track period) {
-                <label><input type="checkbox" name="periods" [value]="period" /> {{ period }}</label>
+                <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('publicProfile.availability.periods', period)" /> {{ period }}</label>
               }
             </div>
           </fieldset>
@@ -179,7 +190,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <legend>Disponível para</legend>
             <div class="checkbox-grid compact">
               @for (type of availabilityTypes; track type) {
-                <label><input type="checkbox" name="availabilityTypes" [value]="type" /> {{ type }}</label>
+                <label><input type="checkbox" name="availabilityTypes" [value]="type" [checked]="isChecked('publicProfile.availability.availabilityTypes', type)" /> {{ type }}</label>
               }
             </div>
           </fieldset>
@@ -194,10 +205,10 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid four-columns">
-            <label>Valor por hora (€) <strong>*</strong><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" /></label>
-            <label>Valor por turno<input type="number" name="shiftRate" min="0" step="0.5" /></label>
-            <label>Valor por dia<input type="number" name="dayRate" min="0" step="0.5" /></label>
-            <label>Valor mensal<input type="number" name="monthlyRate" min="0" step="0.5" /></label>
+            <label>Valor por hora (€) <strong>*</strong><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
+            <label>Valor por turno<input type="number" name="shiftRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.shiftRate')" /></label>
+            <label>Valor por dia<input type="number" name="dayRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.dayRate')" /></label>
+            <label>Valor mensal<input type="number" name="monthlyRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.monthlyRate')" /></label>
           </div>
         </section>
 
@@ -211,7 +222,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
           </div>
           <div class="checkbox-grid">
             @for (skill of skills; track skill) {
-              <label><input type="checkbox" name="skills" [value]="skill" /> {{ skill }}</label>
+              <label><input type="checkbox" name="skills" [value]="skill" [checked]="isChecked('publicProfile.skills', skill)" /> {{ skill }}</label>
             }
           </div>
         </section>
@@ -228,16 +239,16 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <legend>Idiomas</legend>
             <div class="checkbox-grid compact">
               @for (language of languages; track language) {
-                <label><input type="checkbox" name="languages" [value]="language" /> {{ language }}</label>
+                <label><input type="checkbox" name="languages" [value]="language" [checked]="isChecked('publicProfile.languages', language)" /> {{ language }}</label>
               }
             </div>
           </fieldset>
           <fieldset>
             <legend>Mobilidade</legend>
             <div class="checkbox-grid compact">
-              <label><input type="checkbox" name="drivingLicense" /> Possui carta de condução</label>
-              <label><input type="checkbox" name="ownVehicle" /> Possui viatura própria</label>
-              <label><input type="checkbox" name="acceptsTravel" /> Aceita deslocações</label>
+              <label><input type="checkbox" name="drivingLicense" [checked]="isChecked('publicProfile.mobility.drivingLicense')" /> Possui carta de condução</label>
+              <label><input type="checkbox" name="ownVehicle" [checked]="isChecked('publicProfile.mobility.ownVehicle')" /> Possui viatura própria</label>
+              <label><input type="checkbox" name="acceptsTravel" [checked]="isChecked('publicProfile.mobility.acceptsTravel')" /> Aceita deslocações</label>
             </div>
           </fieldset>
         </section>
@@ -251,9 +262,9 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid three-columns">
-            <label>Nome da referência<input name="referenceName" placeholder="Nome completo" /></label>
-            <label>Contacto<input name="referenceContact" placeholder="Telemóvel ou email" /></label>
-            <label>Relação profissional<input name="referenceRelation" placeholder="Ex.: antiga família, instituição" /></label>
+            <label>Nome da referência<input name="referenceName" placeholder="Nome completo" [value]="fieldValue('private.reference.name')" /></label>
+            <label>Contacto<input name="referenceContact" placeholder="Telemóvel ou email" [value]="fieldValue('private.reference.contact')" /></label>
+            <label>Relação profissional<input name="referenceRelation" placeholder="Ex.: antiga família, instituição" [value]="fieldValue('private.reference.relation')" /></label>
           </div>
         </section>
 
@@ -265,7 +276,7 @@ import { Auth, CaregiverRegistration } from '../../core/services/auth';
             <p class="form-message success-message" role="status">{{ successMessage }}</p>
           }
           <button class="button" type="submit" [disabled]="isSubmitting">
-            {{ isSubmitting ? 'A gravar...' : 'Guardar cadastro inicial' }}
+            {{ isSubmitting ? 'A gravar...' : submitButtonLabel() }}
           </button>
           <a class="button-secondary" routerLink="/como-funciona/cuidadores">Ver como funciona</a>
         </div>
@@ -281,6 +292,9 @@ export class BecomeCaregiverComponent implements OnInit {
   protected errorMessage = '';
   protected successMessage = '';
   protected readonly accountEmail = signal('');
+  protected readonly hasExistingCaregiverProfile = signal(false);
+  protected readonly submitButtonLabel = signal('Guardar cadastro inicial');
+  private readonly existingCaregiverProfile = signal<CaregiverProfileDocument | null>(null);
 
   protected readonly sections = [
     { id: 'conta', label: 'Conta' },
@@ -335,6 +349,15 @@ export class BecomeCaregiverComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const user = await this.authService.getCurrentUser();
     this.accountEmail.set(user?.email ?? '');
+
+    if (!user) {
+      return;
+    }
+
+    const caregiverProfile = await this.authService.getCaregiverProfile(user.uid);
+    this.existingCaregiverProfile.set(caregiverProfile);
+    this.hasExistingCaregiverProfile.set(!!caregiverProfile);
+    this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar cadastro inicial');
   }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
@@ -348,7 +371,14 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     const formData = new FormData(form);
-    const data = this.buildCaregiverRegistration(formData);
+    let data: CaregiverRegistration;
+    try {
+      data = await this.buildCaregiverRegistration(formData);
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível processar a foto de perfil.';
+      return;
+    }
+
     const missingGroup = this.getMissingRequiredGroup(data);
     if (missingGroup) {
       this.errorMessage = `Selecione pelo menos uma opção em ${missingGroup}.`;
@@ -359,7 +389,7 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       await this.authService.registerCaregiver(data);
       form.reset();
-      this.successMessage = 'Cadastro gravado com sucesso. O perfil foi criado como rascunho.';
+      this.successMessage = 'Cadastro gravado com sucesso. O perfil de cuidador foi atualizado.';
       window.location.assign('/dashboard/cuidador');
     } catch (error) {
       this.errorMessage = this.authService.getFirebaseErrorMessage(error);
@@ -377,7 +407,28 @@ export class BecomeCaregiverComponent implements OnInit {
     history.replaceState(null, '', `/seja-cuidador#${sectionId}`);
   }
 
-  private buildCaregiverRegistration(formData: FormData): CaregiverRegistration {
+  protected fieldValue(path: string): string {
+    const value = this.profileValue(path);
+    if (typeof value === 'number') {
+      return String(value);
+    }
+
+    return typeof value === 'string' ? value : '';
+  }
+
+  protected isChecked(path: string, option?: string): boolean {
+    const value = this.profileValue(path);
+    if (Array.isArray(value) && option) {
+      return value.includes(option);
+    }
+
+    return typeof value === 'boolean' ? value : false;
+  }
+
+  private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
+    const profilePhoto = await this.profilePhotoValue(formData, 'profilePhoto');
+    const profilePhotoName = profilePhoto?.name ?? this.fieldValue('publicProfile.profilePhotoName');
+
     return {
       account: {
         email: this.textValue(formData, 'email'),
@@ -390,7 +441,8 @@ export class BecomeCaregiverComponent implements OnInit {
         gender: this.textValue(formData, 'gender'),
         nationality: this.textValue(formData, 'nationality'),
         phone: this.textValue(formData, 'phone'),
-        profilePhotoName: this.fileName(formData, 'profilePhoto'),
+        profilePhotoName,
+        profilePhoto,
         private: {
           nif: this.textValue(formData, 'nif'),
           idDocument: this.textValue(formData, 'idDocument'),
@@ -474,8 +526,144 @@ export class BecomeCaregiverComponent implements OnInit {
     return value ? Number(value) : null;
   }
 
-  private fileName(formData: FormData, key: string): string {
+  private async profilePhotoValue(
+    formData: FormData,
+    key: string,
+  ): Promise<CaregiverRegistration['personal']['profilePhoto']> {
     const value = formData.get(key);
-    return value instanceof File && value.name ? value.name : '';
+    if (!(value instanceof File) || !value.name) {
+      return this.existingProfilePhoto();
+    }
+
+    if (!value.type.startsWith('image/')) {
+      throw new Error('A foto de perfil deve ser um ficheiro de imagem.');
+    }
+
+    if (value.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
+      throw new Error('A foto de perfil deve ter no máximo 1 MB.');
+    }
+
+    const base64 = await this.compressImageAsDataUrl(value);
+    const base64Bytes = new TextEncoder().encode(base64).length;
+    if (base64Bytes > PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
+      throw new Error(
+        'Não foi possível reduzir a foto para menos de 800 KB em base64. Use uma imagem mais leve.',
+      );
+    }
+
+    return {
+      name: value.name,
+      type: 'image/jpeg',
+      size: base64Bytes,
+      base64,
+    };
+  }
+
+  private profileValue(path: string): unknown {
+    return path.split('.').reduce<unknown>((currentValue, key) => {
+      if (!currentValue || typeof currentValue !== 'object') {
+        return undefined;
+      }
+
+      return (currentValue as Record<string, unknown>)[key];
+    }, this.existingCaregiverProfile());
+  }
+
+  private existingProfilePhoto(): CaregiverRegistration['personal']['profilePhoto'] {
+    const value = this.profileValue('publicProfile.profilePhoto');
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const profilePhoto = value as Record<string, unknown>;
+    if (
+      typeof profilePhoto['name'] !== 'string' ||
+      typeof profilePhoto['type'] !== 'string' ||
+      typeof profilePhoto['size'] !== 'number' ||
+      typeof profilePhoto['base64'] !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      name: profilePhoto['name'],
+      type: profilePhoto['type'],
+      size: profilePhoto['size'],
+      base64: profilePhoto['base64'],
+    };
+  }
+
+  private async compressImageAsDataUrl(file: File): Promise<string> {
+    const originalDataUrl = await this.readFileAsDataUrl(file);
+    if (new TextEncoder().encode(originalDataUrl).length <= PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
+      return originalDataUrl;
+    }
+
+    const image = await this.loadImage(originalDataUrl);
+    let { width, height } = this.fitImageSize(image.width, image.height, PROFILE_PHOTO_MAX_DIMENSION);
+
+    while (width >= 320 && height >= 320) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Não foi possível otimizar a foto de perfil.');
+      }
+
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+
+      for (let quality = 0.82; quality >= PROFILE_PHOTO_MIN_QUALITY; quality -= 0.08) {
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        if (new TextEncoder().encode(dataUrl).length <= PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
+          return dataUrl;
+        }
+      }
+
+      width = Math.floor(width * 0.82);
+      height = Math.floor(height * 0.82);
+    }
+
+    throw new Error('Não foi possível reduzir a foto para menos de 800 KB em base64. Use uma imagem mais leve.');
+  }
+
+  private fitImageSize(width: number, height: number, maxDimension: number): { width: number; height: number } {
+    if (width <= maxDimension && height <= maxDimension) {
+      return { width, height };
+    }
+
+    const ratio = Math.min(maxDimension / width, maxDimension / height);
+    return {
+      width: Math.round(width * ratio),
+      height: Math.round(height * ratio),
+    };
+  }
+
+  private loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Não foi possível carregar a foto de perfil.'));
+      image.src = src;
+    });
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Não foi possível ler a foto de perfil.'));
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler a foto de perfil.'));
+      reader.readAsDataURL(file);
+    });
   }
 }

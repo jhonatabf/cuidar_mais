@@ -27,10 +27,22 @@ import { Auth } from '../../core/services/auth';
                 <span class="badge">Cadastro pendente</span>
                 <h3>Conclua o seu perfil de cuidador</h3>
                 <p class="muted">
-                  O perfil ainda está como rascunho. Complete os dados para preparar a revisão e ativação.
+                  Ainda não encontramos um cadastro de cuidador vinculado a esta conta.
+                  Complete os dados para criar o perfil profissional.
                 </p>
               </div>
               <a class="button" routerLink="/seja-cuidador">Concluir cadastro</a>
+            </article>
+          } @else {
+            <article class="card card-body dashboard-alert">
+              <div>
+                <span class="badge">Perfil de cuidador</span>
+                <h3>Dados do cuidador cadastrados</h3>
+                <p class="muted">
+                  O cadastro está vinculado a esta conta. Pode rever e atualizar os dados profissionais quando precisar.
+                </p>
+              </div>
+              <a class="button" routerLink="/seja-cuidador">Editar dados</a>
             </article>
           }
 
@@ -101,22 +113,30 @@ export class CaregiverDashboardComponent implements OnInit {
       return;
     }
 
-    const status = await this.auth.getCaregiverStatus(user.uid);
-    this.showCompleteCaregiverProfile.set(status !== 'active' && status !== 'completed');
-    this.profileStatusLabel.set(this.getStatusLabel(status));
+    const [status, caregiverProfile] = await Promise.all([
+      this.auth.getCaregiverStatus(user.uid),
+      this.auth.getCaregiverProfile(user.uid),
+    ]);
+
+    this.showCompleteCaregiverProfile.set(!caregiverProfile);
+    this.profileStatusLabel.set(this.getStatusLabel(status, !!caregiverProfile));
   }
 
-  private getStatusLabel(status: string | null): string {
+  private getStatusLabel(status: string | null, hasCaregiverProfile: boolean): string {
+    if (!hasCaregiverProfile) {
+      return 'Por criar';
+    }
+
     switch (status) {
       case 'active':
       case 'completed':
         return 'Ativo';
       case 'draft':
-        return 'Rascunho';
+        return 'Cadastro inicial';
       case 'pending':
         return 'Pendente';
       default:
-        return 'Por criar';
+        return 'Cadastrado';
     }
   }
 }

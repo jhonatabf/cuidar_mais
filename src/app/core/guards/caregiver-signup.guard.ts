@@ -14,10 +14,5 @@ export const caregiverSignupGuard: CanActivateFn = async () => {
     });
   }
 
-  const caregiverStatus = await auth.getCaregiverStatus(user.uid);
-  if (caregiverStatus === 'active' || caregiverStatus === 'completed') {
-    return router.createUrlTree(['/dashboard/cuidador']);
-  }
-
   return true;
 };

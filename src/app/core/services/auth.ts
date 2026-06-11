@@ -25,6 +25,12 @@ export interface CaregiverRegistration {
     nationality: string;
     phone: string;
     profilePhotoName: string;
+    profilePhoto: {
+      name: string;
+      type: string;
+      size: number;
+      base64: string;
+    } | null;
     private: {
       nif: string;
       idDocument: string;
@@ -87,6 +93,8 @@ export interface UserAccount {
   caregiverProfileStatus?: string;
   familyProfileStatus?: string;
 }
+
+export type CaregiverProfileDocument = Record<string, unknown>;
 
 @Injectable({
   providedIn: 'root',
@@ -160,6 +168,15 @@ export class Auth {
 
     const data = snapshot.data();
     return typeof data['status'] === 'string' ? data['status'] : 'draft';
+  }
+
+  async getCaregiverProfile(uid: string): Promise<CaregiverProfileDocument | null> {
+    const snapshot = await getDoc(doc(firestoreDb, 'caregivers', uid));
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return snapshot.data() as CaregiverProfileDocument;
   }
 
   async hasCaregiverProfile(uid: string): Promise<boolean> {
@@ -275,6 +292,7 @@ export class Auth {
           languages: data.languages,
           mobility: data.mobility,
           profilePhotoName: data.personal.profilePhotoName,
+          profilePhoto: data.personal.profilePhoto,
         },
         private: {
           birthDate: data.personal.birthDate,

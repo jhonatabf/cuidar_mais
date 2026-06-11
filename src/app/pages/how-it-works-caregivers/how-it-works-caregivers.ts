@@ -58,14 +58,8 @@ export class HowItWorksCaregiversComponent implements OnInit {
       }
 
       const caregiverStatus = await this.auth.getCaregiverStatus(user.uid);
-      if (caregiverStatus === 'active' || caregiverStatus === 'completed') {
+      if (caregiverStatus) {
         this.primaryActionLabel.set('Acessar dashboard');
-        this.primaryActionPath.set('/dashboard/cuidador');
-        return;
-      }
-
-      if (caregiverStatus === 'draft') {
-        this.primaryActionLabel.set('Continuar cadastro');
         this.primaryActionPath.set('/dashboard/cuidador');
         return;
       }

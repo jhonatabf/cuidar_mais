@@ -75,72 +75,73 @@ const CAREGIVER_SIGNUP_COPY = {
       </aside>
 
       <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
-        <div class="profile-photo-field">
-          <label class="profile-photo-picker">
-            <span class="profile-photo-title">{{ profilePhotoActionLabel() }}</span>
-            <input type="file" name="profilePhoto" accept="image/*" (change)="onProfilePhotoChange($event)" />
-            <span class="profile-photo-frame" [attr.data-tooltip]="profilePhotoActionLabel()">
-              @if (profilePhotoPreviewUrl()) {
-                <img [src]="profilePhotoPreviewUrl()" alt="Foto de perfil" />
-              } @else {
-                <span class="profile-photo-avatar" aria-hidden="true">{{ profilePhotoInitials() }}</span>
-              }
-            </span>
-          </label>
-        </div>
-
-        <section id="conta" class="signup-section">
-          <div class="section-title">
-            <span>1</span>
-            <div>
-              <h2>Dados de conta</h2>
-              <p>Obrigatório para criar acesso seguro à plataforma.</p>
-            </div>
-          </div>
-          <div class="form-grid two-columns">
-            <label>Email <strong>*</strong><input type="email" name="email" required readonly [value]="accountEmail()" /></label>
-          </div>
-          <div class="check-stack">
-            <label><input type="checkbox" name="acceptedTerms" required [checked]="hasExistingCaregiverProfile()" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
-            <label><input type="checkbox" name="acceptedPrivacy" required [checked]="hasExistingCaregiverProfile()" /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
-          </div>
-        </section>
-
-        <section id="dados-pessoais" class="signup-section">
-          <div class="section-title">
-            <span>2</span>
-            <div>
-              <h2>Dados pessoais</h2>
-              <p>Dados essenciais para identificação e contacto.</p>
-            </div>
-          </div>
-          <div class="form-grid two-columns">
-            <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" [value]="fieldValue('publicProfile.fullName')" /></label>
-            <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required [value]="fieldValue('private.birthDate')" /></label>
-            <label>Sexo <strong>*</strong>
-              <select name="gender" required [value]="fieldValue('publicProfile.gender')">
-                <option value="">Selecionar</option>
-                <option>Feminino</option>
-                <option>Masculino</option>
-                <option>Outro</option>
-                <option>Prefiro não indicar</option>
-              </select>
+        <fieldset class="form-disabled-shell" [disabled]="!canEditProfile()">
+          <div class="profile-photo-field">
+            <label class="profile-photo-picker">
+              <span class="profile-photo-title">{{ profilePhotoActionLabel() }}</span>
+              <input type="file" name="profilePhoto" accept="image/*" (change)="onProfilePhotoChange($event)" />
+              <span class="profile-photo-frame" [attr.data-tooltip]="profilePhotoActionLabel()">
+                @if (profilePhotoPreviewUrl()) {
+                  <img [src]="profilePhotoPreviewUrl()" alt="Foto de perfil" />
+                } @else {
+                  <span class="profile-photo-avatar" aria-hidden="true">{{ profilePhotoInitials() }}</span>
+                }
+              </span>
             </label>
-            <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="fieldValue('publicProfile.nationality')" /></label>
-            <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="fieldValue('private.phone')" /></label>
-            <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="fieldValue('private.nif')" /></label>
-            <label>Tipo de documento <strong>*</strong>
-              <select name="documentType" required [value]="fieldValue('private.documentType')">
-                <option value="">Selecionar</option>
-                <option>Cartão de Cidadão</option>
-                <option>Passaporte</option>
-                <option>Título de residência</option>
-                <option>Outro</option>
-              </select>
-            </label>
-            <label>Documento de identificação <strong>*</strong> <small>privado</small><input name="idDocument" required placeholder="Número do documento" [value]="fieldValue('private.idDocument')" /></label>
           </div>
-        </section>
+
+          <section id="conta" class="signup-section">
+            <div class="section-title">
+              <span>1</span>
+              <div>
+                <h2>Dados de conta</h2>
+                <p>Obrigatório para criar acesso seguro à plataforma.</p>
+              </div>
+            </div>
+            <div class="form-grid two-columns">
+              <label>Email <strong>*</strong><input type="email" name="email" required readonly [value]="accountEmail()" /></label>
+            </div>
+            <div class="check-stack">
+              <label><input type="checkbox" name="acceptedTerms" required [checked]="hasExistingCaregiverProfile()" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
+              <label><input type="checkbox" name="acceptedPrivacy" required [checked]="hasExistingCaregiverProfile()" /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
+            </div>
+          </section>
+
+          <section id="dados-pessoais" class="signup-section">
+            <div class="section-title">
+              <span>2</span>
+              <div>
+                <h2>Dados pessoais</h2>
+                <p>Dados essenciais para identificação e contacto.</p>
+              </div>
+            </div>
+            <div class="form-grid two-columns">
+              <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" [value]="fieldValue('publicProfile.fullName')" /></label>
+              <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required [value]="fieldValue('private.birthDate')" /></label>
+              <label>Sexo <strong>*</strong>
+                <select name="gender" required [value]="fieldValue('publicProfile.gender')">
+                  <option value="">Selecionar</option>
+                  <option>Feminino</option>
+                  <option>Masculino</option>
+                  <option>Outro</option>
+                  <option>Prefiro não indicar</option>
+                </select>
+              </label>
+              <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="fieldValue('publicProfile.nationality')" /></label>
+              <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="fieldValue('private.phone')" /></label>
+              <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="fieldValue('private.nif')" /></label>
+              <label>Tipo de documento <strong>*</strong>
+                <select name="documentType" required [value]="fieldValue('private.documentType')">
+                  <option value="">Selecionar</option>
+                  <option>Cartão de Cidadão</option>
+                  <option>Passaporte</option>
+                  <option>Título de residência</option>
+                  <option>Outro</option>
+                </select>
+              </label>
+              <label>Documento de identificação <strong>*</strong> <small>privado</small><input name="idDocument" required placeholder="Número do documento" [value]="fieldValue('private.idDocument')" /></label>
+            </div>
+          </section>
 
         <section id="localizacao" class="signup-section">
           <div class="section-title">
@@ -320,15 +321,19 @@ const CAREGIVER_SIGNUP_COPY = {
             <label>Relação profissional<input name="referenceRelation" placeholder="Ex.: antiga família, instituição" [value]="fieldValue('private.reference.relation')" /></label>
           </div>
         </section>
+        </fieldset>
 
         <div class="form-actions">
+          @if (approvalLockMessage()) {
+            <p class="form-message info-message" role="status">{{ approvalLockMessage() }}</p>
+          }
           @if (errorMessage) {
             <p class="form-message error-message" role="alert">{{ errorMessage }}</p>
           }
           @if (successMessage) {
             <p class="form-message success-message" role="status">{{ successMessage }}</p>
           }
-          <button class="button" type="submit" [disabled]="isSubmitting">
+          <button class="button" type="submit" [disabled]="isSubmitting || !canEditProfile()">
             {{ isSubmitting ? 'A gravar...' : submitButtonLabel() }}
           </button>
           <a class="button-secondary" routerLink="/como-funciona/cuidadores">Ver como funciona</a>
@@ -347,6 +352,8 @@ export class BecomeCaregiverComponent implements OnInit {
   protected readonly accountEmail = signal('');
   protected readonly hasExistingCaregiverProfile = signal(false);
   protected readonly profilePhotoPreviewUrl = signal('');
+  protected readonly canEditProfile = signal(true);
+  protected readonly approvalLockMessage = signal('');
   protected readonly submitButtonLabel = signal('Guardar registo inicial');
   protected readonly locale = signal<CaregiverSignupLocale>('pt-PT');
   private readonly existingCaregiverProfile = signal<CaregiverProfileDocument | null>(null);
@@ -417,6 +424,7 @@ export class BecomeCaregiverComponent implements OnInit {
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
     this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
+    this.applyApprovalLock(caregiverProfile);
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
   }
 
@@ -424,6 +432,11 @@ export class BecomeCaregiverComponent implements OnInit {
     event.preventDefault();
     this.errorMessage = '';
     this.successMessage = '';
+
+    if (!this.canEditProfile()) {
+      this.errorMessage = this.approvalLockMessage();
+      return;
+    }
 
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
@@ -508,6 +521,11 @@ export class BecomeCaregiverComponent implements OnInit {
   protected async onProfilePhotoChange(event: Event): Promise<void> {
     this.errorMessage = '';
 
+    if (!this.canEditProfile()) {
+      this.errorMessage = this.approvalLockMessage();
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) {
@@ -533,6 +551,22 @@ export class BecomeCaregiverComponent implements OnInit {
       this.errorMessage = error instanceof Error ? error.message : 'Não foi possível carregar a foto de perfil.';
       input.value = '';
     }
+  }
+
+  private applyApprovalLock(caregiverProfile: CaregiverProfileDocument | null): void {
+    const approvalSummary = this.authService.getCaregiverApprovalSummary(caregiverProfile);
+
+    this.canEditProfile.set(approvalSummary.canEdit);
+    if (approvalSummary.canEdit || !approvalSummary.approval) {
+      this.approvalLockMessage.set('');
+      return;
+    }
+
+    this.approvalLockMessage.set(
+      `O cadastro foi aprovado no dia ${this.formatDate(approvalSummary.approvalDate)}. ` +
+        `Os dados pessoais só poderão ser alterados novamente a partir de ${this.formatDate(approvalSummary.canEditFrom)}, ` +
+        '5 dias após a aprovação.',
+    );
   }
 
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
@@ -707,6 +741,18 @@ export class BecomeCaregiverComponent implements OnInit {
     const adultDate = new Date(birthDate);
     adultDate.setFullYear(adultDate.getFullYear() + 18);
     return adultDate <= today;
+  }
+
+  private formatDate(date: Date | null): string {
+    if (!date) {
+      return 'data não informada';
+    }
+
+    return new Intl.DateTimeFormat('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
   }
 
   private textValue(formData: FormData, key: string): string {

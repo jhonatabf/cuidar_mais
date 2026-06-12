@@ -39,10 +39,14 @@ import { Auth } from '../../core/services/auth';
                 <span class="badge">Perfil de cuidador</span>
                 <h3>Dados do cuidador cadastrados</h3>
                 <p class="muted">
-                  O cadastro está vinculado a esta conta. Pode rever e atualizar os dados profissionais quando precisar.
+                  {{ approvalMessage() }}
                 </p>
               </div>
-              <a class="button" routerLink="/seja-cuidador">Editar dados</a>
+              @if (canEditProfile()) {
+                <a class="button" routerLink="/seja-cuidador">Editar dados</a>
+              } @else {
+                <button class="button-secondary" type="button" disabled>Alteração bloqueada</button>
+              }
             </article>
           }
 
@@ -61,6 +65,7 @@ import { Auth } from '../../core/services/auth';
             <article class="card card-body"><span class="badge">Semana</span><h3>18 horas</h3><p class="muted">trabalho confirmado</p></article>
             <article class="card card-body"><span class="badge">Novos</span><h3>4 pedidos</h3><p class="muted">aguardam resposta</p></article>
             <article class="card card-body"><span class="badge">Perfil</span><h3>{{ profileStatusLabel() }}</h3><p class="muted">estado atual</p></article>
+            <article class="card card-body"><span class="badge">Validação</span><h3>{{ approvalStatusLabel() }}</h3><p class="muted">aprovação humana</p></article>
           </div>
           <div class="table-like">
             @for (task of tasks; track task.time) {
@@ -99,6 +104,9 @@ export class CaregiverDashboardComponent implements OnInit {
 
   protected readonly showCompleteCaregiverProfile = signal(false);
   protected readonly profileStatusLabel = signal('A verificar');
+  protected readonly approvalStatusLabel = signal('A verificar');
+  protected readonly approvalMessage = signal('O cadastro está vinculado a esta conta.');
+  protected readonly canEditProfile = signal(true);
 
   protected readonly tasks = [
     { family: 'Familia Rocha', note: 'Visita de companhia e refeicao', time: 'Hoje 15:00' },
@@ -120,6 +128,11 @@ export class CaregiverDashboardComponent implements OnInit {
 
     this.showCompleteCaregiverProfile.set(!caregiverProfile);
     this.profileStatusLabel.set(this.getStatusLabel(status, !!caregiverProfile));
+
+    const approvalSummary = this.auth.getCaregiverApprovalSummary(caregiverProfile);
+    this.approvalStatusLabel.set(this.getApprovalStatusLabel(approvalSummary.approvalStatus));
+    this.canEditProfile.set(approvalSummary.canEdit);
+    this.approvalMessage.set(this.getApprovalMessage(approvalSummary));
   }
 
   private getStatusLabel(status: string | null, hasCaregiverProfile: boolean): string {
@@ -138,5 +151,43 @@ export class CaregiverDashboardComponent implements OnInit {
       default:
         return 'Cadastrado';
     }
+  }
+
+  private getApprovalStatusLabel(status: string): string {
+    switch (status) {
+      case 'analysing':
+      case 'analysinig':
+        return 'Em análise';
+      case 'done':
+      case 'Done':
+        return 'Aprovado';
+      default:
+        return 'Pendente';
+    }
+  }
+
+  private getApprovalMessage(summary: ReturnType<Auth['getCaregiverApprovalSummary']>): string {
+    if (!summary.approval) {
+      return `O cadastro está vinculado a esta conta e aguarda validação humana. Estado atual: ${this.getApprovalStatusLabel(summary.approvalStatus)}.`;
+    }
+
+    const approvalDate = this.formatDate(summary.approvalDate);
+    if (!summary.canEdit) {
+      return `Cadastro aprovado em ${approvalDate}. Os dados pessoais só poderão ser alterados novamente a partir de ${this.formatDate(summary.canEditFrom)}.`;
+    }
+
+    return `Cadastro aprovado em ${approvalDate}. Já pode solicitar uma nova alteração; depois disso, os dados voltarão para validação.`;
+  }
+
+  private formatDate(date: Date | null): string {
+    if (!date) {
+      return 'data não informada';
+    }
+
+    return new Intl.DateTimeFormat('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
   }
 }

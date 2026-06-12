@@ -70,6 +70,36 @@
   gap: 18px;
 }
 
+.form-disabled-shell {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-disabled-shell:disabled {
+  input,
+  select,
+  textarea {
+    cursor: not-allowed;
+    background: #f4f8fb;
+    color: #6f7f8d;
+  }
+
+  .checkbox-grid label,
+  .check-stack label,
+  .profile-photo-picker {
+    cursor: not-allowed;
+  }
+
+  .profile-photo-frame {
+    filter: grayscale(0.18);
+    opacity: 0.82;
+  }
+}
+
 .profile-photo-field {
   display: flex;
   justify-content: flex-start;
@@ -356,7 +386,7 @@ legend {
   margin: 0;
   padding: 14px 16px;
   border-radius: 14px;
-  font-weight: 800;
+  font-weight: 780;
 }
 
 .error-message {
@@ -369,6 +399,14 @@ legend {
   border: 1px solid #b8dfbd;
   background: #edf9ef;
   color: var(--color-primary-strong);
+}
+
+.info-message {
+  border: 1px solid #b9d7f2;
+  background: #f1f7fd;
+  color: #245f91;
+  font-weight: 400;
+  line-height: 1.55;
 }
 
 @media (max-width: 980px) {

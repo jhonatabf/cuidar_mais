@@ -97,6 +97,17 @@ export interface UserAccount {
 
 export type CaregiverProfileDocument = Record<string, unknown>;
 
+export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'done';
+
+export interface CaregiverApprovalSummary {
+  approval: boolean;
+  approvalStatus: CaregiverApprovalStatus;
+  approvalDate: Date | null;
+  approvalUserId: string | null;
+  canEditFrom: Date | null;
+  canEdit: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -190,6 +201,28 @@ export class Auth {
     return snapshot.data() as CaregiverProfileDocument;
   }
 
+  getCaregiverApprovalSummary(
+    caregiverProfile: CaregiverProfileDocument | null,
+  ): CaregiverApprovalSummary {
+    const approvalDate = this.toDate(caregiverProfile?.['approvalDate'] ?? caregiverProfile?.['data']);
+    const approval = caregiverProfile?.['approval'] === true;
+    const approvalStatus = this.toApprovalStatus(caregiverProfile?.['approvalStatus'] ?? caregiverProfile?.['status']);
+    const approvalUserId =
+      typeof (caregiverProfile?.['approvalUserId'] ?? caregiverProfile?.['userId']) === 'string'
+        ? (caregiverProfile?.['approvalUserId'] ?? caregiverProfile?.['userId']) as string
+        : null;
+    const canEditFrom = approvalDate ? this.addDays(approvalDate, 5) : null;
+
+    return {
+      approval,
+      approvalStatus,
+      approvalDate,
+      approvalUserId,
+      canEditFrom,
+      canEdit: !approval || !canEditFrom || canEditFrom <= new Date(),
+    };
+  }
+
   async hasCaregiverProfile(uid: string): Promise<boolean> {
     return (await this.getCaregiverStatus(uid)) !== null;
   }
@@ -263,6 +296,16 @@ export class Auth {
     }
 
     const uid = user.uid;
+    const existingProfile = await this.getCaregiverProfile(uid);
+    const approvalSummary = this.getCaregiverApprovalSummary(existingProfile);
+    if (!approvalSummary.canEdit) {
+      throw new FirebaseError(
+        'permission-denied',
+        `Os dados pessoais só podem ser alterados novamente a partir de ${this.formatDate(approvalSummary.canEditFrom)}.`,
+      );
+    }
+
+    const isNewProfile = !existingProfile;
     await updateProfile(user, { displayName: data.personal.fullName });
 
     await Promise.all([
@@ -289,49 +332,108 @@ export class Auth {
         },
         { merge: true },
       ),
-      setDoc(doc(firestoreDb, 'caregivers', uid), {
-        uid,
-        status: 'draft',
-        publicProfile: {
-          fullName: data.personal.fullName,
-          gender: data.personal.gender,
-          nationality: data.personal.nationality,
-          district: data.location.district,
-          county: data.location.county,
-          travelRadius: data.location.travelRadius,
-          summary: data.professional.summary,
-          experienceYears: data.professional.experienceYears,
-          serviceTypes: data.professional.serviceTypes,
-          trainingTypes: data.training.trainingTypes,
-          availability: data.availability,
-          rates: data.rates,
-          skills: data.skills,
-          languages: data.languages,
-          mobility: data.mobility,
-          profilePhotoName: data.personal.profilePhotoName,
-          profilePhoto: data.personal.profilePhoto,
-        },
-        private: {
-          birthDate: data.personal.birthDate,
-          phone: data.personal.phone,
-          nif: data.personal.private.nif,
-          documentType: data.personal.private.documentType,
-          idDocument: data.personal.private.idDocument,
-          address: data.location.private.address,
-          postalCode: data.location.postalCode,
-          training: {
-            courseName: data.training.courseName,
-            trainingEntity: data.training.trainingEntity,
-            completionYear: data.training.completionYear,
+      setDoc(
+        doc(firestoreDb, 'caregivers', uid),
+        {
+          uid,
+          status: 'draft',
+          approvalDate: isNewProfile ? null : existingProfile['approvalDate'] ?? null,
+          approvalUserId: null,
+          approvalStatus: 'pending',
+          approval: false,
+          publicProfile: {
+            fullName: data.personal.fullName,
+            gender: data.personal.gender,
+            nationality: data.personal.nationality,
+            district: data.location.district,
+            county: data.location.county,
+            travelRadius: data.location.travelRadius,
+            summary: data.professional.summary,
+            experienceYears: data.professional.experienceYears,
+            serviceTypes: data.professional.serviceTypes,
+            trainingTypes: data.training.trainingTypes,
+            availability: data.availability,
+            rates: data.rates,
+            skills: data.skills,
+            languages: data.languages,
+            mobility: data.mobility,
+            profilePhotoName: data.personal.profilePhotoName,
+            profilePhoto: data.personal.profilePhoto,
           },
-          reference: data.reference,
+          private: {
+            birthDate: data.personal.birthDate,
+            phone: data.personal.phone,
+            nif: data.personal.private.nif,
+            documentType: data.personal.private.documentType,
+            idDocument: data.personal.private.idDocument,
+            address: data.location.private.address,
+            postalCode: data.location.postalCode,
+            training: {
+              courseName: data.training.courseName,
+              trainingEntity: data.training.trainingEntity,
+              completionYear: data.training.completionYear,
+            },
+            reference: data.reference,
+          },
+          createdAt: isNewProfile ? serverTimestamp() : existingProfile['createdAt'] ?? serverTimestamp(),
+          updatedAt: serverTimestamp(),
         },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
+        { merge: true },
+      ),
     ]);
 
     return uid;
+  }
+
+  private toApprovalStatus(value: unknown): CaregiverApprovalStatus {
+    if (value === 'analysing' || value === 'analysinig') {
+      return 'analysing';
+    }
+
+    if (value === 'done' || value === 'Done') {
+      return 'done';
+    }
+
+    return 'pending';
+  }
+
+  private toDate(value: unknown): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return value;
+    }
+
+    if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+      return value.toDate();
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
+  private formatDate(date: Date | null): string {
+    if (!date) {
+      return '';
+    }
+
+    return new Intl.DateTimeFormat('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
   }
 
   getFirebaseErrorMessage(error: unknown): string {
@@ -346,7 +448,7 @@ export class Auth {
         case 'auth/requires-recent-login':
           return 'É necessário iniciar sessão para criar o perfil de cuidador.';
         case 'permission-denied':
-          return 'Não foi possível gravar no Firestore. Verifique as regras de segurança.';
+          return error.message || 'Não foi possível gravar no Firestore. Verifique as regras de segurança.';
         default:
           return error.message;
       }

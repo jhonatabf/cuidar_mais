@@ -8,25 +8,62 @@ const PROFILE_PHOTO_MAX_FIRESTORE_BYTES = 800 * 1024;
 const PROFILE_PHOTO_MAX_DIMENSION = 1200;
 const PROFILE_PHOTO_MIN_QUALITY = 0.45;
 
+type CaregiverSignupLocale = 'pt-PT' | 'en' | 'es';
+
+const CAREGIVER_SIGNUP_COPY = {
+  'pt-PT': {
+    eyebrow: 'Cadastro de cuidadores',
+    badge: 'Uma dica',
+    title: 'Crie um perfil claro, fiável e rápido de avaliar.',
+    lead:
+      'O registo inicial recolhe apenas o essencial para apresentar o cuidador às famílias, mantendo os dados sensíveis privados.',
+    summaryTitle: 'Perfil público simples',
+    summaryText:
+      'As famílias verão o resumo, os serviços, a disponibilidade, a localização aproximada, os idiomas e as competências.',
+    privacyNote: 'NIF, documento, morada e contactos privados não aparecem no perfil público.',
+  },
+  en: {
+    eyebrow: 'Caregiver registration',
+    badge: 'A tip',
+    title: 'Create a clear, reliable profile that is quick to review.',
+    lead:
+      'The initial registration collects only the essentials to present the caregiver to families while keeping sensitive data private.',
+    summaryTitle: 'Simple public profile',
+    summaryText:
+      'Families will see the summary, services, availability, approximate location, languages and skills.',
+    privacyNote: 'Tax ID, document, address and private contacts do not appear on the public profile.',
+  },
+  es: {
+    eyebrow: 'Registro de cuidadores',
+    badge: 'Un consejo',
+    title: 'Crea un perfil claro, fiable y rápido de evaluar.',
+    lead:
+      'El registro inicial recoge solo lo esencial para presentar al cuidador a las familias, manteniendo los datos sensibles privados.',
+    summaryTitle: 'Perfil público simple',
+    summaryText:
+      'Las familias verán el resumen, los servicios, la disponibilidad, la ubicación aproximada, los idiomas y las competencias.',
+    privacyNote: 'NIF, documento, dirección y contactos privados no aparecen en el perfil público.',
+  },
+} as const;
+
 @Component({
   selector: 'app-become-caregiver',
   imports: [RouterLink],
   template: `
     <section class="page caregiver-signup-hero">
       <div>
-        <p class="eyebrow">Cadastro de cuidadora</p>
-        <h1>Crie um perfil claro, confiável e rápido de avaliar.</h1>
+        <p class="eyebrow">{{ copy().eyebrow }}</p>
+        <h1>{{ copy().title }}</h1>
         <p class="lead">
-          O cadastro inicial recolhe apenas o essencial para apresentar a profissional
-          às famílias, mantendo dados sensíveis privados.
+          {{ copy().lead }}
         </p>
       </div>
 
-      <aside class="signup-summary" aria-label="Resumo do cadastro">
-        <span class="badge">MVP</span>
-        <h3>Perfil público enxuto</h3>
-        <p>As famílias verão resumo, serviços, disponibilidade, localização aproximada, idiomas e competências.</p>
-        <p class="privacy-note">NIF, documento, morada e contactos privados não aparecem no perfil público.</p>
+      <aside class="signup-summary" aria-label="Resumo do registo">
+        <span class="badge">{{ copy().badge }}</span>
+        <h3>{{ copy().summaryTitle }}</h3>
+        <p>{{ copy().summaryText }}</p>
+        <p class="privacy-note">{{ copy().privacyNote }}</p>
       </aside>
     </section>
 
@@ -74,7 +111,7 @@ const PROFILE_PHOTO_MIN_QUALITY = 0.45;
             <span>2</span>
             <div>
               <h2>Dados pessoais</h2>
-              <p>Dados básicos para identificação e contacto.</p>
+              <p>Dados essenciais para identificação e contacto.</p>
             </div>
           </div>
           <div class="form-grid two-columns">
@@ -310,8 +347,13 @@ export class BecomeCaregiverComponent implements OnInit {
   protected readonly accountEmail = signal('');
   protected readonly hasExistingCaregiverProfile = signal(false);
   protected readonly profilePhotoPreviewUrl = signal('');
-  protected readonly submitButtonLabel = signal('Guardar cadastro inicial');
+  protected readonly submitButtonLabel = signal('Guardar registo inicial');
+  protected readonly locale = signal<CaregiverSignupLocale>('pt-PT');
   private readonly existingCaregiverProfile = signal<CaregiverProfileDocument | null>(null);
+
+  protected copy(): (typeof CAREGIVER_SIGNUP_COPY)[CaregiverSignupLocale] {
+    return CAREGIVER_SIGNUP_COPY[this.locale()];
+  }
 
   protected readonly sections = [
     { id: 'conta', label: 'Conta' },
@@ -375,7 +417,7 @@ export class BecomeCaregiverComponent implements OnInit {
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
     this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
-    this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar cadastro inicial');
+    this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
   }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
@@ -409,7 +451,7 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       await this.authService.registerCaregiver(data);
       form.reset();
-      this.successMessage = 'Cadastro gravado com sucesso. O perfil de cuidador foi atualizado.';
+      this.successMessage = 'Registo guardado com sucesso. O perfil de cuidador foi atualizado.';
       window.location.assign('/dashboard/cuidador');
     } catch (error) {
       this.errorMessage = this.authService.getFirebaseErrorMessage(error);
@@ -627,7 +669,7 @@ export class BecomeCaregiverComponent implements OnInit {
       }
 
       if (field.type === 'birthDate' && !this.isAdult(value)) {
-        return 'É necessário ter pelo menos 18 anos para se cadastrar como cuidador.';
+        return 'É necessário ter pelo menos 18 anos para se registar como cuidador.';
       }
     }
 

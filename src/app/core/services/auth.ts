@@ -97,7 +97,7 @@ export interface UserAccount {
 
 export type CaregiverProfileDocument = Record<string, unknown>;
 
-export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'done';
+export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'approved' | 'rejected';
 
 export interface CaregiverApprovalSummary {
   approval: boolean;
@@ -341,6 +341,15 @@ export class Auth {
           approvalUserId: null,
           approvalStatus: 'pending',
           approval: false,
+          review: {
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            lockedBy: null,
+            lockedAt: null,
+            decidedBy: null,
+            decidedAt: null,
+            rejectionReason: null,
+          },
           publicProfile: {
             fullName: data.personal.fullName,
             gender: data.personal.gender,
@@ -390,8 +399,12 @@ export class Auth {
       return 'analysing';
     }
 
-    if (value === 'done' || value === 'Done') {
-      return 'done';
+    if (value === 'approved' || value === 'done' || value === 'Done') {
+      return 'approved';
+    }
+
+    if (value === 'rejected') {
+      return 'rejected';
     }
 
     return 'pending';

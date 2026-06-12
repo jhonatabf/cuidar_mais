@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { caregiverSignupGuard } from './core/guards/caregiver-signup.guard';
 import { caregiverDashboardGuard, familyDashboardGuard } from './core/guards/dashboard.guard';
 
@@ -111,6 +112,24 @@ export const routes: Routes = [
     path: 'rgpd',
     title: 'RGPD | Cuidar+',
     loadComponent: () => import('./pages/gdpr/gdpr').then((m) => m.GdprComponent),
+  },
+  {
+    path: 'admin',
+    title: 'Administração | Cuidar+',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./pages/admin-dashboard/admin-dashboard').then(
+        (m) => m.AdminDashboardComponent,
+      ),
+  },
+  {
+    path: 'admin/revisoes/:id',
+    title: 'Análise de cadastro | Cuidar+',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./pages/admin-review-detail/admin-review-detail').then(
+        (m) => m.AdminReviewDetailComponent,
+      ),
   },
   {
     path: '**',

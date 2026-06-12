@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from 'firebase/auth';
 
-import { Auth } from './core/services/auth';
+import { Auth, CaregiverProfileDocument } from './core/services/auth';
 
 @Component({
   selector: 'app-root',
@@ -107,11 +107,31 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
-    const summary = await this.auth.getProfileSummary(user.uid);
+    const [summary, caregiverProfile] = await Promise.all([
+      this.auth.getProfileSummary(user.uid),
+      this.auth.getCaregiverProfile(user.uid),
+    ]);
+    const caregiverAvatarUrl = this.getCaregiverAvatarUrl(caregiverProfile);
+
     this.displayName.set(summary.account?.fullName || user.displayName || user.email || 'Utilizador');
-    this.avatarUrl.set(user.photoURL ?? '');
+    this.avatarUrl.set(caregiverAvatarUrl || user.photoURL || '');
     this.hasCaregiverProfile.set(summary.hasCaregiver);
     this.hasFamilyProfile.set(summary.hasFamily);
     this.caregiverStatus.set(summary.caregiverStatus);
+  }
+
+  private getCaregiverAvatarUrl(caregiverProfile: CaregiverProfileDocument | null): string {
+    const publicProfile = caregiverProfile?.['publicProfile'];
+    if (!publicProfile || typeof publicProfile !== 'object') {
+      return '';
+    }
+
+    const profilePhoto = (publicProfile as Record<string, unknown>)['profilePhoto'];
+    if (!profilePhoto || typeof profilePhoto !== 'object') {
+      return '';
+    }
+
+    const base64 = (profilePhoto as Record<string, unknown>)['base64'];
+    return typeof base64 === 'string' ? base64 : '';
   }
 }

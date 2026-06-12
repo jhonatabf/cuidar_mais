@@ -37,7 +37,21 @@ const PROFILE_PHOTO_MIN_QUALITY = 0.45;
         }
       </aside>
 
-      <form class="caregiver-form" (submit)="onSubmit($event)">
+      <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
+        <div class="profile-photo-field">
+          <label class="profile-photo-picker">
+            <span class="profile-photo-title">{{ profilePhotoActionLabel() }}</span>
+            <input type="file" name="profilePhoto" accept="image/*" (change)="onProfilePhotoChange($event)" />
+            <span class="profile-photo-frame" [attr.data-tooltip]="profilePhotoActionLabel()">
+              @if (profilePhotoPreviewUrl()) {
+                <img [src]="profilePhotoPreviewUrl()" alt="Foto de perfil" />
+              } @else {
+                <span class="profile-photo-avatar" aria-hidden="true">{{ profilePhotoInitials() }}</span>
+              }
+            </span>
+          </label>
+        </div>
+
         <section id="conta" class="signup-section">
           <div class="section-title">
             <span>1</span>
@@ -77,15 +91,17 @@ const PROFILE_PHOTO_MIN_QUALITY = 0.45;
             </label>
             <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="fieldValue('publicProfile.nationality')" /></label>
             <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="fieldValue('private.phone')" /></label>
-            <label>Foto de perfil
-              <input type="file" name="profilePhoto" accept="image/*" />
-              <small>Imagem até 1 MB. Será otimizada e gravada em base64 no Firestore.</small>
-              @if (fieldValue('publicProfile.profilePhoto.name')) {
-                <small>Foto atual: {{ fieldValue('publicProfile.profilePhoto.name') }}</small>
-              }
+            <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="fieldValue('private.nif')" /></label>
+            <label>Tipo de documento <strong>*</strong>
+              <select name="documentType" required [value]="fieldValue('private.documentType')">
+                <option value="">Selecionar</option>
+                <option>Cartão de Cidadão</option>
+                <option>Passaporte</option>
+                <option>Título de residência</option>
+                <option>Outro</option>
+              </select>
             </label>
-            <label>NIF <small>privado</small><input name="nif" inputmode="numeric" placeholder="Opcional nesta fase" [value]="fieldValue('private.nif')" /></label>
-            <label>Documento de identificação <small>privado</small><input name="idDocument" placeholder="Opcional nesta fase" [value]="fieldValue('private.idDocument')" /></label>
+            <label>Documento de identificação <strong>*</strong> <small>privado</small><input name="idDocument" required placeholder="Número do documento" [value]="fieldValue('private.idDocument')" /></label>
           </div>
         </section>
 
@@ -293,6 +309,7 @@ export class BecomeCaregiverComponent implements OnInit {
   protected successMessage = '';
   protected readonly accountEmail = signal('');
   protected readonly hasExistingCaregiverProfile = signal(false);
+  protected readonly profilePhotoPreviewUrl = signal('');
   protected readonly submitButtonLabel = signal('Guardar cadastro inicial');
   private readonly existingCaregiverProfile = signal<CaregiverProfileDocument | null>(null);
 
@@ -357,6 +374,7 @@ export class BecomeCaregiverComponent implements OnInit {
     const caregiverProfile = await this.authService.getCaregiverProfile(user.uid);
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
+    this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar cadastro inicial');
   }
 
@@ -366,11 +384,13 @@ export class BecomeCaregiverComponent implements OnInit {
     this.successMessage = '';
 
     const form = event.currentTarget as HTMLFormElement;
-    if (!form.reportValidity()) {
+    const formData = new FormData(form);
+    const validationMessage = this.getCaregiverValidationMessage(form, formData);
+    if (validationMessage) {
+      this.errorMessage = validationMessage;
       return;
     }
 
-    const formData = new FormData(form);
     let data: CaregiverRegistration;
     try {
       data = await this.buildCaregiverRegistration(formData);
@@ -425,6 +445,54 @@ export class BecomeCaregiverComponent implements OnInit {
     return typeof value === 'boolean' ? value : false;
   }
 
+  protected profilePhotoActionLabel(): string {
+    return this.profilePhotoPreviewUrl() ? 'Alterar foto de perfil' : 'Adicionar foto de perfil';
+  }
+
+  protected profilePhotoInitials(): string {
+    const fullName = this.fieldValue('publicProfile.fullName');
+    const fallback = this.accountEmail();
+    const source = fullName || fallback;
+    const initials = source
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('');
+
+    return initials || '+';
+  }
+
+  protected async onProfilePhotoChange(event: Event): Promise<void> {
+    this.errorMessage = '';
+
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage = 'A foto de perfil deve ser um ficheiro de imagem.';
+      input.value = '';
+      return;
+    }
+
+    if (file.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
+      this.errorMessage = 'A foto de perfil deve ter no máximo 1 MB.';
+      input.value = '';
+      return;
+    }
+
+    try {
+      this.profilePhotoPreviewUrl.set(await this.readFileAsDataUrl(file));
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível carregar a foto de perfil.';
+      input.value = '';
+    }
+  }
+
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
     const profilePhoto = await this.profilePhotoValue(formData, 'profilePhoto');
     const profilePhotoName = profilePhoto?.name ?? this.fieldValue('publicProfile.profilePhotoName');
@@ -445,6 +513,7 @@ export class BecomeCaregiverComponent implements OnInit {
         profilePhoto,
         private: {
           nif: this.textValue(formData, 'nif'),
+          documentType: this.textValue(formData, 'documentType'),
           idDocument: this.textValue(formData, 'idDocument'),
         },
       },
@@ -506,6 +575,96 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     return '';
+  }
+
+  private getCaregiverValidationMessage(form: HTMLFormElement, formData: FormData): string {
+    const requiredFields = [
+      { key: 'email', label: 'Email' },
+      { key: 'acceptedTerms', label: 'Aceitação dos Termos e Condições', type: 'checkbox' },
+      { key: 'acceptedPrivacy', label: 'Aceitação da Política de Privacidade', type: 'checkbox' },
+      { key: 'fullName', label: 'Nome completo' },
+      { key: 'birthDate', label: 'Data de nascimento', type: 'birthDate' },
+      { key: 'gender', label: 'Sexo' },
+      { key: 'nationality', label: 'Nacionalidade' },
+      { key: 'phone', label: 'Telemóvel' },
+      { key: 'nif', label: 'NIF' },
+      { key: 'documentType', label: 'Tipo de documento' },
+      { key: 'idDocument', label: 'Documento de identificação' },
+      { key: 'district', label: 'Distrito' },
+      { key: 'county', label: 'Concelho' },
+      { key: 'postalCode', label: 'Código Postal' },
+      { key: 'summary', label: 'Resumo profissional' },
+      { key: 'experienceYears', label: 'Anos de experiência' },
+      { key: 'serviceTypes', label: 'Tipos de serviço prestados', type: 'array' },
+      { key: 'weekDays', label: 'Dias da semana', type: 'array' },
+      { key: 'periods', label: 'Períodos', type: 'array' },
+      { key: 'hourlyRate', label: 'Valor por hora' },
+    ];
+
+    for (const field of requiredFields) {
+      if (field.type === 'checkbox' && !formData.has(field.key)) {
+        return `${field.label} é obrigatório.`;
+      }
+
+      if (field.type === 'array' && this.arrayValue(formData, field.key).length === 0) {
+        return `Selecione pelo menos uma opção em ${field.label}.`;
+      }
+
+      const value = this.textValue(formData, field.key);
+      if (!field.type && !value) {
+        return `${field.label} é obrigatório.`;
+      }
+
+      const control = form.elements.namedItem(field.key);
+      if (
+        control instanceof HTMLInputElement ||
+        control instanceof HTMLSelectElement ||
+        control instanceof HTMLTextAreaElement
+      ) {
+        if (!control.checkValidity()) {
+          return this.controlValidationMessage(control, field.label);
+        }
+      }
+
+      if (field.type === 'birthDate' && !this.isAdult(value)) {
+        return 'É necessário ter pelo menos 18 anos para se cadastrar como cuidador.';
+      }
+    }
+
+    return '';
+  }
+
+  private controlValidationMessage(
+    control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+    label: string,
+  ): string {
+    if (control.validity.valueMissing) {
+      return `${label} é obrigatório.`;
+    }
+    if (control.validity.typeMismatch || control.validity.badInput) {
+      return `${label} não está válido.`;
+    }
+    if (control.validity.rangeUnderflow || control.validity.rangeOverflow) {
+      return `${label} está fora do intervalo permitido.`;
+    }
+
+    return `${label} não está válido.`;
+  }
+
+  private isAdult(value: string): boolean {
+    if (!value) {
+      return false;
+    }
+
+    const birthDate = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(birthDate.getTime())) {
+      return false;
+    }
+
+    const today = new Date();
+    const adultDate = new Date(birthDate);
+    adultDate.setFullYear(adultDate.getFullYear() + 18);
+    return adultDate <= today;
   }
 
   private textValue(formData: FormData, key: string): string {

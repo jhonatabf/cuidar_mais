@@ -33,6 +33,7 @@ export interface CaregiverRegistration {
     } | null;
     private: {
       nif: string;
+      documentType: string;
       idDocument: string;
     };
   };
@@ -107,6 +108,10 @@ export class Auth {
   async registerAccount(data: {
     accountType: string;
     fullName: string;
+    birthDate: string;
+    nif: string;
+    documentType: string;
+    idDocument: string;
     email: string;
     password: string;
   }): Promise<User> {
@@ -117,6 +122,12 @@ export class Auth {
       uid: credential.user.uid,
       email: data.email,
       fullName: data.fullName,
+      birthDate: data.birthDate,
+      private: {
+        nif: data.nif,
+        documentType: data.documentType,
+        idDocument: data.idDocument,
+      },
       role: data.accountType === 'Cuidador' ? 'caregiver' : 'family',
       roles: {
         caregiver: data.accountType === 'Cuidador',
@@ -261,9 +272,15 @@ export class Auth {
           uid,
           email: user.email ?? data.account.email,
           fullName: data.personal.fullName,
+          birthDate: data.personal.birthDate,
           role: 'caregiver',
           roles: {
             caregiver: true,
+          },
+          private: {
+            nif: data.personal.private.nif,
+            documentType: data.personal.private.documentType,
+            idDocument: data.personal.private.idDocument,
           },
           caregiverProfileStatus: 'draft',
           acceptedTerms: data.account.acceptedTerms,
@@ -298,6 +315,7 @@ export class Auth {
           birthDate: data.personal.birthDate,
           phone: data.personal.phone,
           nif: data.personal.private.nif,
+          documentType: data.personal.private.documentType,
           idDocument: data.personal.private.idDocument,
           address: data.location.private.address,
           postalCode: data.location.postalCode,

@@ -1,20 +1,30 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Auth, CaregiverProfileDocument, CaregiverRegistration } from '../../core/services/auth';
+import {
+  Auth,
+  CaregiverProfileDocument,
+  CaregiverRegistration,
+  CaregiverTrainingCertificate,
+} from '../../core/services/auth';
 
 const PROFILE_PHOTO_MAX_FILE_BYTES = 1024 * 1024;
 const PROFILE_PHOTO_MAX_FIRESTORE_BYTES = 800 * 1024;
 const PROFILE_PHOTO_MAX_DIMENSION = 1200;
 const PROFILE_PHOTO_MIN_QUALITY = 0.45;
-const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 3 * 1024 * 1024;
+const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const CERTIFICATE_IMAGE_TARGET_BYTES = 900 * 1024;
+const CERTIFICATE_IMAGE_MAX_DIMENSION = 1600;
+const CERTIFICATE_IMAGE_MIN_QUALITY = 0.58;
 
 type TrainingEntryData = {
+  id: string;
   trainingType: string;
   courseName: string;
   trainingEntity: string;
   completionDate: string;
   certificateFileName: string;
+  certificate: CaregiverTrainingCertificate | null;
 };
 
 type CaregiverSignupLocale = 'pt-PT' | 'en' | 'es';
@@ -247,7 +257,7 @@ const CAREGIVER_SIGNUP_COPY = {
                     <label>
                       Imagem do certificado
                       <input type="file" [name]="'certificateFile-' + entryId" accept="image/*" (change)="onCertificateFileChange($event)" />
-                      <small class="field-hint">Apenas imagem, até 3 MB.</small>
+                      <small class="field-hint">Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.</small>
                       @if (trainingFieldValue(entryId, 'certificateFileName')) {
                         <small class="field-hint">Ficheiro atual: {{ trainingFieldValue(entryId, 'certificateFileName') }}</small>
                       }
@@ -666,7 +676,8 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   protected trainingFieldValue(entryId: number, key: keyof TrainingEntryData): string {
-    return this.existingTrainingEntries()[entryId]?.[key] ?? '';
+    const value = this.existingTrainingEntries()[entryId]?.[key];
+    return typeof value === 'string' ? value : '';
   }
 
   protected onCertificateFileChange(event: Event): void {
@@ -684,7 +695,7 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     if (file.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
-      this.errorMessage = 'A imagem do certificado deve ter no máximo 3 MB.';
+      this.errorMessage = 'A imagem do certificado deve ter no máximo 5 MB.';
       input.value = '';
     }
   }
@@ -710,12 +721,14 @@ export class BecomeCaregiverComponent implements OnInit {
         }
 
         const trainingItem = item as Record<string, unknown>;
-        const entry = {
+        const entry: TrainingEntryData = {
+          id: this.stringFromRecord(trainingItem, 'id') || this.createLocalId(),
           trainingType: this.stringFromRecord(trainingItem, 'trainingType'),
           courseName: this.stringFromRecord(trainingItem, 'courseName'),
           trainingEntity: this.stringFromRecord(trainingItem, 'trainingEntity'),
           completionDate: this.stringFromRecord(trainingItem, 'completionDate'),
           certificateFileName: this.stringFromRecord(trainingItem, 'certificateFileName'),
+          certificate: this.certificateFromRecord(trainingItem['certificate']),
         };
 
         selections[index] = entry.trainingType;
@@ -739,11 +752,13 @@ export class BecomeCaregiverComponent implements OnInit {
         const value = typeof trainingType === 'string' ? trainingType : '';
         selections[index] = value;
         entries[index] = {
+          id: this.createLocalId(),
           trainingType: value,
           courseName: index === 0 ? this.fieldValue('private.training.courseName') : '',
           trainingEntity: index === 0 ? this.fieldValue('private.training.trainingEntity') : '',
           completionDate: index === 0 ? this.legacyCompletionDateValue() : '',
           certificateFileName: '',
+          certificate: null,
         };
       });
 
@@ -768,6 +783,65 @@ export class BecomeCaregiverComponent implements OnInit {
   private stringFromRecord(record: Record<string, unknown>, key: string): string {
     const value = record[key];
     return typeof value === 'string' ? value : '';
+  }
+
+  private trainingEntryPersistentId(entryId: number): string {
+    const existingId = this.trainingFieldValue(entryId, 'id');
+    if (existingId) {
+      return existingId;
+    }
+
+    const generatedId = this.createLocalId();
+    this.existingTrainingEntries.update((entries) => ({
+      ...entries,
+      [entryId]: {
+        ...entries[entryId],
+        id: generatedId,
+        trainingType: entries[entryId]?.trainingType ?? '',
+        courseName: entries[entryId]?.courseName ?? '',
+        trainingEntity: entries[entryId]?.trainingEntity ?? '',
+        completionDate: entries[entryId]?.completionDate ?? '',
+        certificateFileName: entries[entryId]?.certificateFileName ?? '',
+        certificate: entries[entryId]?.certificate ?? null,
+      },
+    }));
+    return generatedId;
+  }
+
+  private trainingCertificateValue(entryId: number): CaregiverTrainingCertificate | null {
+    return this.existingTrainingEntries()[entryId]?.certificate ?? null;
+  }
+
+  private certificateFromRecord(value: unknown): CaregiverTrainingCertificate | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const certificate = value as Record<string, unknown>;
+    if (
+      typeof certificate['storagePath'] !== 'string' ||
+      typeof certificate['fileName'] !== 'string' ||
+      typeof certificate['contentType'] !== 'string' ||
+      typeof certificate['originalSize'] !== 'number' ||
+      typeof certificate['compressedSize'] !== 'number' ||
+      typeof certificate['uploadedAt'] !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      storagePath: certificate['storagePath'],
+      fileName: certificate['fileName'],
+      contentType: certificate['contentType'],
+      originalSize: certificate['originalSize'],
+      compressedSize: certificate['compressedSize'],
+      uploadedAt: certificate['uploadedAt'],
+      status: 'pending',
+    };
+  }
+
+  private createLocalId(): string {
+    return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
   private applyApprovalLock(caregiverProfile: CaregiverProfileDocument | null): void {
@@ -825,7 +899,7 @@ export class BecomeCaregiverComponent implements OnInit {
         serviceTypes: this.arrayValue(formData, 'serviceTypes'),
       },
       training: {
-        items: this.trainingItemsValue(formData),
+        items: await this.trainingItemsValue(formData),
       },
       availability: {
         weekDays: this.arrayValue(formData, 'weekDays'),
@@ -853,9 +927,9 @@ export class BecomeCaregiverComponent implements OnInit {
     };
   }
 
-  private trainingItemsValue(formData: FormData): CaregiverRegistration['training']['items'] {
-    return this.trainingEntryIds()
-      .map((entryId) => {
+  private async trainingItemsValue(formData: FormData): Promise<CaregiverRegistration['training']['items']> {
+    const items = await Promise.all(
+      this.trainingEntryIds().map(async (entryId) => {
         const trainingType = this.textValue(formData, `trainingType-${entryId}`);
         if (!trainingType) {
           return null;
@@ -866,16 +940,22 @@ export class BecomeCaregiverComponent implements OnInit {
           certificate instanceof File && certificate.name
             ? certificate.name
             : this.trainingFieldValue(entryId, 'certificateFileName');
+        const certificateUpload = await this.certificateUploadValue(formData, entryId);
 
         return {
+          id: this.trainingEntryPersistentId(entryId),
           trainingType,
           courseName: this.textValue(formData, `courseName-${entryId}`),
           trainingEntity: this.textValue(formData, `trainingEntity-${entryId}`),
           completionDate: this.textValue(formData, `completionDate-${entryId}`),
           certificateFileName,
+          certificate: this.trainingCertificateValue(entryId),
+          certificateUpload,
         };
-      })
-      .filter((item): item is CaregiverRegistration['training']['items'][number] => !!item);
+      }),
+    );
+
+    return items.filter((item): item is CaregiverRegistration['training']['items'][number] => !!item);
   }
 
   private getMissingRequiredGroup(data: CaregiverRegistration): string {
@@ -974,7 +1054,7 @@ export class BecomeCaregiverComponent implements OnInit {
       }
 
       if (certificate instanceof File && certificate.name && certificate.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
-        return `A imagem do certificado em ${trainingType} deve ter no máximo 3 MB.`;
+        return `A imagem do certificado em ${trainingType} deve ter no máximo 5 MB.`;
       }
 
       if (
@@ -1084,6 +1164,33 @@ export class BecomeCaregiverComponent implements OnInit {
     };
   }
 
+  private async certificateUploadValue(
+    formData: FormData,
+    entryId: number,
+  ): Promise<CaregiverRegistration['training']['items'][number]['certificateUpload']> {
+    const value = formData.get(`certificateFile-${entryId}`);
+    if (!(value instanceof File) || !value.name) {
+      return null;
+    }
+
+    if (!value.type.startsWith('image/')) {
+      throw new Error('O certificado deve ser enviado como imagem.');
+    }
+
+    if (value.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
+      throw new Error('A imagem do certificado deve ter no máximo 5 MB.');
+    }
+
+    const blob = await this.compressCertificateImage(value);
+    return {
+      name: value.name,
+      contentType: 'image/jpeg',
+      originalSize: value.size,
+      compressedSize: blob.size,
+      blob,
+    };
+  }
+
   private profileValue(path: string): unknown {
     return path.split('.').reduce<unknown>((currentValue, key) => {
       if (!currentValue || typeof currentValue !== 'object') {
@@ -1153,6 +1260,62 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     throw new Error('Não foi possível reduzir a foto para menos de 800 KB em base64. Use uma imagem mais leve.');
+  }
+
+  private async compressCertificateImage(file: File): Promise<Blob> {
+    const originalDataUrl = await this.readFileAsDataUrl(file);
+    const image = await this.loadImage(originalDataUrl);
+    let { width, height } = this.fitImageSize(image.width, image.height, CERTIFICATE_IMAGE_MAX_DIMENSION);
+    let bestBlob: Blob | null = null;
+
+    while (width >= 640 && height >= 640) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Não foi possível otimizar a imagem do certificado.');
+      }
+
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+
+      for (let quality = 0.82; quality >= CERTIFICATE_IMAGE_MIN_QUALITY; quality -= 0.06) {
+        const blob = await this.canvasToJpegBlob(canvas, quality);
+        bestBlob = !bestBlob || blob.size < bestBlob.size ? blob : bestBlob;
+        if (blob.size <= CERTIFICATE_IMAGE_TARGET_BYTES) {
+          return blob;
+        }
+      }
+
+      width = Math.floor(width * 0.86);
+      height = Math.floor(height * 0.86);
+    }
+
+    if (bestBlob) {
+      return bestBlob;
+    }
+
+    throw new Error('Não foi possível otimizar a imagem do certificado.');
+  }
+
+  private canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+
+          reject(new Error('Não foi possível gerar a imagem otimizada do certificado.'));
+        },
+        'image/jpeg',
+        quality,
+      );
+    });
   }
 
   private fitImageSize(width: number, height: number, maxDimension: number): { width: number; height: number } {

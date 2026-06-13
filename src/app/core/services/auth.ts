@@ -9,8 +9,27 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes } from 'firebase/storage';
 
-import { firebaseAuth, firestoreDb } from '../firebase/firebase.config';
+import { firebaseAuth, firebaseStorage, firestoreDb } from '../firebase/firebase.config';
+
+export interface CaregiverTrainingCertificate {
+  storagePath: string;
+  fileName: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  uploadedAt: string;
+  status: 'pending';
+}
+
+export interface CaregiverTrainingCertificateUpload {
+  name: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  blob: Blob;
+}
 
 export interface CaregiverRegistration {
   account: {
@@ -53,11 +72,14 @@ export interface CaregiverRegistration {
   };
   training: {
     items: {
+      id: string;
       trainingType: string;
       courseName: string;
       trainingEntity: string;
       completionDate: string;
       certificateFileName: string;
+      certificate: CaregiverTrainingCertificate | null;
+      certificateUpload: CaregiverTrainingCertificateUpload | null;
     }[];
   };
   availability: {
@@ -309,7 +331,8 @@ export class Auth {
     }
 
     const isNewProfile = !existingProfile;
-    const firstTraining = data.training.items[0] ?? null;
+    const persistedTrainingItems = await this.uploadCaregiverTrainingCertificates(uid, data.training.items);
+    const firstTraining = persistedTrainingItems[0] ?? null;
     await updateProfile(user, { displayName: data.personal.fullName });
 
     await Promise.all([
@@ -355,7 +378,7 @@ export class Auth {
             summary: data.professional.summary,
             experienceYears: data.professional.experienceYears,
             serviceTypes: data.professional.serviceTypes,
-            trainingTypes: data.training.items.map((item) => item.trainingType),
+            trainingTypes: persistedTrainingItems.map((item) => item.trainingType),
             availability: data.availability,
             rates: data.rates,
             skills: data.skills,
@@ -373,7 +396,7 @@ export class Auth {
             address: data.location.private.address,
             postalCode: data.location.postalCode,
             training: {
-              items: data.training.items,
+              items: persistedTrainingItems,
               courseName: firstTraining?.courseName ?? '',
               trainingEntity: firstTraining?.trainingEntity ?? '',
               completionYear: firstTraining?.completionDate
@@ -390,6 +413,44 @@ export class Auth {
     ]);
 
     return uid;
+  }
+
+  private async uploadCaregiverTrainingCertificates(
+    uid: string,
+    items: CaregiverRegistration['training']['items'],
+  ): Promise<Array<Omit<CaregiverRegistration['training']['items'][number], 'certificateUpload'>>> {
+    return Promise.all(
+      items.map(async (item) => {
+        const { certificateUpload, ...persistedItem } = item;
+        if (!certificateUpload) {
+          return persistedItem;
+        }
+
+        const storagePath = `caregivers/${uid}/certificates/${item.id}.jpg`;
+        const storageRef = ref(firebaseStorage, storagePath);
+        const snapshot = await uploadBytes(storageRef, certificateUpload.blob, {
+          contentType: certificateUpload.contentType,
+          customMetadata: {
+            ownerUid: uid,
+            trainingType: item.trainingType,
+          },
+        });
+
+        return {
+          ...persistedItem,
+          certificateFileName: certificateUpload.name,
+          certificate: {
+            storagePath: snapshot.metadata.fullPath,
+            fileName: certificateUpload.name,
+            contentType: certificateUpload.contentType,
+            originalSize: certificateUpload.originalSize,
+            compressedSize: certificateUpload.compressedSize,
+            uploadedAt: new Date().toISOString(),
+            status: 'pending' as const,
+          },
+        };
+      }),
+    );
   }
 
   private toApprovalStatus(value: unknown): CaregiverApprovalStatus {

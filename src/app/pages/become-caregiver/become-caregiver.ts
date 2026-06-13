@@ -7,6 +7,15 @@ const PROFILE_PHOTO_MAX_FILE_BYTES = 1024 * 1024;
 const PROFILE_PHOTO_MAX_FIRESTORE_BYTES = 800 * 1024;
 const PROFILE_PHOTO_MAX_DIMENSION = 1200;
 const PROFILE_PHOTO_MIN_QUALITY = 0.45;
+const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 3 * 1024 * 1024;
+
+type TrainingEntryData = {
+  trainingType: string;
+  courseName: string;
+  trainingEntity: string;
+  completionDate: string;
+  certificateFileName: string;
+};
 
 type CaregiverSignupLocale = 'pt-PT' | 'en' | 'es';
 
@@ -201,18 +210,58 @@ const CAREGIVER_SIGNUP_COPY = {
               <p>Opcional, mas recomendado para perfis profissionais.</p>
             </div>
           </div>
-          <fieldset>
-            <legend>Formação profissional</legend>
-            <div class="checkbox-grid compact">
-              @for (course of trainingTypes; track course) {
-                <label><input type="checkbox" name="trainingTypes" [value]="course" [checked]="isChecked('publicProfile.trainingTypes', course)" /> {{ course }}</label>
-              }
+
+          <div class="training-list">
+            @for (entryId of trainingEntryIds(); track entryId) {
+              <div class="training-entry">
+                @if (trainingEntryIds().length > 1) {
+                  <div class="training-entry-header">
+                    <button type="button" class="ghost-button compact-button" (click)="removeTrainingEntry(entryId)">Remover</button>
+                  </div>
+                }
+
+                <label>
+                  Formação profissional
+                  <select [name]="'trainingType-' + entryId" [value]="selectedTrainingType(entryId)" (change)="onTrainingTypeChange(entryId, $event)">
+                    <option value="">Selecionar formação</option>
+                    @for (course of availableTrainingTypes(entryId); track course) {
+                      <option [value]="course">{{ course }}</option>
+                    }
+                  </select>
+                </label>
+
+                @if (selectedTrainingType(entryId)) {
+                  <div class="form-grid two-columns training-details">
+                    <label>
+                      Nome do curso
+                      <input [name]="'courseName-' + entryId" placeholder="Ex.: Curso de cuidador sénior" [value]="trainingFieldValue(entryId, 'courseName')" />
+                    </label>
+                    <label>
+                      Entidade formadora
+                      <input [name]="'trainingEntity-' + entryId" placeholder="Nome da instituição" [value]="trainingFieldValue(entryId, 'trainingEntity')" />
+                    </label>
+                    <label>
+                      Data de conclusão
+                      <input type="date" [name]="'completionDate-' + entryId" [value]="trainingFieldValue(entryId, 'completionDate')" />
+                    </label>
+                    <label>
+                      Imagem do certificado
+                      <input type="file" [name]="'certificateFile-' + entryId" accept="image/*" (change)="onCertificateFileChange($event)" />
+                      <small class="field-hint">Apenas imagem, até 3 MB.</small>
+                      @if (trainingFieldValue(entryId, 'certificateFileName')) {
+                        <small class="field-hint">Ficheiro atual: {{ trainingFieldValue(entryId, 'certificateFileName') }}</small>
+                      }
+                    </label>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="training-actions">
+              <button type="button" class="secondary-button" (click)="addTrainingEntry()" [disabled]="!canAddTrainingEntry()">
+                Informar outra formação profissional
+              </button>
             </div>
-          </fieldset>
-          <div class="form-grid three-columns training-details">
-            <label>Nome do curso<input name="courseName" placeholder="Ex.: Auxiliar de geriatria" [value]="fieldValue('private.training.courseName')" /></label>
-            <label>Entidade formadora<input name="trainingEntity" placeholder="Nome da instituição" [value]="fieldValue('private.training.trainingEntity')" /></label>
-            <label>Ano de conclusão<input type="number" name="completionYear" min="1950" max="2030" placeholder="2024" [value]="fieldValue('private.training.completionYear')" /></label>
           </div>
         </section>
 
@@ -367,6 +416,7 @@ export class BecomeCaregiverComponent implements OnInit {
     { id: 'dados-pessoais', label: 'Dados pessoais' },
     { id: 'localizacao', label: 'Localização' },
     { id: 'perfil-profissional', label: 'Perfil' },
+    { id: 'formacao', label: 'Formação' },
     { id: 'disponibilidade', label: 'Disponibilidade' },
     { id: 'valores', label: 'Valores' },
     { id: 'competencias', label: 'Competências' },
@@ -393,6 +443,11 @@ export class BecomeCaregiverComponent implements OnInit {
     'Enfermagem',
     'Primeiros socorros',
   ];
+
+  protected readonly trainingEntryIds = signal<number[]>([0]);
+  protected readonly trainingSelections = signal<Record<number, string>>({});
+  protected readonly existingTrainingEntries = signal<Record<number, TrainingEntryData>>({});
+  private nextTrainingEntryId = 1;
 
   protected readonly weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
   protected readonly periods = ['Manhã', 'Tarde', 'Noite'];
@@ -424,6 +479,7 @@ export class BecomeCaregiverComponent implements OnInit {
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
     this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
+    this.loadTrainingEntries(caregiverProfile);
     this.applyApprovalLock(caregiverProfile);
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
   }
@@ -553,6 +609,167 @@ export class BecomeCaregiverComponent implements OnInit {
     }
   }
 
+  protected selectedTrainingType(entryId: number): string {
+    return this.trainingSelections()[entryId] ?? '';
+  }
+
+  protected availableTrainingTypes(entryId: number): string[] {
+    const selected = this.trainingSelections();
+    const currentValue = selected[entryId];
+    const selectedByOtherEntries = new Set(
+      Object.entries(selected)
+        .filter(([id, value]) => Number(id) !== entryId && !!value)
+        .map(([, value]) => value),
+    );
+
+    return this.trainingTypes.filter((course) => course === currentValue || !selectedByOtherEntries.has(course));
+  }
+
+  protected canAddTrainingEntry(): boolean {
+    const selectedCount = Object.values(this.trainingSelections()).filter(Boolean).length;
+    return this.trainingEntryIds().length < this.trainingTypes.length && selectedCount < this.trainingTypes.length;
+  }
+
+  protected addTrainingEntry(): void {
+    if (!this.canAddTrainingEntry()) {
+      return;
+    }
+
+    const entryId = this.nextTrainingEntryId;
+    this.nextTrainingEntryId += 1;
+    this.trainingEntryIds.update((entryIds) => [...entryIds, entryId]);
+  }
+
+  protected removeTrainingEntry(entryId: number): void {
+    this.trainingEntryIds.update((entryIds) => {
+      const nextEntryIds = entryIds.filter((id) => id !== entryId);
+      return nextEntryIds.length ? nextEntryIds : [0];
+    });
+    this.trainingSelections.update((selected) => {
+      const nextSelected = { ...selected };
+      delete nextSelected[entryId];
+      return nextSelected;
+    });
+    this.existingTrainingEntries.update((entries) => {
+      const nextEntries = { ...entries };
+      delete nextEntries[entryId];
+      return nextEntries;
+    });
+  }
+
+  protected onTrainingTypeChange(entryId: number, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.trainingSelections.update((selected) => ({
+      ...selected,
+      [entryId]: select.value,
+    }));
+  }
+
+  protected trainingFieldValue(entryId: number, key: keyof TrainingEntryData): string {
+    return this.existingTrainingEntries()[entryId]?.[key] ?? '';
+  }
+
+  protected onCertificateFileChange(event: Event): void {
+    this.errorMessage = '';
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage = 'O certificado deve ser enviado como imagem.';
+      input.value = '';
+      return;
+    }
+
+    if (file.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
+      this.errorMessage = 'A imagem do certificado deve ter no máximo 3 MB.';
+      input.value = '';
+    }
+  }
+
+  private loadTrainingEntries(caregiverProfile: CaregiverProfileDocument | null): void {
+    if (!caregiverProfile) {
+      this.trainingEntryIds.set([0]);
+      this.trainingSelections.set({});
+      this.existingTrainingEntries.set({});
+      this.nextTrainingEntryId = 1;
+      return;
+    }
+
+    const items = this.profileValue('private.training.items');
+    if (Array.isArray(items) && items.length) {
+      const entryIds = items.map((_, index) => index);
+      const selections: Record<number, string> = {};
+      const entries: Record<number, TrainingEntryData> = {};
+
+      items.forEach((item, index) => {
+        if (!item || typeof item !== 'object') {
+          return;
+        }
+
+        const trainingItem = item as Record<string, unknown>;
+        const entry = {
+          trainingType: this.stringFromRecord(trainingItem, 'trainingType'),
+          courseName: this.stringFromRecord(trainingItem, 'courseName'),
+          trainingEntity: this.stringFromRecord(trainingItem, 'trainingEntity'),
+          completionDate: this.stringFromRecord(trainingItem, 'completionDate'),
+          certificateFileName: this.stringFromRecord(trainingItem, 'certificateFileName'),
+        };
+
+        selections[index] = entry.trainingType;
+        entries[index] = entry;
+      });
+
+      this.trainingEntryIds.set(entryIds);
+      this.trainingSelections.set(selections);
+      this.existingTrainingEntries.set(entries);
+      this.nextTrainingEntryId = entryIds.length;
+      return;
+    }
+
+    const legacyTrainingTypes = this.profileValue('publicProfile.trainingTypes');
+    if (Array.isArray(legacyTrainingTypes) && legacyTrainingTypes.length) {
+      const entryIds = legacyTrainingTypes.map((_, index) => index);
+      const selections: Record<number, string> = {};
+      const entries: Record<number, TrainingEntryData> = {};
+
+      legacyTrainingTypes.forEach((trainingType, index) => {
+        const value = typeof trainingType === 'string' ? trainingType : '';
+        selections[index] = value;
+        entries[index] = {
+          trainingType: value,
+          courseName: index === 0 ? this.fieldValue('private.training.courseName') : '',
+          trainingEntity: index === 0 ? this.fieldValue('private.training.trainingEntity') : '',
+          completionDate: index === 0 ? this.legacyCompletionDateValue() : '',
+          certificateFileName: '',
+        };
+      });
+
+      this.trainingEntryIds.set(entryIds);
+      this.trainingSelections.set(selections);
+      this.existingTrainingEntries.set(entries);
+      this.nextTrainingEntryId = entryIds.length;
+      return;
+    }
+
+    this.trainingEntryIds.set([0]);
+    this.trainingSelections.set({});
+    this.existingTrainingEntries.set({});
+    this.nextTrainingEntryId = 1;
+  }
+
+  private legacyCompletionDateValue(): string {
+    const completionYear = this.fieldValue('private.training.completionYear');
+    return completionYear ? `${completionYear}-01-01` : '';
+  }
+
+  private stringFromRecord(record: Record<string, unknown>, key: string): string {
+    const value = record[key];
+    return typeof value === 'string' ? value : '';
+  }
+
   private applyApprovalLock(caregiverProfile: CaregiverProfileDocument | null): void {
     const approvalSummary = this.authService.getCaregiverApprovalSummary(caregiverProfile);
 
@@ -608,10 +825,7 @@ export class BecomeCaregiverComponent implements OnInit {
         serviceTypes: this.arrayValue(formData, 'serviceTypes'),
       },
       training: {
-        trainingTypes: this.arrayValue(formData, 'trainingTypes'),
-        courseName: this.textValue(formData, 'courseName'),
-        trainingEntity: this.textValue(formData, 'trainingEntity'),
-        completionYear: this.numberValue(formData, 'completionYear'),
+        items: this.trainingItemsValue(formData),
       },
       availability: {
         weekDays: this.arrayValue(formData, 'weekDays'),
@@ -637,6 +851,31 @@ export class BecomeCaregiverComponent implements OnInit {
         relation: this.textValue(formData, 'referenceRelation'),
       },
     };
+  }
+
+  private trainingItemsValue(formData: FormData): CaregiverRegistration['training']['items'] {
+    return this.trainingEntryIds()
+      .map((entryId) => {
+        const trainingType = this.textValue(formData, `trainingType-${entryId}`);
+        if (!trainingType) {
+          return null;
+        }
+
+        const certificate = formData.get(`certificateFile-${entryId}`);
+        const certificateFileName =
+          certificate instanceof File && certificate.name
+            ? certificate.name
+            : this.trainingFieldValue(entryId, 'certificateFileName');
+
+        return {
+          trainingType,
+          courseName: this.textValue(formData, `courseName-${entryId}`),
+          trainingEntity: this.textValue(formData, `trainingEntity-${entryId}`),
+          completionDate: this.textValue(formData, `completionDate-${entryId}`),
+          certificateFileName,
+        };
+      })
+      .filter((item): item is CaregiverRegistration['training']['items'][number] => !!item);
   }
 
   private getMissingRequiredGroup(data: CaregiverRegistration): string {
@@ -704,6 +943,45 @@ export class BecomeCaregiverComponent implements OnInit {
 
       if (field.type === 'birthDate' && !this.isAdult(value)) {
         return 'É necessário ter pelo menos 18 anos para se registar como cuidador.';
+      }
+    }
+
+    return this.getTrainingValidationMessage(formData);
+  }
+
+  private getTrainingValidationMessage(formData: FormData): string {
+    for (const entryId of this.trainingEntryIds()) {
+      const trainingType = this.textValue(formData, `trainingType-${entryId}`);
+      if (!trainingType) {
+        continue;
+      }
+
+      const fields = [
+        { key: `courseName-${entryId}`, label: `Nome do curso em ${trainingType}` },
+        { key: `trainingEntity-${entryId}`, label: `Entidade formadora em ${trainingType}` },
+        { key: `completionDate-${entryId}`, label: `Data de conclusão em ${trainingType}` },
+      ];
+
+      for (const field of fields) {
+        if (!this.textValue(formData, field.key)) {
+          return `${field.label} é obrigatório.`;
+        }
+      }
+
+      const certificate = formData.get(`certificateFile-${entryId}`);
+      if (certificate instanceof File && certificate.name && !certificate.type.startsWith('image/')) {
+        return `A imagem do certificado em ${trainingType} deve ser um ficheiro de imagem.`;
+      }
+
+      if (certificate instanceof File && certificate.name && certificate.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
+        return `A imagem do certificado em ${trainingType} deve ter no máximo 3 MB.`;
+      }
+
+      if (
+        (!(certificate instanceof File) || !certificate.name) &&
+        !this.trainingFieldValue(entryId, 'certificateFileName')
+      ) {
+        return `A imagem do certificado em ${trainingType} é obrigatória.`;
       }
     }
 

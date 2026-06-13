@@ -265,6 +265,64 @@
   margin-top: 18px;
 }
 
+.training-list {
+  display: grid;
+  gap: 16px;
+}
+
+.training-entry {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(203, 222, 197, 0.9);
+  border-radius: 18px;
+  background: #fbfdf9;
+}
+
+.training-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.training-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.secondary-button,
+.ghost-button {
+  min-height: 42px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.secondary-button {
+  border: 1px solid var(--color-primary);
+  background: #ffffff;
+  color: var(--color-primary-strong);
+  padding: 0 18px;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ghost-button {
+  border: 1px solid rgba(23, 120, 67, 0.2);
+  background: transparent;
+  color: var(--color-primary-strong);
+  padding: 0 14px;
+}
+
+.compact-button {
+  min-height: 36px;
+  font-size: 0.84rem;
+}
+
 label {
   display: grid;
   gap: 8px;
@@ -285,6 +343,15 @@ label small {
   color: #7a5b2f;
   font-size: 0.74rem;
   font-weight: 900;
+}
+
+label .field-hint {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
 }
 
 input,

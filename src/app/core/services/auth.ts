@@ -52,10 +52,13 @@ export interface CaregiverRegistration {
     serviceTypes: string[];
   };
   training: {
-    trainingTypes: string[];
-    courseName: string;
-    trainingEntity: string;
-    completionYear: number | null;
+    items: {
+      trainingType: string;
+      courseName: string;
+      trainingEntity: string;
+      completionDate: string;
+      certificateFileName: string;
+    }[];
   };
   availability: {
     weekDays: string[];
@@ -306,6 +309,7 @@ export class Auth {
     }
 
     const isNewProfile = !existingProfile;
+    const firstTraining = data.training.items[0] ?? null;
     await updateProfile(user, { displayName: data.personal.fullName });
 
     await Promise.all([
@@ -351,7 +355,7 @@ export class Auth {
             summary: data.professional.summary,
             experienceYears: data.professional.experienceYears,
             serviceTypes: data.professional.serviceTypes,
-            trainingTypes: data.training.trainingTypes,
+            trainingTypes: data.training.items.map((item) => item.trainingType),
             availability: data.availability,
             rates: data.rates,
             skills: data.skills,
@@ -369,9 +373,12 @@ export class Auth {
             address: data.location.private.address,
             postalCode: data.location.postalCode,
             training: {
-              courseName: data.training.courseName,
-              trainingEntity: data.training.trainingEntity,
-              completionYear: data.training.completionYear,
+              items: data.training.items,
+              courseName: firstTraining?.courseName ?? '',
+              trainingEntity: firstTraining?.trainingEntity ?? '',
+              completionYear: firstTraining?.completionDate
+                ? Number(firstTraining.completionDate.slice(0, 4))
+                : null,
             },
             reference: data.reference,
           },

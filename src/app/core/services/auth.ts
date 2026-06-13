@@ -88,6 +88,7 @@ export interface CaregiverRegistration {
     drivingLicense: boolean;
     ownVehicle: boolean;
     acceptsTravel: boolean;
+    travelRadius: string;
   };
   reference: {
     name: string;
@@ -115,7 +116,6 @@ export interface UserPersonalData {
   location: {
     district: string;
     county: string;
-    travelRadius: string;
   };
 }
 
@@ -139,7 +139,6 @@ export interface UserAccount {
   location?: {
     district?: string;
     county?: string;
-    travelRadius?: string;
   };
   role?: 'caregiver' | 'family';
   roles?: {
@@ -482,7 +481,7 @@ export class Auth {
               nationality: account.nationality,
               district: account.location?.district,
               county: account.location?.county,
-              travelRadius: account.location?.travelRadius,
+              travelRadius: data.mobility.travelRadius,
               summary: data.professional.summary,
               experienceYears: data.professional.experienceYears,
               serviceTypes: data.professional.serviceTypes,
@@ -592,7 +591,6 @@ export class Auth {
       { value: account?.private?.postalCode, label: 'Código Postal' },
       { value: account?.location?.district, label: 'Distrito' },
       { value: account?.location?.county, label: 'Concelho' },
-      { value: account?.location?.travelRadius, label: 'Raio máximo de deslocação' },
     ];
 
     return fields

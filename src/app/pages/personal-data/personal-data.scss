@@ -1,3 +1,30 @@
+.personal-data-hero {
+  grid-template-columns: minmax(0, 760px);
+  min-height: auto;
+  padding-top: 28px;
+  padding-bottom: 22px;
+
+  h1 {
+    max-width: 760px;
+  }
+
+  .lead {
+    max-width: 700px;
+  }
+}
+
+.required-note {
+  width: min(100%, 720px);
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(36, 109, 185, 0.18);
+  border-radius: 14px;
+  background: #edf6ff;
+  color: #2b5d8b;
+  font-weight: 350;
+  line-height: 1.5;
+}
+
 .personal-data-page {
   padding-top: 0;
 }
@@ -134,6 +161,11 @@ select:focus {
 }
 
 @media (max-width: 720px) {
+  .personal-data-hero {
+    padding-top: 18px;
+    padding-bottom: 16px;
+  }
+
   .two-columns {
     grid-template-columns: 1fr;
   }

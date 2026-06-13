@@ -273,6 +273,21 @@ const CAREGIVER_SIGNUP_COPY = {
               <label><input type="checkbox" name="acceptsTravel" [checked]="isChecked('publicProfile.mobility.acceptsTravel')" /> Aceita deslocações</label>
             </div>
           </fieldset>
+          <div class="form-grid two-columns mobility-radius">
+            <label>Raio máximo de deslocação <strong>*</strong>
+              <select name="travelRadius" required [value]="fieldValue('publicProfile.travelRadius')">
+                <option value="">Selecionar</option>
+                <option>Até 5 km</option>
+                <option>Até 10 km</option>
+                <option>Até 15 km</option>
+                <option>Até 20 km</option>
+                <option>Até 25 km</option>
+                <option>Até 30 km</option>
+                <option>Até 40 km</option>
+                <option>Até 50 km</option>
+              </select>
+            </label>
+          </div>
         </section>
 
         <section id="referencias" class="signup-section">
@@ -357,6 +372,8 @@ export class BecomeCaregiverComponent implements OnInit {
     'Auxiliar de geriatria',
     'Enfermagem',
     'Primeiros socorros',
+    'Fisioterapeuta',
+    'Massagista',
   ];
 
   protected readonly trainingEntryIds = signal<number[]>([0]);
@@ -737,6 +754,7 @@ export class BecomeCaregiverComponent implements OnInit {
         drivingLicense: this.booleanValue(formData, 'drivingLicense'),
         ownVehicle: this.booleanValue(formData, 'ownVehicle'),
         acceptsTravel: this.booleanValue(formData, 'acceptsTravel'),
+        travelRadius: this.textValue(formData, 'travelRadius'),
       },
       reference: {
         name: this.textValue(formData, 'referenceName'),
@@ -799,6 +817,7 @@ export class BecomeCaregiverComponent implements OnInit {
       { key: 'weekDays', label: 'Dias da semana', type: 'array' },
       { key: 'periods', label: 'Períodos', type: 'array' },
       { key: 'hourlyRate', label: 'Valor por hora' },
+      { key: 'travelRadius', label: 'Raio máximo de deslocação' },
     ];
 
     for (const field of requiredFields) {

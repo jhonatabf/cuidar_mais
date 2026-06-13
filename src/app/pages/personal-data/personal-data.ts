@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
@@ -7,11 +7,16 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
   selector: 'app-personal-data',
   imports: [RouterLink],
   template: `
-    <section class="page hero hero-compact">
+    <section class="page hero hero-compact personal-data-hero" [class.required-step]="isRequiredStep()">
       <div>
-        <p class="eyebrow">Meus dados pessoais</p>
-        <h1>Dados da sua conta, identidade e localização.</h1>
-        <p class="lead">Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.</p>
+        <p class="eyebrow">{{ isRequiredStep() ? 'Conclusão obrigatória' : 'Meus dados pessoais' }}</p>
+        <h1>{{ pageTitle() }}</h1>
+        <p class="lead">{{ pageLead() }}</p>
+        @if (isRequiredStep()) {
+          <p class="required-note">
+            Preencha os campos obrigatórios abaixo. Depois de guardar, continuará automaticamente para a próxima etapa.
+          </p>
+        }
       </div>
     </section>
 
@@ -82,19 +87,6 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
             <label>Distrito <strong>*</strong><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
             <label>Concelho <strong>*</strong><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
             <label>Código Postal <strong>*</strong><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
-            <label>Raio máximo de deslocação <strong>*</strong>
-              <select name="travelRadius" required [value]="locationValue('travelRadius')">
-                <option value="">Selecionar</option>
-                <option>Até 5 km</option>
-                <option>Até 10 km</option>
-                <option>Até 15 km</option>
-                <option>Até 20 km</option>
-                <option>Até 25 km</option>
-                <option>Até 30 km</option>
-                <option>Até 40 km</option>
-                <option>Até 50 km</option>
-              </select>
-            </label>
             <label class="span-2">Morada completa <small>privada</small><input name="address" placeholder="Rua, número, localidade" [value]="privateValue('address')" /></label>
           </div>
         </section>
@@ -132,6 +124,17 @@ export class PersonalDataComponent implements OnInit {
   protected readonly successMessage = signal('');
   protected readonly isSubmitting = signal(false);
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
+  protected readonly isRequiredStep = computed(() => !!this.redirectTo());
+  protected readonly pageTitle = computed(() =>
+    this.isRequiredStep()
+      ? 'Conclua os seus dados pessoais para continuar.'
+      : 'Dados da sua conta, identidade e localização.',
+  );
+  protected readonly pageLead = computed(() =>
+    this.isRequiredStep()
+      ? 'Esta etapa é necessária antes de criar ou editar um perfil na Cuidar+.'
+      : 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
+  );
 
   async ngOnInit(): Promise<void> {
     const user = await this.auth.getCurrentUser();
@@ -182,7 +185,7 @@ export class PersonalDataComponent implements OnInit {
     return this.account()?.private?.[key] ?? '';
   }
 
-  protected locationValue(key: 'district' | 'county' | 'travelRadius'): string {
+  protected locationValue(key: 'district' | 'county'): string {
     return this.account()?.location?.[key] ?? '';
   }
 
@@ -206,7 +209,6 @@ export class PersonalDataComponent implements OnInit {
       location: {
         district: this.textValue(formData, 'district'),
         county: this.textValue(formData, 'county'),
-        travelRadius: this.textValue(formData, 'travelRadius'),
       },
     };
   }
@@ -226,7 +228,6 @@ export class PersonalDataComponent implements OnInit {
       { key: 'district', label: 'Distrito' },
       { key: 'county', label: 'Concelho' },
       { key: 'postalCode', label: 'Código Postal' },
-      { key: 'travelRadius', label: 'Raio máximo de deslocação' },
     ];
 
     for (const field of requiredFields) {

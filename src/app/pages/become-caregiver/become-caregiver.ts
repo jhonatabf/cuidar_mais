@@ -4,14 +4,15 @@ import { RouterLink } from '@angular/router';
 import {
   Auth,
   CaregiverProfileDocument,
+  CaregiverProfilePhoto,
   CaregiverRegistration,
   CaregiverTrainingCertificate,
 } from '../../core/services/auth';
 
-const PROFILE_PHOTO_MAX_FILE_BYTES = 1024 * 1024;
-const PROFILE_PHOTO_MAX_FIRESTORE_BYTES = 800 * 1024;
-const PROFILE_PHOTO_MAX_DIMENSION = 1200;
-const PROFILE_PHOTO_MIN_QUALITY = 0.45;
+const PROFILE_PHOTO_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const PROFILE_PHOTO_TARGET_BYTES = 300 * 1024;
+const PROFILE_PHOTO_MAX_DIMENSION = 800;
+const PROFILE_PHOTO_MIN_QUALITY = 0.58;
 const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const CERTIFICATE_IMAGE_TARGET_BYTES = 900 * 1024;
 const CERTIFICATE_IMAGE_MAX_DIMENSION = 1600;
@@ -106,6 +107,7 @@ const CAREGIVER_SIGNUP_COPY = {
                   <span class="profile-photo-avatar" aria-hidden="true">{{ profilePhotoInitials() }}</span>
                 }
               </span>
+              <small class="field-hint">Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.</small>
             </label>
           </div>
 
@@ -488,7 +490,7 @@ export class BecomeCaregiverComponent implements OnInit {
     const caregiverProfile = await this.authService.getCaregiverProfile(user.uid);
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
-    this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
+    this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.downloadUrl'));
     this.loadTrainingEntries(caregiverProfile);
     this.applyApprovalLock(caregiverProfile);
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
@@ -595,7 +597,7 @@ export class BecomeCaregiverComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) {
-      this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.base64'));
+      this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.downloadUrl'));
       return;
     }
 
@@ -606,7 +608,7 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     if (file.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
-      this.errorMessage = 'A foto de perfil deve ter no máximo 1 MB.';
+      this.errorMessage = 'A foto de perfil deve ter no máximo 5 MB.';
       input.value = '';
       return;
     }
@@ -862,7 +864,9 @@ export class BecomeCaregiverComponent implements OnInit {
 
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
     const profilePhoto = await this.profilePhotoValue(formData, 'profilePhoto');
-    const profilePhotoName = profilePhoto?.name ?? this.fieldValue('publicProfile.profilePhotoName');
+    const profilePhotoUpload = await this.profilePhotoUploadValue(formData, 'profilePhoto');
+    const profilePhotoName =
+      profilePhotoUpload?.name ?? profilePhoto?.fileName ?? this.fieldValue('publicProfile.profilePhotoName');
 
     return {
       account: {
@@ -878,6 +882,7 @@ export class BecomeCaregiverComponent implements OnInit {
         phone: this.textValue(formData, 'phone'),
         profilePhotoName,
         profilePhoto,
+        profilePhotoUpload,
         private: {
           nif: this.textValue(formData, 'nif'),
           documentType: this.textValue(formData, 'documentType'),
@@ -1140,27 +1145,33 @@ export class BecomeCaregiverComponent implements OnInit {
       return this.existingProfilePhoto();
     }
 
+    return null;
+  }
+
+  private async profilePhotoUploadValue(
+    formData: FormData,
+    key: string,
+  ): Promise<CaregiverRegistration['personal']['profilePhotoUpload']> {
+    const value = formData.get(key);
+    if (!(value instanceof File) || !value.name) {
+      return null;
+    }
+
     if (!value.type.startsWith('image/')) {
       throw new Error('A foto de perfil deve ser um ficheiro de imagem.');
     }
 
     if (value.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
-      throw new Error('A foto de perfil deve ter no máximo 1 MB.');
+      throw new Error('A foto de perfil deve ter no máximo 5 MB.');
     }
 
-    const base64 = await this.compressImageAsDataUrl(value);
-    const base64Bytes = new TextEncoder().encode(base64).length;
-    if (base64Bytes > PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
-      throw new Error(
-        'Não foi possível reduzir a foto para menos de 800 KB em base64. Use uma imagem mais leve.',
-      );
-    }
-
+    const blob = await this.compressProfilePhotoImage(value);
     return {
       name: value.name,
-      type: 'image/jpeg',
-      size: base64Bytes,
-      base64,
+      contentType: 'image/jpeg',
+      originalSize: value.size,
+      compressedSize: blob.size,
+      blob,
     };
   }
 
@@ -1201,7 +1212,7 @@ export class BecomeCaregiverComponent implements OnInit {
     }, this.existingCaregiverProfile());
   }
 
-  private existingProfilePhoto(): CaregiverRegistration['personal']['profilePhoto'] {
+  private existingProfilePhoto(): CaregiverProfilePhoto | null {
     const value = this.profileValue('publicProfile.profilePhoto');
     if (!value || typeof value !== 'object') {
       return null;
@@ -1209,32 +1220,53 @@ export class BecomeCaregiverComponent implements OnInit {
 
     const profilePhoto = value as Record<string, unknown>;
     if (
-      typeof profilePhoto['name'] !== 'string' ||
-      typeof profilePhoto['type'] !== 'string' ||
-      typeof profilePhoto['size'] !== 'number' ||
-      typeof profilePhoto['base64'] !== 'string'
+      typeof profilePhoto['storagePath'] !== 'string' ||
+      typeof profilePhoto['downloadUrl'] !== 'string' ||
+      typeof profilePhoto['fileName'] !== 'string' ||
+      typeof profilePhoto['contentType'] !== 'string' ||
+      typeof profilePhoto['originalSize'] !== 'number' ||
+      typeof profilePhoto['compressedSize'] !== 'number' ||
+      typeof profilePhoto['uploadedAt'] !== 'string'
     ) {
       return null;
     }
 
     return {
-      name: profilePhoto['name'],
-      type: profilePhoto['type'],
-      size: profilePhoto['size'],
-      base64: profilePhoto['base64'],
+      storagePath: profilePhoto['storagePath'],
+      downloadUrl: profilePhoto['downloadUrl'],
+      fileName: profilePhoto['fileName'],
+      contentType: profilePhoto['contentType'],
+      originalSize: profilePhoto['originalSize'],
+      compressedSize: profilePhoto['compressedSize'],
+      uploadedAt: profilePhoto['uploadedAt'],
     };
   }
 
-  private async compressImageAsDataUrl(file: File): Promise<string> {
+  private async compressProfilePhotoImage(file: File): Promise<Blob> {
     const originalDataUrl = await this.readFileAsDataUrl(file);
-    if (new TextEncoder().encode(originalDataUrl).length <= PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
-      return originalDataUrl;
-    }
-
     const image = await this.loadImage(originalDataUrl);
-    let { width, height } = this.fitImageSize(image.width, image.height, PROFILE_PHOTO_MAX_DIMENSION);
+    return this.compressImageElementToJpegBlob(
+      image,
+      PROFILE_PHOTO_MAX_DIMENSION,
+      PROFILE_PHOTO_TARGET_BYTES,
+      PROFILE_PHOTO_MIN_QUALITY,
+      320,
+      'Não foi possível otimizar a foto de perfil.',
+    );
+  }
 
-    while (width >= 320 && height >= 320) {
+  private async compressImageElementToJpegBlob(
+    image: HTMLImageElement,
+    maxDimension: number,
+    targetBytes: number,
+    minQuality: number,
+    minDimension: number,
+    errorMessage: string,
+  ): Promise<Blob> {
+    let { width, height } = this.fitImageSize(image.width, image.height, maxDimension);
+    let bestBlob: Blob | null = null;
+
+    while (width >= minDimension && height >= minDimension) {
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
@@ -1248,10 +1280,11 @@ export class BecomeCaregiverComponent implements OnInit {
       context.fillRect(0, 0, width, height);
       context.drawImage(image, 0, 0, width, height);
 
-      for (let quality = 0.82; quality >= PROFILE_PHOTO_MIN_QUALITY; quality -= 0.08) {
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        if (new TextEncoder().encode(dataUrl).length <= PROFILE_PHOTO_MAX_FIRESTORE_BYTES) {
-          return dataUrl;
+      for (let quality = 0.82; quality >= minQuality; quality -= 0.08) {
+        const blob = await this.canvasToJpegBlob(canvas, quality);
+        bestBlob = !bestBlob || blob.size < bestBlob.size ? blob : bestBlob;
+        if (blob.size <= targetBytes) {
+          return blob;
         }
       }
 
@@ -1259,7 +1292,11 @@ export class BecomeCaregiverComponent implements OnInit {
       height = Math.floor(height * 0.82);
     }
 
-    throw new Error('Não foi possível reduzir a foto para menos de 800 KB em base64. Use uma imagem mais leve.');
+    if (bestBlob) {
+      return bestBlob;
+    }
+
+    throw new Error(errorMessage);
   }
 
   private async compressCertificateImage(file: File): Promise<Blob> {

@@ -131,7 +131,11 @@ export class App implements OnInit, OnDestroy {
       return '';
     }
 
-    const base64 = (profilePhoto as Record<string, unknown>)['base64'];
-    return typeof base64 === 'string' ? base64 : '';
+    const downloadUrl = (profilePhoto as Record<string, unknown>)['downloadUrl'];
+    if (typeof downloadUrl === 'string') {
+      return downloadUrl;
+    }
+
+    return '';
   }
 }

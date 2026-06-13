@@ -9,7 +9,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { firebaseAuth, firebaseStorage, firestoreDb } from '../firebase/firebase.config';
 
@@ -31,6 +31,24 @@ export interface CaregiverTrainingCertificateUpload {
   blob: Blob;
 }
 
+export interface CaregiverProfilePhoto {
+  storagePath: string;
+  downloadUrl: string;
+  fileName: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  uploadedAt: string;
+}
+
+export interface CaregiverProfilePhotoUpload {
+  name: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  blob: Blob;
+}
+
 export interface CaregiverRegistration {
   account: {
     email: string;
@@ -44,12 +62,8 @@ export interface CaregiverRegistration {
     nationality: string;
     phone: string;
     profilePhotoName: string;
-    profilePhoto: {
-      name: string;
-      type: string;
-      size: number;
-      base64: string;
-    } | null;
+    profilePhoto: CaregiverProfilePhoto | null;
+    profilePhotoUpload: CaregiverProfilePhotoUpload | null;
     private: {
       nif: string;
       documentType: string;
@@ -332,8 +346,16 @@ export class Auth {
 
     const isNewProfile = !existingProfile;
     const persistedTrainingItems = await this.uploadCaregiverTrainingCertificates(uid, data.training.items);
+    const persistedProfilePhoto = await this.uploadCaregiverProfilePhoto(
+      uid,
+      data.personal.profilePhoto,
+      data.personal.profilePhotoUpload,
+    );
     const firstTraining = persistedTrainingItems[0] ?? null;
-    await updateProfile(user, { displayName: data.personal.fullName });
+    await updateProfile(user, {
+      displayName: data.personal.fullName,
+      photoURL: persistedProfilePhoto?.downloadUrl ?? user.photoURL,
+    });
 
     await Promise.all([
       setDoc(
@@ -384,8 +406,8 @@ export class Auth {
             skills: data.skills,
             languages: data.languages,
             mobility: data.mobility,
-            profilePhotoName: data.personal.profilePhotoName,
-            profilePhoto: data.personal.profilePhoto,
+            profilePhotoName: persistedProfilePhoto?.fileName ?? data.personal.profilePhotoName,
+            profilePhoto: persistedProfilePhoto,
           },
           private: {
             birthDate: data.personal.birthDate,
@@ -413,6 +435,37 @@ export class Auth {
     ]);
 
     return uid;
+  }
+
+  private async uploadCaregiverProfilePhoto(
+    uid: string,
+    existingPhoto: CaregiverProfilePhoto | null,
+    profilePhotoUpload: CaregiverProfilePhotoUpload | null,
+  ): Promise<CaregiverProfilePhoto | null> {
+    if (!profilePhotoUpload) {
+      return existingPhoto;
+    }
+
+    const storagePath = `caregivers/${uid}/profile/profile.jpg`;
+    const storageRef = ref(firebaseStorage, storagePath);
+    const snapshot = await uploadBytes(storageRef, profilePhotoUpload.blob, {
+      contentType: profilePhotoUpload.contentType,
+      customMetadata: {
+        ownerUid: uid,
+        usage: 'profilePhoto',
+      },
+    });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+
+    return {
+      storagePath: snapshot.metadata.fullPath,
+      downloadUrl,
+      fileName: profilePhotoUpload.name,
+      contentType: profilePhotoUpload.contentType,
+      originalSize: profilePhotoUpload.originalSize,
+      compressedSize: profilePhotoUpload.compressedSize,
+      uploadedAt: new Date().toISOString(),
+    };
   }
 
   private async uploadCaregiverTrainingCertificates(

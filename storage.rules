@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isImageUpload() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isUnder5Mb() {
+      return request.resource != null
+        && request.resource.size <= 5 * 1024 * 1024;
+    }
+
+    function hasAdminProfile() {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/adminProfiles/$(request.auth.uid));
+    }
+
+    function adminProfile() {
+      return firestore.get(/databases/(default)/documents/adminProfiles/$(request.auth.uid));
+    }
+
+    function isReviewerOrSuperUser() {
+      return hasAdminProfile()
+        && adminProfile().data.enabled == true
+        && adminProfile().data.role in ['super_user', 'reviewer'];
+    }
+
+    match /caregivers/{uid}/certificates/{fileName} {
+      allow read: if isOwner(uid) || isReviewerOrSuperUser();
+
+      allow create, update: if isOwner(uid)
+        && isImageUpload()
+        && isUnder5Mb();
+
+      allow delete: if isOwner(uid);
+    }
+
+    match /caregivers/{uid}/profile/{fileName} {
+      allow read: if true;
+
+      allow create, update: if isOwner(uid)
+        && isImageUpload()
+        && isUnder5Mb();
+
+      allow delete: if isOwner(uid);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

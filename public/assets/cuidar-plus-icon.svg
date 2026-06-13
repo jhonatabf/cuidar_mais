@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Cuidar+ icon</title>
+  <desc id="desc">Ícone da Cuidar+ com escudo, coração e cruz médica.</desc>
+  <path
+    d="M256 472C256 472 74 386 74 207.3V86.2L256 20L438 86.2V207.3C438 386 256 472 256 472Z"
+    fill="#FFFFFF"
+    stroke="#0B7A3B"
+    stroke-width="36"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M204 176.7C229 149.2 267.8 159.2 285.5 186.7C303.2 159.2 342 149.2 367 176.7C393.3 205.4 383.3 252.9 350.8 279.2L285.5 335.5L220.2 279.2C187.7 252.9 177.7 205.4 204 176.7Z"
+    fill="#FFFFFF"
+    stroke="#0B7A3B"
+    stroke-width="28"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M285.5 127V207"
+    stroke="#0B7A3B"
+    stroke-width="28"
+    stroke-linecap="round"
+  />
+  <path
+    d="M245.5 167H325.5"
+    stroke="#0B7A3B"
+    stroke-width="28"
+    stroke-linecap="round"
+  />
+</svg>

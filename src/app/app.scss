@@ -171,7 +171,8 @@
     text-transform: uppercase;
   }
 
-  button {
+  button,
+  .account-upload {
     display: grid;
     gap: 2px;
     width: 100%;
@@ -185,9 +186,27 @@
     text-align: left;
   }
 
-  button:hover {
+  button:hover,
+  .account-upload:hover {
     background: var(--color-primary-soft);
     color: var(--color-primary-strong);
+  }
+
+  .account-upload {
+    input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+
+  .account-feedback {
+    padding: 0 10px 4px;
+    color: #27678f;
+    font-weight: 400;
   }
 
   small {

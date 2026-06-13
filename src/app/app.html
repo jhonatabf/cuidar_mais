@@ -40,6 +40,14 @@
 
           @if (accountMenuOpen()) {
             <div class="account-dropdown" role="menu">
+              <label class="account-upload" role="menuitem">
+                <input type="file" accept="image/*" (change)="onProfilePhotoChange($event)" />
+                <span>{{ isUpdatingPhoto() ? 'A atualizar foto...' : 'Alterar foto de perfil' }}</span>
+              </label>
+              @if (photoMessage()) {
+                <small class="account-feedback">{{ photoMessage() }}</small>
+              }
+              <hr />
               <p>Escolher perfil</p>
               @if (hasCaregiverProfile()) {
                 <button type="button" role="menuitem" (click)="goToCaregiverDashboard()">

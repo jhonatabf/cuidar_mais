@@ -31,7 +31,7 @@ export interface CaregiverTrainingCertificateUpload {
   blob: Blob;
 }
 
-export interface CaregiverProfilePhoto {
+export interface UserProfilePhoto {
   storagePath: string;
   downloadUrl: string;
   fileName: string;
@@ -41,7 +41,7 @@ export interface CaregiverProfilePhoto {
   uploadedAt: string;
 }
 
-export interface CaregiverProfilePhotoUpload {
+export interface UserProfilePhotoUpload {
   name: string;
   contentType: string;
   originalSize: number;
@@ -61,9 +61,6 @@ export interface CaregiverRegistration {
     gender: string;
     nationality: string;
     phone: string;
-    profilePhotoName: string;
-    profilePhoto: CaregiverProfilePhoto | null;
-    profilePhotoUpload: CaregiverProfilePhotoUpload | null;
     private: {
       nif: string;
       documentType: string;
@@ -132,6 +129,8 @@ export interface UserAccount {
   };
   caregiverProfileStatus?: string;
   familyProfileStatus?: string;
+  profilePhoto?: UserProfilePhoto | null;
+  profilePhotoName?: string;
 }
 
 export type CaregiverProfileDocument = Record<string, unknown>;
@@ -346,16 +345,8 @@ export class Auth {
 
     const isNewProfile = !existingProfile;
     const persistedTrainingItems = await this.uploadCaregiverTrainingCertificates(uid, data.training.items);
-    const persistedProfilePhoto = await this.uploadCaregiverProfilePhoto(
-      uid,
-      data.personal.profilePhoto,
-      data.personal.profilePhotoUpload,
-    );
     const firstTraining = persistedTrainingItems[0] ?? null;
-    await updateProfile(user, {
-      displayName: data.personal.fullName,
-      photoURL: persistedProfilePhoto?.downloadUrl ?? user.photoURL,
-    });
+    await updateProfile(user, { displayName: data.personal.fullName });
 
     await Promise.all([
       setDoc(
@@ -374,9 +365,9 @@ export class Auth {
             documentType: data.personal.private.documentType,
             idDocument: data.personal.private.idDocument,
           },
-          caregiverProfileStatus: 'draft',
-          acceptedTerms: data.account.acceptedTerms,
-          acceptedPrivacy: data.account.acceptedPrivacy,
+            caregiverProfileStatus: 'draft',
+            acceptedTerms: data.account.acceptedTerms,
+            acceptedPrivacy: data.account.acceptedPrivacy,
           updatedAt: serverTimestamp(),
         },
         { merge: true },
@@ -406,8 +397,6 @@ export class Auth {
             skills: data.skills,
             languages: data.languages,
             mobility: data.mobility,
-            profilePhotoName: persistedProfilePhoto?.fileName ?? data.personal.profilePhotoName,
-            profilePhoto: persistedProfilePhoto,
           },
           private: {
             birthDate: data.personal.birthDate,
@@ -437,16 +426,35 @@ export class Auth {
     return uid;
   }
 
-  private async uploadCaregiverProfilePhoto(
-    uid: string,
-    existingPhoto: CaregiverProfilePhoto | null,
-    profilePhotoUpload: CaregiverProfilePhotoUpload | null,
-  ): Promise<CaregiverProfilePhoto | null> {
-    if (!profilePhotoUpload) {
-      return existingPhoto;
+  async updateUserProfilePhoto(profilePhotoUpload: UserProfilePhotoUpload): Promise<UserProfilePhoto> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para alterar a foto de perfil.');
     }
 
-    const storagePath = `caregivers/${uid}/profile/profile.jpg`;
+    const profilePhoto = await this.uploadUserProfilePhoto(user.uid, profilePhotoUpload);
+    await Promise.all([
+      updateProfile(user, { photoURL: profilePhoto.downloadUrl }),
+      setDoc(
+        doc(firestoreDb, 'users', user.uid),
+        {
+          uid: user.uid,
+          profilePhoto,
+          profilePhotoName: profilePhoto.fileName,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    ]);
+
+    return profilePhoto;
+  }
+
+  private async uploadUserProfilePhoto(
+    uid: string,
+    profilePhotoUpload: UserProfilePhotoUpload,
+  ): Promise<UserProfilePhoto> {
+    const storagePath = `users/${uid}/profile/profile.jpg`;
     const storageRef = ref(firebaseStorage, storagePath);
     const snapshot = await uploadBytes(storageRef, profilePhotoUpload.blob, {
       contentType: profilePhotoUpload.contentType,

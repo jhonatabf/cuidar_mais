@@ -4,15 +4,10 @@ import { RouterLink } from '@angular/router';
 import {
   Auth,
   CaregiverProfileDocument,
-  CaregiverProfilePhoto,
   CaregiverRegistration,
   CaregiverTrainingCertificate,
 } from '../../core/services/auth';
 
-const PROFILE_PHOTO_MAX_FILE_BYTES = 5 * 1024 * 1024;
-const PROFILE_PHOTO_TARGET_BYTES = 300 * 1024;
-const PROFILE_PHOTO_MAX_DIMENSION = 800;
-const PROFILE_PHOTO_MIN_QUALITY = 0.58;
 const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const CERTIFICATE_IMAGE_TARGET_BYTES = 900 * 1024;
 const CERTIFICATE_IMAGE_MAX_DIMENSION = 1600;
@@ -96,21 +91,6 @@ const CAREGIVER_SIGNUP_COPY = {
 
       <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
         <fieldset class="form-disabled-shell" [disabled]="!canEditProfile()">
-          <div class="profile-photo-field">
-            <label class="profile-photo-picker">
-              <span class="profile-photo-title">{{ profilePhotoActionLabel() }}</span>
-              <input type="file" name="profilePhoto" accept="image/*" (change)="onProfilePhotoChange($event)" />
-              <span class="profile-photo-frame" [attr.data-tooltip]="profilePhotoActionLabel()">
-                @if (profilePhotoPreviewUrl()) {
-                  <img [src]="profilePhotoPreviewUrl()" alt="Foto de perfil" />
-                } @else {
-                  <span class="profile-photo-avatar" aria-hidden="true">{{ profilePhotoInitials() }}</span>
-                }
-              </span>
-              <small class="field-hint">Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.</small>
-            </label>
-          </div>
-
           <section id="conta" class="signup-section">
             <div class="section-title">
               <span>1</span>
@@ -412,7 +392,6 @@ export class BecomeCaregiverComponent implements OnInit {
   protected successMessage = '';
   protected readonly accountEmail = signal('');
   protected readonly hasExistingCaregiverProfile = signal(false);
-  protected readonly profilePhotoPreviewUrl = signal('');
   protected readonly canEditProfile = signal(true);
   protected readonly approvalLockMessage = signal('');
   protected readonly submitButtonLabel = signal('Guardar registo inicial');
@@ -490,7 +469,6 @@ export class BecomeCaregiverComponent implements OnInit {
     const caregiverProfile = await this.authService.getCaregiverProfile(user.uid);
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
-    this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.downloadUrl'));
     this.loadTrainingEntries(caregiverProfile);
     this.applyApprovalLock(caregiverProfile);
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
@@ -566,59 +544,6 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     return typeof value === 'boolean' ? value : false;
-  }
-
-  protected profilePhotoActionLabel(): string {
-    return this.profilePhotoPreviewUrl() ? 'Alterar foto de perfil' : 'Adicionar foto de perfil';
-  }
-
-  protected profilePhotoInitials(): string {
-    const fullName = this.fieldValue('publicProfile.fullName');
-    const fallback = this.accountEmail();
-    const source = fullName || fallback;
-    const initials = source
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('');
-
-    return initials || '+';
-  }
-
-  protected async onProfilePhotoChange(event: Event): Promise<void> {
-    this.errorMessage = '';
-
-    if (!this.canEditProfile()) {
-      this.errorMessage = this.approvalLockMessage();
-      return;
-    }
-
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) {
-      this.profilePhotoPreviewUrl.set(this.fieldValue('publicProfile.profilePhoto.downloadUrl'));
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      this.errorMessage = 'A foto de perfil deve ser um ficheiro de imagem.';
-      input.value = '';
-      return;
-    }
-
-    if (file.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
-      this.errorMessage = 'A foto de perfil deve ter no máximo 5 MB.';
-      input.value = '';
-      return;
-    }
-
-    try {
-      this.profilePhotoPreviewUrl.set(await this.readFileAsDataUrl(file));
-    } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível carregar a foto de perfil.';
-      input.value = '';
-    }
   }
 
   protected selectedTrainingType(entryId: number): string {
@@ -863,11 +788,6 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
-    const profilePhoto = await this.profilePhotoValue(formData, 'profilePhoto');
-    const profilePhotoUpload = await this.profilePhotoUploadValue(formData, 'profilePhoto');
-    const profilePhotoName =
-      profilePhotoUpload?.name ?? profilePhoto?.fileName ?? this.fieldValue('publicProfile.profilePhotoName');
-
     return {
       account: {
         email: this.textValue(formData, 'email'),
@@ -880,9 +800,6 @@ export class BecomeCaregiverComponent implements OnInit {
         gender: this.textValue(formData, 'gender'),
         nationality: this.textValue(formData, 'nationality'),
         phone: this.textValue(formData, 'phone'),
-        profilePhotoName,
-        profilePhoto,
-        profilePhotoUpload,
         private: {
           nif: this.textValue(formData, 'nif'),
           documentType: this.textValue(formData, 'documentType'),
@@ -1136,45 +1053,6 @@ export class BecomeCaregiverComponent implements OnInit {
     return value ? Number(value) : null;
   }
 
-  private async profilePhotoValue(
-    formData: FormData,
-    key: string,
-  ): Promise<CaregiverRegistration['personal']['profilePhoto']> {
-    const value = formData.get(key);
-    if (!(value instanceof File) || !value.name) {
-      return this.existingProfilePhoto();
-    }
-
-    return null;
-  }
-
-  private async profilePhotoUploadValue(
-    formData: FormData,
-    key: string,
-  ): Promise<CaregiverRegistration['personal']['profilePhotoUpload']> {
-    const value = formData.get(key);
-    if (!(value instanceof File) || !value.name) {
-      return null;
-    }
-
-    if (!value.type.startsWith('image/')) {
-      throw new Error('A foto de perfil deve ser um ficheiro de imagem.');
-    }
-
-    if (value.size > PROFILE_PHOTO_MAX_FILE_BYTES) {
-      throw new Error('A foto de perfil deve ter no máximo 5 MB.');
-    }
-
-    const blob = await this.compressProfilePhotoImage(value);
-    return {
-      name: value.name,
-      contentType: 'image/jpeg',
-      originalSize: value.size,
-      compressedSize: blob.size,
-      blob,
-    };
-  }
-
   private async certificateUploadValue(
     formData: FormData,
     entryId: number,
@@ -1210,49 +1088,6 @@ export class BecomeCaregiverComponent implements OnInit {
 
       return (currentValue as Record<string, unknown>)[key];
     }, this.existingCaregiverProfile());
-  }
-
-  private existingProfilePhoto(): CaregiverProfilePhoto | null {
-    const value = this.profileValue('publicProfile.profilePhoto');
-    if (!value || typeof value !== 'object') {
-      return null;
-    }
-
-    const profilePhoto = value as Record<string, unknown>;
-    if (
-      typeof profilePhoto['storagePath'] !== 'string' ||
-      typeof profilePhoto['downloadUrl'] !== 'string' ||
-      typeof profilePhoto['fileName'] !== 'string' ||
-      typeof profilePhoto['contentType'] !== 'string' ||
-      typeof profilePhoto['originalSize'] !== 'number' ||
-      typeof profilePhoto['compressedSize'] !== 'number' ||
-      typeof profilePhoto['uploadedAt'] !== 'string'
-    ) {
-      return null;
-    }
-
-    return {
-      storagePath: profilePhoto['storagePath'],
-      downloadUrl: profilePhoto['downloadUrl'],
-      fileName: profilePhoto['fileName'],
-      contentType: profilePhoto['contentType'],
-      originalSize: profilePhoto['originalSize'],
-      compressedSize: profilePhoto['compressedSize'],
-      uploadedAt: profilePhoto['uploadedAt'],
-    };
-  }
-
-  private async compressProfilePhotoImage(file: File): Promise<Blob> {
-    const originalDataUrl = await this.readFileAsDataUrl(file);
-    const image = await this.loadImage(originalDataUrl);
-    return this.compressImageElementToJpegBlob(
-      image,
-      PROFILE_PHOTO_MAX_DIMENSION,
-      PROFILE_PHOTO_TARGET_BYTES,
-      PROFILE_PHOTO_MIN_QUALITY,
-      320,
-      'Não foi possível otimizar a foto de perfil.',
-    );
   }
 
   private async compressImageElementToJpegBlob(

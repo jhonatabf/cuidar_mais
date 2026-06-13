@@ -147,7 +147,7 @@ export class CaregiverDashboardComponent implements OnInit {
       case 'draft':
         return 'Cadastro inicial';
       case 'pending':
-        return 'Pendente';
+        return 'Em validação';
       default:
         return 'Cadastrado';
     }

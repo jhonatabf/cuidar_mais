@@ -14,6 +14,12 @@ export const caregiverDashboardGuard: CanActivateFn = async () => {
     });
   }
 
+  if (!(await auth.isCurrentUserEmailVerified())) {
+    return router.createUrlTree(['/verificar-email'], {
+      queryParams: { redirectTo: '/dashboard/cuidador' },
+    });
+  }
+
   const [account, caregiverStatus] = await Promise.all([
     auth.getUserAccount(user.uid),
     auth.getCaregiverStatus(user.uid),
@@ -33,6 +39,12 @@ export const familyDashboardGuard: CanActivateFn = async () => {
 
   if (!user) {
     return router.createUrlTree(['/login'], {
+      queryParams: { redirectTo: '/dashboard/familia' },
+    });
+  }
+
+  if (!(await auth.isCurrentUserEmailVerified())) {
+    return router.createUrlTree(['/verificar-email'], {
       queryParams: { redirectTo: '/dashboard/familia' },
     });
   }

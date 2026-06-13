@@ -4,6 +4,8 @@ import {
   User,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  reload,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -12,6 +14,8 @@ import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { firebaseAuth, firebaseStorage, firestoreDb } from '../firebase/firebase.config';
+
+const FIREBASE_OPERATION_TIMEOUT_MS = 20000;
 
 export interface CaregiverTrainingCertificate {
   storagePath: string;
@@ -146,6 +150,7 @@ export interface UserAccount {
   familyProfileStatus?: string;
   profilePhoto?: UserProfilePhoto | null;
   profilePhotoName?: string;
+  emailVerified?: boolean;
 }
 
 export type CaregiverProfileDocument = Record<string, unknown>;
@@ -199,15 +204,18 @@ export class Auth {
       },
       caregiverProfileStatus: data.accountType === 'Cuidador' ? 'pending' : null,
       familyProfileStatus: data.accountType === 'Cuidador' ? null : 'pending',
+      emailVerified: credential.user.emailVerified,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    await this.sendEmailVerificationMessage(credential.user);
 
     return credential.user;
   }
 
   async signIn(email: string, password: string): Promise<User> {
     const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    await this.syncEmailVerificationStatus(credential.user);
     return credential.user;
   }
 
@@ -318,6 +326,36 @@ export class Auth {
     ]);
   }
 
+  async sendCurrentUserEmailVerification(): Promise<void> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para validar o email.');
+    }
+
+    await this.sendEmailVerificationMessage(user);
+  }
+
+  async refreshCurrentUserEmailVerification(): Promise<boolean> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      return false;
+    }
+
+    await reload(user);
+    await this.syncEmailVerificationStatus(user);
+    return user.emailVerified;
+  }
+
+  async isCurrentUserEmailVerified(): Promise<boolean> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      return false;
+    }
+
+    await reload(user);
+    return user.emailVerified;
+  }
+
   async getProfileSummary(uid: string): Promise<{
     account: UserAccount | null;
     hasCaregiver: boolean;
@@ -352,11 +390,7 @@ export class Auth {
       this.getCaregiverStatus(uid),
     ]);
 
-    if (caregiverStatus === 'active' || caregiverStatus === 'completed') {
-      return '/dashboard/cuidador';
-    }
-
-    if (caregiverStatus === 'draft') {
+    if (caregiverStatus) {
       return '/dashboard/cuidador';
     }
 
@@ -396,75 +430,84 @@ export class Auth {
     }
 
     const isNewProfile = !existingProfile;
-    const persistedTrainingItems = await this.uploadCaregiverTrainingCertificates(uid, data.training.items);
+    const persistedTrainingItems = await this.withTimeout(
+      this.uploadCaregiverTrainingCertificates(uid, data.training.items),
+      'Não foi possível enviar os certificados. Verifique a ligação e tente novamente.',
+    );
     const firstTraining = persistedTrainingItems[0] ?? null;
-    await updateProfile(user, { displayName: account.fullName });
+    await this.withTimeout(
+      updateProfile(user, { displayName: account.fullName }),
+      'Não foi possível atualizar a conta. Verifique a ligação e tente novamente.',
+    );
 
-    await Promise.all([
-      setDoc(
-        doc(firestoreDb, 'users', uid),
-        {
-          uid,
-          email: user.email ?? account.email,
-          role: 'caregiver',
-          roles: {
-            caregiver: true,
-          },
-          caregiverProfileStatus: 'draft',
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      ),
-      setDoc(
-        doc(firestoreDb, 'caregivers', uid),
-        {
-          uid,
-          status: 'draft',
-          approvalDate: isNewProfile ? null : existingProfile['approvalDate'] ?? null,
-          approvalUserId: null,
-          approvalStatus: 'pending',
-          approval: false,
-          publicProfile: {
-            fullName: account.fullName,
-            gender: account.gender,
-            nationality: account.nationality,
-            district: account.location?.district,
-            county: account.location?.county,
-            travelRadius: account.location?.travelRadius,
-            summary: data.professional.summary,
-            experienceYears: data.professional.experienceYears,
-            serviceTypes: data.professional.serviceTypes,
-            trainingTypes: persistedTrainingItems.map((item) => item.trainingType),
-            availability: data.availability,
-            rates: data.rates,
-            skills: data.skills,
-            languages: data.languages,
-            mobility: data.mobility,
-          },
-          private: {
-            birthDate: account.birthDate,
-            phone: account.phone,
-            nif: account.private?.nif,
-            documentType: account.private?.documentType,
-            idDocument: account.private?.idDocument,
-            address: account.private?.address,
-            postalCode: account.private?.postalCode,
-            training: {
-              items: persistedTrainingItems,
-              courseName: firstTraining?.courseName ?? '',
-              trainingEntity: firstTraining?.trainingEntity ?? '',
-              completionYear: firstTraining?.completionDate
-                ? Number(firstTraining.completionDate.slice(0, 4))
-                : null,
+    await this.withTimeout(
+      Promise.all([
+        setDoc(
+          doc(firestoreDb, 'users', uid),
+          {
+            uid,
+            email: user.email ?? account.email,
+            role: 'caregiver',
+            roles: {
+              caregiver: true,
             },
-            reference: data.reference,
+            caregiverProfileStatus: 'pending',
+            updatedAt: serverTimestamp(),
           },
-          createdAt: isNewProfile ? serverTimestamp() : existingProfile['createdAt'] ?? serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      ),
-    ]);
+          { merge: true },
+        ),
+        setDoc(
+          doc(firestoreDb, 'caregivers', uid),
+          {
+            uid,
+            status: 'pending',
+            approvalDate: isNewProfile ? null : existingProfile['approvalDate'] ?? null,
+            approvalUserId: null,
+            approvalStatus: 'pending',
+            approval: false,
+            publicProfile: {
+              fullName: account.fullName,
+              gender: account.gender,
+              nationality: account.nationality,
+              district: account.location?.district,
+              county: account.location?.county,
+              travelRadius: account.location?.travelRadius,
+              summary: data.professional.summary,
+              experienceYears: data.professional.experienceYears,
+              serviceTypes: data.professional.serviceTypes,
+              trainingTypes: persistedTrainingItems.map((item) => item.trainingType),
+              availability: data.availability,
+              rates: data.rates,
+              skills: data.skills,
+              languages: data.languages,
+              mobility: data.mobility,
+            },
+            private: {
+              birthDate: account.birthDate,
+              phone: account.phone,
+              nif: account.private?.nif,
+              documentType: account.private?.documentType,
+              idDocument: account.private?.idDocument,
+              address: account.private?.address,
+              postalCode: account.private?.postalCode,
+              training: {
+                items: persistedTrainingItems,
+                courseName: firstTraining?.courseName ?? '',
+                trainingEntity: firstTraining?.trainingEntity ?? '',
+                completionYear: firstTraining?.completionDate
+                  ? Number(firstTraining.completionDate.slice(0, 4))
+                  : null,
+              },
+              reference: data.reference,
+            },
+            createdAt: isNewProfile ? serverTimestamp() : existingProfile['createdAt'] ?? serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+      ]),
+      'Não foi possível gravar o perfil de cuidador. Verifique a ligação e tente novamente.',
+    );
 
     return uid;
   }
@@ -535,6 +578,44 @@ export class Auth {
       account.location?.district &&
       account.location?.county &&
       account.location?.travelRadius
+    );
+  }
+
+  private withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+    let timeoutId: number | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new FirebaseError('deadline-exceeded', message));
+      }, FIREBASE_OPERATION_TIMEOUT_MS);
+    });
+
+    return Promise.race([promise, timeout]).finally(() => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    });
+  }
+
+  private async sendEmailVerificationMessage(user: User): Promise<void> {
+    if (user.emailVerified) {
+      return;
+    }
+
+    await sendEmailVerification(user, {
+      url: `${window.location.origin}/verificar-email`,
+      handleCodeInApp: false,
+    });
+  }
+
+  private async syncEmailVerificationStatus(user: User): Promise<void> {
+    await setDoc(
+      doc(firestoreDb, 'users', user.uid),
+      {
+        uid: user.uid,
+        emailVerified: user.emailVerified,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
     );
   }
 
@@ -638,6 +719,10 @@ export class Auth {
           return 'A palavra-passe deve ter pelo menos 6 caracteres.';
         case 'auth/requires-recent-login':
           return 'É necessário iniciar sessão para continuar.';
+        case 'auth/too-many-requests':
+          return 'Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.';
+        case 'deadline-exceeded':
+          return error.message || 'A operação demorou demasiado tempo. Verifique a ligação e tente novamente.';
         case 'failed-precondition':
           return error.message || 'Complete os seus dados pessoais antes de continuar.';
         case 'permission-denied':

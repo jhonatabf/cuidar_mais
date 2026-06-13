@@ -40,36 +40,39 @@
 
           @if (accountMenuOpen()) {
             <div class="account-dropdown" role="menu">
-              <label class="account-upload" role="menuitem">
-                <input type="file" accept="image/*" (change)="onProfilePhotoChange($event)" />
-                <span>{{ isUpdatingPhoto() ? 'A atualizar foto...' : 'Alterar foto de perfil' }}</span>
-              </label>
-              @if (photoMessage()) {
-                <small class="account-feedback">{{ photoMessage() }}</small>
-              }
-              <button type="button" role="menuitem" (click)="goToPersonalData()">Meus dados pessoais</button>
-              <hr />
-              <p>Escolher perfil</p>
-              @if (hasCaregiverProfile()) {
-                <button type="button" role="menuitem" (click)="goToCaregiverDashboard()">
-                  Dashboard cuidador
-                  @if (caregiverStatus() === 'draft') {
-                    <small>editar cadastro</small>
-                  }
-                </button>
-              }
-              @if (hasFamilyProfile()) {
-                <button type="button" role="menuitem" (click)="goToFamilyDashboard()">Dashboard família</button>
+              @if (emailVerified()) {
+                <label class="account-upload" role="menuitem">
+                  <input type="file" accept="image/*" (change)="onProfilePhotoChange($event)" />
+                  <span>{{ isUpdatingPhoto() ? 'A atualizar foto...' : 'Alterar foto de perfil' }}</span>
+                </label>
+                @if (photoMessage()) {
+                  <small class="account-feedback">{{ photoMessage() }}</small>
+                }
+                <button type="button" role="menuitem" (click)="goToPersonalData()">Meus dados pessoais</button>
+                <hr />
+                <p>Escolher perfil</p>
+                @if (hasCaregiverProfile()) {
+                  <button type="button" role="menuitem" (click)="goToCaregiverDashboard()">
+                    Dashboard cuidador
+                    @if (caregiverStatus() === 'draft') {
+                      <small>editar cadastro</small>
+                    }
+                  </button>
+                }
+                @if (hasFamilyProfile()) {
+                  <button type="button" role="menuitem" (click)="goToFamilyDashboard()">Dashboard família</button>
+                }
+
+                @if (!hasCaregiverProfile()) {
+                  <button type="button" role="menuitem" (click)="createCaregiverProfile()">Criar perfil de cuidador</button>
+                }
+                @if (!hasFamilyProfile()) {
+                  <button type="button" role="menuitem" (click)="createFamilyProfile()">Criar perfil de família</button>
+                }
+
+                <hr />
               }
 
-              @if (!hasCaregiverProfile()) {
-                <button type="button" role="menuitem" (click)="createCaregiverProfile()">Criar perfil de cuidador</button>
-              }
-              @if (!hasFamilyProfile()) {
-                <button type="button" role="menuitem" (click)="createFamilyProfile()">Criar perfil de família</button>
-              }
-
-              <hr />
               <button type="button" role="menuitem" (click)="logout()">Sair</button>
             </div>
           }

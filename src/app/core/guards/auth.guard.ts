@@ -14,5 +14,11 @@ export const authGuard: CanActivateFn = async (_route, state) => {
     });
   }
 
+  if (!(await auth.isCurrentUserEmailVerified())) {
+    return router.createUrlTree(['/verificar-email'], {
+      queryParams: { redirectTo: state.url },
+    });
+  }
+
   return true;
 };

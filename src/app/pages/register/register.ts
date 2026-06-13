@@ -82,7 +82,9 @@ export class RegisterComponent {
       });
 
       const fallback = accountType === 'Cuidador' ? '/seja-cuidador' : '/dashboard/familia';
-      await this.router.navigateByUrl(this.redirectTo() || fallback);
+      await this.router.navigate(['/verificar-email'], {
+        queryParams: { redirectTo: this.redirectTo() || fallback },
+      });
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
     } finally {

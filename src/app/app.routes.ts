@@ -66,6 +66,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/register/register').then((m) => m.RegisterComponent),
   },
   {
+    path: 'verificar-email',
+    title: 'Verificar Email | Cuidar+',
+    loadComponent: () =>
+      import('./pages/email-verification/email-verification').then(
+        (m) => m.EmailVerificationComponent,
+      ),
+  },
+  {
     path: 'meus-dados-pessoais',
     title: 'Meus Dados Pessoais | Cuidar+',
     canActivate: [authGuard],

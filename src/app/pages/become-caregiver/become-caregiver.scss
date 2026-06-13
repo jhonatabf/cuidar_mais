@@ -94,6 +94,27 @@
   }
 }
 
+.review-notice {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(39, 103, 143, 0.22);
+  border-radius: 16px;
+  background: #f4f9fd;
+  color: #27678f;
+
+  strong {
+    color: #245f84;
+    font-weight: 760;
+  }
+
+  p {
+    margin: 0;
+    font-weight: 400;
+    line-height: 1.55;
+  }
+}
+
 .signup-section {
   padding: 28px;
   border: 1px solid rgba(220, 233, 216, 0.82);

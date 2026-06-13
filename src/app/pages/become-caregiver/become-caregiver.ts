@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import {
   Auth,
@@ -91,6 +91,14 @@ const CAREGIVER_SIGNUP_COPY = {
 
       <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
         <fieldset class="form-disabled-shell" [disabled]="!canEditProfile()">
+        <div class="review-notice">
+          <strong>Validação pela Cuidar+</strong>
+          <p>
+            Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa Cuidar+.
+            O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.
+          </p>
+        </div>
+
         <section id="perfil-profissional" class="signup-section">
           <div class="section-title">
             <span>1</span>
@@ -305,6 +313,7 @@ const CAREGIVER_SIGNUP_COPY = {
 })
 export class BecomeCaregiverComponent implements OnInit {
   private readonly authService = inject(Auth);
+  private readonly router = inject(Router);
 
   protected isSubmitting = false;
   protected errorMessage = '';
@@ -424,8 +433,8 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       await this.authService.registerCaregiver(data);
       form.reset();
-      this.successMessage = 'Registo guardado com sucesso. O perfil de cuidador foi atualizado.';
-      window.location.assign('/dashboard/cuidador');
+      this.successMessage = 'Cadastro submetido para validação. Será notificado quando a equipa Cuidar+ terminar a análise.';
+      await this.router.navigateByUrl('/dashboard/cuidador');
     } catch (error) {
       this.errorMessage = this.authService.getFirebaseErrorMessage(error);
     } finally {

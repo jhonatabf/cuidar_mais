@@ -14,5 +14,11 @@ export const caregiverSignupGuard: CanActivateFn = async () => {
     });
   }
 
+  if (!(await auth.isCurrentUserEmailVerified())) {
+    return router.createUrlTree(['/verificar-email'], {
+      queryParams: { redirectTo: '/seja-cuidador' },
+    });
+  }
+
   return true;
 };

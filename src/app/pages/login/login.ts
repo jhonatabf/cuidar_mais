@@ -49,7 +49,15 @@ export class LoginComponent {
     this.isSubmitting.set(true);
     try {
       const user = await this.auth.signIn(this.textValue(formData, 'email'), this.textValue(formData, 'password'));
-      await this.router.navigateByUrl(this.redirectTo() || (await this.auth.getPostLoginRedirect(user.uid)));
+      const redirectTo = this.redirectTo() || (await this.auth.getPostLoginRedirect(user.uid));
+      if (!user.emailVerified) {
+        await this.router.navigate(['/verificar-email'], {
+          queryParams: { redirectTo },
+        });
+        return;
+      }
+
+      await this.router.navigateByUrl(redirectTo);
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
     } finally {

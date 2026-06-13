@@ -26,6 +26,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly hasCaregiverProfile = signal(false);
   protected readonly hasFamilyProfile = signal(false);
   protected readonly caregiverStatus = signal<string | null>(null);
+  protected readonly emailVerified = signal(false);
   protected readonly accountMenuOpen = signal(false);
   protected readonly photoMessage = signal('');
   protected readonly isUpdatingPhoto = signal(false);
@@ -151,6 +152,7 @@ export class App implements OnInit, OnDestroy {
       this.hasCaregiverProfile.set(false);
       this.hasFamilyProfile.set(false);
       this.caregiverStatus.set(null);
+      this.emailVerified.set(false);
       return;
     }
 
@@ -162,6 +164,7 @@ export class App implements OnInit, OnDestroy {
     this.hasCaregiverProfile.set(summary.hasCaregiver);
     this.hasFamilyProfile.set(summary.hasFamily);
     this.caregiverStatus.set(summary.caregiverStatus);
+    this.emailVerified.set(user.emailVerified);
   }
 
   private async buildUserProfilePhotoUpload(file: File): Promise<UserProfilePhotoUpload> {

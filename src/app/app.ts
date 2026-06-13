@@ -95,6 +95,11 @@ export class App implements OnInit, OnDestroy {
     await this.router.navigateByUrl('/dashboard/familia');
   }
 
+  protected async goToPersonalData(): Promise<void> {
+    this.closeAccountMenu();
+    await this.router.navigateByUrl('/meus-dados-pessoais');
+  }
+
   protected async logout(): Promise<void> {
     this.closeAccountMenu();
     await this.auth.signOut();

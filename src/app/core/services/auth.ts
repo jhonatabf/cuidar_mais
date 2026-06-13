@@ -50,32 +50,6 @@ export interface UserProfilePhotoUpload {
 }
 
 export interface CaregiverRegistration {
-  account: {
-    email: string;
-    acceptedTerms: boolean;
-    acceptedPrivacy: boolean;
-  };
-  personal: {
-    fullName: string;
-    birthDate: string;
-    gender: string;
-    nationality: string;
-    phone: string;
-    private: {
-      nif: string;
-      documentType: string;
-      idDocument: string;
-    };
-  };
-  location: {
-    district: string;
-    county: string;
-    postalCode: string;
-    travelRadius: string;
-    private: {
-      address: string;
-    };
-  };
   professional: {
     summary: string;
     experienceYears: number;
@@ -118,10 +92,51 @@ export interface CaregiverRegistration {
   };
 }
 
+export interface UserPersonalData {
+  email: string;
+  fullName: string;
+  birthDate: string;
+  gender: string;
+  nationality: string;
+  phone: string;
+  acceptedTerms: boolean;
+  acceptedPrivacy: boolean;
+  private: {
+    nif: string;
+    documentType: string;
+    idDocument: string;
+    address: string;
+    postalCode: string;
+  };
+  location: {
+    district: string;
+    county: string;
+    travelRadius: string;
+  };
+}
+
 export interface UserAccount {
   uid: string;
   email: string;
   fullName: string;
+  birthDate?: string;
+  gender?: string;
+  nationality?: string;
+  phone?: string;
+  acceptedTerms?: boolean;
+  acceptedPrivacy?: boolean;
+  private?: {
+    nif?: string;
+    documentType?: string;
+    idDocument?: string;
+    address?: string;
+    postalCode?: string;
+  };
+  location?: {
+    district?: string;
+    county?: string;
+    travelRadius?: string;
+  };
   role?: 'caregiver' | 'family';
   roles?: {
     caregiver?: boolean;
@@ -274,6 +289,35 @@ export class Auth {
     return snapshot.data() as UserAccount;
   }
 
+  async updateUserPersonalData(data: UserPersonalData): Promise<void> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para alterar os dados pessoais.');
+    }
+
+    await Promise.all([
+      updateProfile(user, { displayName: data.fullName }),
+      setDoc(
+        doc(firestoreDb, 'users', user.uid),
+        {
+          uid: user.uid,
+          email: user.email ?? data.email,
+          fullName: data.fullName,
+          birthDate: data.birthDate,
+          gender: data.gender,
+          nationality: data.nationality,
+          phone: data.phone,
+          acceptedTerms: data.acceptedTerms,
+          acceptedPrivacy: data.acceptedPrivacy,
+          private: data.private,
+          location: data.location,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    ]);
+  }
+
   async getProfileSummary(uid: string): Promise<{
     account: UserAccount | null;
     hasCaregiver: boolean;
@@ -334,6 +378,14 @@ export class Auth {
     }
 
     const uid = user.uid;
+    const account = await this.getUserAccount(uid);
+    if (!this.hasCompletePersonalData(account)) {
+      throw new FirebaseError(
+        'failed-precondition',
+        'Complete os seus dados pessoais antes de criar ou atualizar o perfil de cuidador.',
+      );
+    }
+
     const existingProfile = await this.getCaregiverProfile(uid);
     const approvalSummary = this.getCaregiverApprovalSummary(existingProfile);
     if (!approvalSummary.canEdit) {
@@ -346,28 +398,19 @@ export class Auth {
     const isNewProfile = !existingProfile;
     const persistedTrainingItems = await this.uploadCaregiverTrainingCertificates(uid, data.training.items);
     const firstTraining = persistedTrainingItems[0] ?? null;
-    await updateProfile(user, { displayName: data.personal.fullName });
+    await updateProfile(user, { displayName: account.fullName });
 
     await Promise.all([
       setDoc(
         doc(firestoreDb, 'users', uid),
         {
           uid,
-          email: user.email ?? data.account.email,
-          fullName: data.personal.fullName,
-          birthDate: data.personal.birthDate,
+          email: user.email ?? account.email,
           role: 'caregiver',
           roles: {
             caregiver: true,
           },
-          private: {
-            nif: data.personal.private.nif,
-            documentType: data.personal.private.documentType,
-            idDocument: data.personal.private.idDocument,
-          },
-            caregiverProfileStatus: 'draft',
-            acceptedTerms: data.account.acceptedTerms,
-            acceptedPrivacy: data.account.acceptedPrivacy,
+          caregiverProfileStatus: 'draft',
           updatedAt: serverTimestamp(),
         },
         { merge: true },
@@ -382,12 +425,12 @@ export class Auth {
           approvalStatus: 'pending',
           approval: false,
           publicProfile: {
-            fullName: data.personal.fullName,
-            gender: data.personal.gender,
-            nationality: data.personal.nationality,
-            district: data.location.district,
-            county: data.location.county,
-            travelRadius: data.location.travelRadius,
+            fullName: account.fullName,
+            gender: account.gender,
+            nationality: account.nationality,
+            district: account.location?.district,
+            county: account.location?.county,
+            travelRadius: account.location?.travelRadius,
             summary: data.professional.summary,
             experienceYears: data.professional.experienceYears,
             serviceTypes: data.professional.serviceTypes,
@@ -399,13 +442,13 @@ export class Auth {
             mobility: data.mobility,
           },
           private: {
-            birthDate: data.personal.birthDate,
-            phone: data.personal.phone,
-            nif: data.personal.private.nif,
-            documentType: data.personal.private.documentType,
-            idDocument: data.personal.private.idDocument,
-            address: data.location.private.address,
-            postalCode: data.location.postalCode,
+            birthDate: account.birthDate,
+            phone: account.phone,
+            nif: account.private?.nif,
+            documentType: account.private?.documentType,
+            idDocument: account.private?.idDocument,
+            address: account.private?.address,
+            postalCode: account.private?.postalCode,
             training: {
               items: persistedTrainingItems,
               courseName: firstTraining?.courseName ?? '',
@@ -474,6 +517,25 @@ export class Auth {
       compressedSize: profilePhotoUpload.compressedSize,
       uploadedAt: new Date().toISOString(),
     };
+  }
+
+  private hasCompletePersonalData(account: UserAccount | null): account is UserAccount {
+    return !!(
+      account?.fullName &&
+      account.birthDate &&
+      account.gender &&
+      account.nationality &&
+      account.phone &&
+      account.acceptedTerms &&
+      account.acceptedPrivacy &&
+      account.private?.nif &&
+      account.private?.documentType &&
+      account.private?.idDocument &&
+      account.private?.postalCode &&
+      account.location?.district &&
+      account.location?.county &&
+      account.location?.travelRadius
+    );
   }
 
   private async uploadCaregiverTrainingCertificates(
@@ -575,7 +637,9 @@ export class Auth {
         case 'auth/weak-password':
           return 'A palavra-passe deve ter pelo menos 6 caracteres.';
         case 'auth/requires-recent-login':
-          return 'É necessário iniciar sessão para criar o perfil de cuidador.';
+          return 'É necessário iniciar sessão para continuar.';
+        case 'failed-precondition':
+          return error.message || 'Complete os seus dados pessoais antes de continuar.';
         case 'permission-denied':
           return error.message || 'Não foi possível gravar no Firestore. Verifique as regras de segurança.';
         default:

@@ -91,90 +91,9 @@ const CAREGIVER_SIGNUP_COPY = {
 
       <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
         <fieldset class="form-disabled-shell" [disabled]="!canEditProfile()">
-          <section id="conta" class="signup-section">
-            <div class="section-title">
-              <span>1</span>
-              <div>
-                <h2>Dados de conta</h2>
-                <p>Obrigatório para criar acesso seguro à plataforma.</p>
-              </div>
-            </div>
-            <div class="form-grid two-columns">
-              <label>Email <strong>*</strong><input type="email" name="email" required readonly [value]="accountEmail()" /></label>
-            </div>
-            <div class="check-stack">
-              <label><input type="checkbox" name="acceptedTerms" required [checked]="hasExistingCaregiverProfile()" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
-              <label><input type="checkbox" name="acceptedPrivacy" required [checked]="hasExistingCaregiverProfile()" /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
-            </div>
-          </section>
-
-          <section id="dados-pessoais" class="signup-section">
-            <div class="section-title">
-              <span>2</span>
-              <div>
-                <h2>Dados pessoais</h2>
-                <p>Dados essenciais para identificação e contacto.</p>
-              </div>
-            </div>
-            <div class="form-grid two-columns">
-              <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" [value]="fieldValue('publicProfile.fullName')" /></label>
-              <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required [value]="fieldValue('private.birthDate')" /></label>
-              <label>Sexo <strong>*</strong>
-                <select name="gender" required [value]="fieldValue('publicProfile.gender')">
-                  <option value="">Selecionar</option>
-                  <option>Feminino</option>
-                  <option>Masculino</option>
-                  <option>Outro</option>
-                  <option>Prefiro não indicar</option>
-                </select>
-              </label>
-              <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="fieldValue('publicProfile.nationality')" /></label>
-              <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="fieldValue('private.phone')" /></label>
-              <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="fieldValue('private.nif')" /></label>
-              <label>Tipo de documento <strong>*</strong>
-                <select name="documentType" required [value]="fieldValue('private.documentType')">
-                  <option value="">Selecionar</option>
-                  <option>Cartão de Cidadão</option>
-                  <option>Passaporte</option>
-                  <option>Título de residência</option>
-                  <option>Outro</option>
-                </select>
-              </label>
-              <label>Documento de identificação <strong>*</strong> <small>privado</small><input name="idDocument" required placeholder="Número do documento" [value]="fieldValue('private.idDocument')" /></label>
-            </div>
-          </section>
-
-        <section id="localizacao" class="signup-section">
-          <div class="section-title">
-            <span>3</span>
-            <div>
-              <h2>Localização</h2>
-              <p>A família verá apenas a zona de atuação, não a morada completa.</p>
-            </div>
-          </div>
-          <div class="form-grid two-columns">
-            <label>Distrito <strong>*</strong><input name="district" required placeholder="Lisboa" [value]="fieldValue('publicProfile.district')" /></label>
-            <label>Concelho <strong>*</strong><input name="county" required placeholder="Oeiras" [value]="fieldValue('publicProfile.county')" /></label>
-            <label>Código Postal <strong>*</strong><input name="postalCode" required placeholder="0000-000" [value]="fieldValue('private.postalCode')" /></label>
-            <label>Raio máximo de deslocação
-              <select name="travelRadius" [value]="fieldValue('publicProfile.travelRadius')">
-                <option>Até 5 km</option>
-                <option>Até 10 km</option>
-                <option>Até 15 km</option>
-                <option>Até 20 km</option>
-                <option>Até 25 km</option>
-                <option>Até 30 km</option>
-                <option>Até 40 km</option>
-                <option>Até 50 km</option>
-              </select>
-            </label>
-            <label class="span-2">Morada completa <small>privada</small><input name="address" placeholder="Rua, número, localidade" [value]="fieldValue('private.address')" /></label>
-          </div>
-        </section>
-
         <section id="perfil-profissional" class="signup-section">
           <div class="section-title">
-            <span>4</span>
+            <span>1</span>
             <div>
               <h2>Perfil profissional</h2>
               <p>Informação pública que ajuda a família a decidir.</p>
@@ -196,7 +115,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="formacao" class="signup-section">
           <div class="section-title">
-            <span>5</span>
+            <span>2</span>
             <div>
               <h2>Formação</h2>
               <p>Opcional, mas recomendado para perfis profissionais.</p>
@@ -259,7 +178,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="disponibilidade" class="signup-section">
           <div class="section-title">
-            <span>6</span>
+            <span>3</span>
             <div>
               <h2>Disponibilidade</h2>
               <p>Dias, períodos e formatos de trabalho aceites.</p>
@@ -293,7 +212,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="valores" class="signup-section">
           <div class="section-title">
-            <span>7</span>
+            <span>4</span>
             <div>
               <h2>Valores</h2>
               <p>Comece pelo valor por hora; outros valores podem ser adicionados depois.</p>
@@ -309,7 +228,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="competencias" class="signup-section">
           <div class="section-title">
-            <span>8</span>
+            <span>5</span>
             <div>
               <h2>Competências</h2>
               <p>Assinale competências que fazem parte da sua prática.</p>
@@ -324,7 +243,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="idiomas-mobilidade" class="signup-section">
           <div class="section-title">
-            <span>9</span>
+            <span>6</span>
             <div>
               <h2>Idiomas e mobilidade</h2>
               <p>Ajuda a família a entender comunicação e deslocação.</p>
@@ -350,7 +269,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
         <section id="referencias" class="signup-section">
           <div class="section-title">
-            <span>10</span>
+            <span>7</span>
             <div>
               <h2>Referências</h2>
               <p>Opcional, mas útil para validação posterior.</p>
@@ -390,7 +309,6 @@ export class BecomeCaregiverComponent implements OnInit {
   protected isSubmitting = false;
   protected errorMessage = '';
   protected successMessage = '';
-  protected readonly accountEmail = signal('');
   protected readonly hasExistingCaregiverProfile = signal(false);
   protected readonly canEditProfile = signal(true);
   protected readonly approvalLockMessage = signal('');
@@ -403,9 +321,6 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   protected readonly sections = [
-    { id: 'conta', label: 'Conta' },
-    { id: 'dados-pessoais', label: 'Dados pessoais' },
-    { id: 'localizacao', label: 'Localização' },
     { id: 'perfil-profissional', label: 'Perfil' },
     { id: 'formacao', label: 'Formação' },
     { id: 'disponibilidade', label: 'Disponibilidade' },
@@ -460,7 +375,6 @@ export class BecomeCaregiverComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const user = await this.authService.getCurrentUser();
-    this.accountEmail.set(user?.email ?? '');
 
     if (!user) {
       return;
@@ -496,7 +410,7 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       data = await this.buildCaregiverRegistration(formData);
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível processar a foto de perfil.';
+      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível processar o cadastro.';
       return;
     }
 
@@ -789,32 +703,6 @@ export class BecomeCaregiverComponent implements OnInit {
 
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
     return {
-      account: {
-        email: this.textValue(formData, 'email'),
-        acceptedTerms: this.booleanValue(formData, 'acceptedTerms'),
-        acceptedPrivacy: this.booleanValue(formData, 'acceptedPrivacy'),
-      },
-      personal: {
-        fullName: this.textValue(formData, 'fullName'),
-        birthDate: this.textValue(formData, 'birthDate'),
-        gender: this.textValue(formData, 'gender'),
-        nationality: this.textValue(formData, 'nationality'),
-        phone: this.textValue(formData, 'phone'),
-        private: {
-          nif: this.textValue(formData, 'nif'),
-          documentType: this.textValue(formData, 'documentType'),
-          idDocument: this.textValue(formData, 'idDocument'),
-        },
-      },
-      location: {
-        district: this.textValue(formData, 'district'),
-        county: this.textValue(formData, 'county'),
-        postalCode: this.textValue(formData, 'postalCode'),
-        travelRadius: this.textValue(formData, 'travelRadius'),
-        private: {
-          address: this.textValue(formData, 'address'),
-        },
-      },
       professional: {
         summary: this.textValue(formData, 'summary'),
         experienceYears: this.numberValue(formData, 'experienceYears') ?? 0,
@@ -896,20 +784,6 @@ export class BecomeCaregiverComponent implements OnInit {
 
   private getCaregiverValidationMessage(form: HTMLFormElement, formData: FormData): string {
     const requiredFields = [
-      { key: 'email', label: 'Email' },
-      { key: 'acceptedTerms', label: 'Aceitação dos Termos e Condições', type: 'checkbox' },
-      { key: 'acceptedPrivacy', label: 'Aceitação da Política de Privacidade', type: 'checkbox' },
-      { key: 'fullName', label: 'Nome completo' },
-      { key: 'birthDate', label: 'Data de nascimento', type: 'birthDate' },
-      { key: 'gender', label: 'Sexo' },
-      { key: 'nationality', label: 'Nacionalidade' },
-      { key: 'phone', label: 'Telemóvel' },
-      { key: 'nif', label: 'NIF' },
-      { key: 'documentType', label: 'Tipo de documento' },
-      { key: 'idDocument', label: 'Documento de identificação' },
-      { key: 'district', label: 'Distrito' },
-      { key: 'county', label: 'Concelho' },
-      { key: 'postalCode', label: 'Código Postal' },
       { key: 'summary', label: 'Resumo profissional' },
       { key: 'experienceYears', label: 'Anos de experiência' },
       { key: 'serviceTypes', label: 'Tipos de serviço prestados', type: 'array' },
@@ -943,9 +817,6 @@ export class BecomeCaregiverComponent implements OnInit {
         }
       }
 
-      if (field.type === 'birthDate' && !this.isAdult(value)) {
-        return 'É necessário ter pelo menos 18 anos para se registar como cuidador.';
-      }
     }
 
     return this.getTrainingValidationMessage(formData);

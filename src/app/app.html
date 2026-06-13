@@ -47,6 +47,7 @@
               @if (photoMessage()) {
                 <small class="account-feedback">{{ photoMessage() }}</small>
               }
+              <button type="button" role="menuitem" (click)="goToPersonalData()">Meus dados pessoais</button>
               <hr />
               <p>Escolher perfil</p>
               @if (hasCaregiverProfile()) {

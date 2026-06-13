@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { authGuard } from './core/guards/auth.guard';
 import { caregiverSignupGuard } from './core/guards/caregiver-signup.guard';
 import { caregiverDashboardGuard, familyDashboardGuard } from './core/guards/dashboard.guard';
 
@@ -63,6 +64,13 @@ export const routes: Routes = [
     path: 'cadastro',
     title: 'Cadastro | Cuidar+',
     loadComponent: () => import('./pages/register/register').then((m) => m.RegisterComponent),
+  },
+  {
+    path: 'meus-dados-pessoais',
+    title: 'Meus Dados Pessoais | Cuidar+',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/personal-data/personal-data').then((m) => m.PersonalDataComponent),
   },
   {
     path: 'dashboard/familia',

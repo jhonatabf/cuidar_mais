@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
 
@@ -102,6 +102,11 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
         @if (errorMessage()) {
           <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
         }
+        @if (redirectTo() && !successMessage()) {
+          <p class="form-message info-message" role="status">
+            Complete estes dados para continuar a criação ou edição do seu perfil.
+          </p>
+        }
         @if (successMessage()) {
           <p class="form-message success-message" role="status">{{ successMessage() }}</p>
         }
@@ -118,12 +123,15 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
 })
 export class PersonalDataComponent implements OnInit {
   private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly account = signal<UserAccount | null>(null);
   protected readonly email = signal('');
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly isSubmitting = signal(false);
+  protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
 
   async ngOnInit(): Promise<void> {
     const user = await this.auth.getCurrentUser();
@@ -152,6 +160,11 @@ export class PersonalDataComponent implements OnInit {
     try {
       await this.auth.updateUserPersonalData(this.buildPersonalData(formData));
       this.account.set(await this.auth.getUserAccount((await this.auth.getCurrentUser())?.uid ?? ''));
+      if (this.redirectTo()) {
+        await this.router.navigateByUrl(this.redirectTo());
+        return;
+      }
+
       this.successMessage.set('Dados pessoais guardados com sucesso.');
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));

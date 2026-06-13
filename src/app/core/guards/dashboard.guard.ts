@@ -25,6 +25,16 @@ export const caregiverDashboardGuard: CanActivateFn = async () => {
     auth.getCaregiverStatus(user.uid),
   ]);
 
+  if (!account) {
+    return router.createUrlTree(['/cadastro']);
+  }
+
+  if (!auth.hasCompletePersonalData(account)) {
+    return router.createUrlTree(['/meus-dados-pessoais'], {
+      queryParams: { redirectTo: '/dashboard/cuidador' },
+    });
+  }
+
   if (caregiverStatus || account?.roles?.caregiver || account?.role === 'caregiver') {
     return true;
   }
@@ -52,6 +62,12 @@ export const familyDashboardGuard: CanActivateFn = async () => {
   const account = await auth.getUserAccount(user.uid);
   if (!account) {
     return router.createUrlTree(['/cadastro']);
+  }
+
+  if (!auth.hasCompletePersonalData(account)) {
+    return router.createUrlTree(['/meus-dados-pessoais'], {
+      queryParams: { redirectTo: '/dashboard/familia' },
+    });
   }
 
   if (account?.roles?.family || account?.role === 'family') {

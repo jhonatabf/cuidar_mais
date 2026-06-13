@@ -20,5 +20,12 @@ export const caregiverSignupGuard: CanActivateFn = async () => {
     });
   }
 
+  const account = await auth.getUserAccount(user.uid);
+  if (!auth.hasCompletePersonalData(account)) {
+    return router.createUrlTree(['/meus-dados-pessoais'], {
+      queryParams: { redirectTo: '/seja-cuidador' },
+    });
+  }
+
   return true;
 };

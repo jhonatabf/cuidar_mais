@@ -390,6 +390,17 @@ export class Auth {
       this.getCaregiverStatus(uid),
     ]);
 
+    if (!account) {
+      return '/cadastro';
+    }
+
+    if (this.getMissingPersonalDataFields(account).length > 0) {
+      const nextStep = account?.roles?.caregiver || account?.role === 'caregiver'
+        ? '/seja-cuidador'
+        : '/dashboard/familia';
+      return `/meus-dados-pessoais?redirectTo=${encodeURIComponent(nextStep)}`;
+    }
+
     if (caregiverStatus) {
       return '/dashboard/cuidador';
     }
@@ -562,23 +573,31 @@ export class Auth {
     };
   }
 
-  private hasCompletePersonalData(account: UserAccount | null): account is UserAccount {
-    return !!(
-      account?.fullName &&
-      account.birthDate &&
-      account.gender &&
-      account.nationality &&
-      account.phone &&
-      account.acceptedTerms &&
-      account.acceptedPrivacy &&
-      account.private?.nif &&
-      account.private?.documentType &&
-      account.private?.idDocument &&
-      account.private?.postalCode &&
-      account.location?.district &&
-      account.location?.county &&
-      account.location?.travelRadius
-    );
+  hasCompletePersonalData(account: UserAccount | null): account is UserAccount {
+    return this.getMissingPersonalDataFields(account).length === 0;
+  }
+
+  getMissingPersonalDataFields(account: UserAccount | null): string[] {
+    const fields = [
+      { value: account?.fullName, label: 'Nome completo' },
+      { value: account?.birthDate, label: 'Data de nascimento' },
+      { value: account?.gender, label: 'Sexo' },
+      { value: account?.nationality, label: 'Nacionalidade' },
+      { value: account?.phone, label: 'Telemóvel' },
+      { value: account?.acceptedTerms, label: 'Aceitação dos Termos e Condições' },
+      { value: account?.acceptedPrivacy, label: 'Aceitação da Política de Privacidade' },
+      { value: account?.private?.nif, label: 'NIF' },
+      { value: account?.private?.documentType, label: 'Tipo de documento' },
+      { value: account?.private?.idDocument, label: 'Documento de identificação' },
+      { value: account?.private?.postalCode, label: 'Código Postal' },
+      { value: account?.location?.district, label: 'Distrito' },
+      { value: account?.location?.county, label: 'Concelho' },
+      { value: account?.location?.travelRadius, label: 'Raio máximo de deslocação' },
+    ];
+
+    return fields
+      .filter((field) => field.value !== true && (typeof field.value !== 'string' || !field.value.trim()))
+      .map((field) => field.label);
   }
 
   private withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {

@@ -126,6 +126,13 @@ select:focus {
   justify-content: flex-end;
 }
 
+.info-message {
+  border-color: rgba(36, 109, 185, 0.18);
+  background: #edf6ff;
+  color: #2b5d8b;
+  font-weight: 350;
+}
+
 @media (max-width: 720px) {
   .two-columns {
     grid-template-columns: 1fr;

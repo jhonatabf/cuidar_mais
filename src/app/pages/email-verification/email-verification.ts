@@ -105,13 +105,18 @@ export class EmailVerificationComponent {
 
   private async nextRouteAfterVerification(): Promise<string> {
     const redirectTo = this.redirectTo();
-    if (redirectTo && redirectTo !== '/') {
-      return redirectTo;
-    }
-
     const user = await this.auth.getCurrentUser();
     if (!user) {
       return '/login';
+    }
+
+    if (redirectTo && redirectTo !== '/') {
+      const account = await this.auth.getUserAccount(user.uid);
+      if (!this.auth.hasCompletePersonalData(account)) {
+        return `/meus-dados-pessoais?redirectTo=${encodeURIComponent(redirectTo)}`;
+      }
+
+      return redirectTo;
     }
 
     return this.auth.getPostLoginRedirect(user.uid);

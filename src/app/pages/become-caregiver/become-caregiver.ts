@@ -341,7 +341,11 @@ const CAREGIVER_SIGNUP_COPY = {
           <button class="button" type="submit" [disabled]="isSubmitting || !canEditProfile()">
             {{ isSubmitting ? 'A gravar...' : submitButtonLabel() }}
           </button>
-          <a class="button-secondary" routerLink="/como-funciona/cuidadores">Ver como funciona</a>
+          @if (hasExistingCaregiverProfile()) {
+            <a class="button-secondary" routerLink="/dashboard/cuidador">Voltar ao Dashboard</a>
+          } @else {
+            <a class="button-secondary" routerLink="/como-funciona/cuidadores">Ver como funciona</a>
+          }
         </div>
       </form>
     </section>

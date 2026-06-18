@@ -163,7 +163,7 @@ export interface UserAccount {
 
 export type CaregiverProfileDocument = Record<string, unknown>;
 
-export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'done';
+export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'approved' | 'rejected';
 
 export interface CaregiverApprovalSummary {
   approval: boolean;
@@ -275,7 +275,10 @@ export class Auth {
   ): CaregiverApprovalSummary {
     const approvalDate = this.toDate(caregiverProfile?.['approvalDate'] ?? caregiverProfile?.['data']);
     const approval = caregiverProfile?.['approval'] === true;
-    const approvalStatus = this.toApprovalStatus(caregiverProfile?.['approvalStatus'] ?? caregiverProfile?.['status']);
+    const storedApprovalStatus = this.toApprovalStatus(
+      caregiverProfile?.['approvalStatus'] ?? caregiverProfile?.['status'],
+    );
+    const approvalStatus: CaregiverApprovalStatus = approval ? 'approved' : storedApprovalStatus;
     const approvalUserId =
       typeof (caregiverProfile?.['approvalUserId'] ?? caregiverProfile?.['userId']) === 'string'
         ? (caregiverProfile?.['approvalUserId'] ?? caregiverProfile?.['userId']) as string
@@ -691,8 +694,12 @@ export class Auth {
       return 'analysing';
     }
 
-    if (value === 'done' || value === 'Done') {
-      return 'done';
+    if (value === 'done' || value === 'Done' || value === 'approved') {
+      return 'approved';
+    }
+
+    if (value === 'rejected' || value === 'refused' || value === 'recusado') {
+      return 'rejected';
     }
 
     return 'pending';

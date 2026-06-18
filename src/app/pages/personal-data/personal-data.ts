@@ -1,5 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  getCountries,
+  getCountryCallingCode,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from 'libphonenumber-js';
 
 import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
 
@@ -60,7 +66,24 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
               </select>
             </label>
             <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="value('nationality')" /></label>
-            <label>Telemóvel <strong>*</strong><input type="tel" name="phone" required placeholder="+351 900 000 000" [value]="value('phone')" /></label>
+            <label>Indicativo internacional (DDI) <strong>*</strong>
+              <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event)">
+                @for (country of phoneCountries; track country.code) {
+                  <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+                }
+              </select>
+            </label>
+            <label>Telemóvel <strong>*</strong>
+              <input
+                type="tel"
+                name="phone"
+                required
+                inputmode="tel"
+                autocomplete="tel-national"
+                placeholder="912 345 678"
+                [value]="nationalPhone()"
+              />
+            </label>
             <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="privateValue('nif')" /></label>
             <label>Tipo de documento <strong>*</strong>
               <select name="documentType" required [value]="privateValue('documentType')">
@@ -124,6 +147,19 @@ export class PersonalDataComponent implements OnInit {
   protected readonly successMessage = signal('');
   protected readonly isSubmitting = signal(false);
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
+  protected readonly phoneCountry = signal<CountryCode>('PT');
+  protected readonly nationalPhone = signal('');
+  protected readonly phoneCountries = getCountries()
+    .map((code) => ({
+      code,
+      name: this.countryDisplayName(code),
+      callingCode: getCountryCallingCode(code),
+    }))
+    .sort((first, second) => {
+      if (first.code === 'PT') return -1;
+      if (second.code === 'PT') return 1;
+      return first.name.localeCompare(second.name, 'pt-PT');
+    });
   protected readonly isRequiredStep = computed(() => !!this.redirectTo());
   protected readonly pageTitle = computed(() =>
     this.isRequiredStep()
@@ -143,7 +179,9 @@ export class PersonalDataComponent implements OnInit {
       return;
     }
 
-    this.account.set(await this.auth.getUserAccount(user.uid));
+    const account = await this.auth.getUserAccount(user.uid);
+    this.account.set(account);
+    this.loadPhone(account);
   }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
@@ -189,14 +227,24 @@ export class PersonalDataComponent implements OnInit {
     return this.account()?.location?.[key] ?? '';
   }
 
+  protected onPhoneCountryChange(event: Event): void {
+    this.phoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
+  }
+
   private buildPersonalData(formData: FormData): UserPersonalData {
+    const phoneCountry = this.textValue(formData, 'phoneCountry') as CountryCode;
+    const phoneNational = this.textValue(formData, 'phone');
+
     return {
       email: this.textValue(formData, 'email'),
       fullName: this.textValue(formData, 'fullName'),
       birthDate: this.textValue(formData, 'birthDate'),
       gender: this.textValue(formData, 'gender'),
       nationality: this.textValue(formData, 'nationality'),
-      phone: this.textValue(formData, 'phone'),
+      phone: this.normalizedPhone(formData),
+      phoneCountry,
+      phoneCallingCode: `+${getCountryCallingCode(phoneCountry)}`,
+      phoneNational,
       acceptedTerms: formData.has('acceptedTerms'),
       acceptedPrivacy: formData.has('acceptedPrivacy'),
       private: {
@@ -250,6 +298,10 @@ export class PersonalDataComponent implements OnInit {
       if (field.type === 'birthDate' && !this.isAdult(value)) {
         return 'É necessário ter pelo menos 18 anos.';
       }
+
+      if (field.key === 'phone' && !this.isValidPhone(formData)) {
+        return 'Introduza um número de telemóvel válido para o indicativo selecionado.';
+      }
     }
 
     return '';
@@ -280,6 +332,39 @@ export class PersonalDataComponent implements OnInit {
     const adultDate = new Date(birthDate);
     adultDate.setFullYear(adultDate.getFullYear() + 18);
     return adultDate <= today;
+  }
+
+  private loadPhone(account: UserAccount | null): void {
+    if (account?.phoneCountry && account.phoneNational) {
+      this.phoneCountry.set(account.phoneCountry as CountryCode);
+      this.nationalPhone.set(account.phoneNational);
+      return;
+    }
+
+    const parsedPhone = parsePhoneNumberFromString(account?.phone ?? '');
+    if (parsedPhone?.country) {
+      this.phoneCountry.set(parsedPhone.country);
+      this.nationalPhone.set(parsedPhone.nationalNumber);
+      return;
+    }
+
+    this.nationalPhone.set(account?.phone ?? '');
+  }
+
+  private normalizedPhone(formData: FormData): string {
+    const country = this.textValue(formData, 'phoneCountry') as CountryCode;
+    const phone = parsePhoneNumberFromString(this.textValue(formData, 'phone'), country);
+    return phone?.number ?? '';
+  }
+
+  private isValidPhone(formData: FormData): boolean {
+    const country = this.textValue(formData, 'phoneCountry') as CountryCode;
+    const phone = parsePhoneNumberFromString(this.textValue(formData, 'phone'), country);
+    return !!phone && phone.country === country && phone.isValid();
+  }
+
+  private countryDisplayName(country: CountryCode): string {
+    return new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(country) ?? country;
   }
 
   private textValue(formData: FormData, key: string): string {

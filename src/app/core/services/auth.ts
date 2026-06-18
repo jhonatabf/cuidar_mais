@@ -93,6 +93,9 @@ export interface CaregiverRegistration {
   reference: {
     name: string;
     contact: string;
+    contactCountry: string;
+    contactCallingCode: string;
+    contactNational: string;
     relation: string;
   };
 }
@@ -104,6 +107,9 @@ export interface UserPersonalData {
   gender: string;
   nationality: string;
   phone: string;
+  phoneCountry: string;
+  phoneCallingCode: string;
+  phoneNational: string;
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   private: {
@@ -127,6 +133,9 @@ export interface UserAccount {
   gender?: string;
   nationality?: string;
   phone?: string;
+  phoneCountry?: string;
+  phoneCallingCode?: string;
+  phoneNational?: string;
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
   private?: {
@@ -314,6 +323,9 @@ export class Auth {
           gender: data.gender,
           nationality: data.nationality,
           phone: data.phone,
+          phoneCountry: data.phoneCountry,
+          phoneCallingCode: data.phoneCallingCode,
+          phoneNational: data.phoneNational,
           acceptedTerms: data.acceptedTerms,
           acceptedPrivacy: data.acceptedPrivacy,
           private: data.private,

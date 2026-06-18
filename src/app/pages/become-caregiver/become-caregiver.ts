@@ -1,5 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import {
+  getCountries,
+  getCountryCallingCode,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from 'libphonenumber-js';
 
 import {
   Auth,
@@ -298,10 +304,26 @@ const CAREGIVER_SIGNUP_COPY = {
               <p>Opcional, mas útil para validação posterior.</p>
             </div>
           </div>
-          <div class="form-grid three-columns">
+          <div class="form-grid two-columns">
             <label>Nome da referência<input name="referenceName" placeholder="Nome completo" [value]="fieldValue('private.reference.name')" /></label>
-            <label>Contacto<input name="referenceContact" placeholder="Telemóvel ou email" [value]="fieldValue('private.reference.contact')" /></label>
             <label>Relação profissional<input name="referenceRelation" placeholder="Ex.: antiga família, instituição" [value]="fieldValue('private.reference.relation')" /></label>
+            <label>Indicativo internacional (DDI)
+              <select name="referencePhoneCountry" [value]="referencePhoneCountry()" (change)="onReferencePhoneCountryChange($event)">
+                @for (country of referencePhoneCountries; track country.code) {
+                  <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+                }
+              </select>
+            </label>
+            <label>Telemóvel
+              <input
+                type="tel"
+                name="referenceContact"
+                inputmode="tel"
+                autocomplete="tel-national"
+                placeholder="912 345 678"
+                [value]="referencePhoneNational()"
+              />
+            </label>
           </div>
         </section>
         </fieldset>
@@ -398,6 +420,19 @@ export class BecomeCaregiverComponent implements OnInit {
   ];
 
   protected readonly languages = ['Português', 'Inglês', 'Francês', 'Espanhol', 'Outro'];
+  protected readonly referencePhoneCountry = signal<CountryCode>('PT');
+  protected readonly referencePhoneNational = signal('');
+  protected readonly referencePhoneCountries = getCountries()
+    .map((code) => ({
+      code,
+      name: this.countryDisplayName(code),
+      callingCode: getCountryCallingCode(code),
+    }))
+    .sort((first, second) => {
+      if (first.code === 'PT') return -1;
+      if (second.code === 'PT') return 1;
+      return first.name.localeCompare(second.name, 'pt-PT');
+    });
 
   async ngOnInit(): Promise<void> {
     const user = await this.authService.getCurrentUser();
@@ -410,6 +445,7 @@ export class BecomeCaregiverComponent implements OnInit {
     this.existingCaregiverProfile.set(caregiverProfile);
     this.hasExistingCaregiverProfile.set(!!caregiverProfile);
     this.loadTrainingEntries(caregiverProfile);
+    this.loadReferencePhone();
     this.applyApprovalLock(caregiverProfile);
     this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
   }
@@ -565,6 +601,10 @@ export class BecomeCaregiverComponent implements OnInit {
       this.errorMessage = 'A imagem do certificado deve ter no máximo 5 MB.';
       input.value = '';
     }
+  }
+
+  protected onReferencePhoneCountryChange(event: Event): void {
+    this.referencePhoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
   }
 
   private loadTrainingEntries(caregiverProfile: CaregiverProfileDocument | null): void {
@@ -728,6 +768,9 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   private async buildCaregiverRegistration(formData: FormData): Promise<CaregiverRegistration> {
+    const referencePhoneCountry = this.textValue(formData, 'referencePhoneCountry') as CountryCode;
+    const referencePhoneNational = this.textValue(formData, 'referenceContact');
+
     return {
       professional: {
         summary: this.textValue(formData, 'summary'),
@@ -758,7 +801,10 @@ export class BecomeCaregiverComponent implements OnInit {
       },
       reference: {
         name: this.textValue(formData, 'referenceName'),
-        contact: this.textValue(formData, 'referenceContact'),
+        contact: this.normalizedReferencePhone(formData),
+        contactCountry: referencePhoneNational ? referencePhoneCountry : '',
+        contactCallingCode: referencePhoneNational ? `+${getCountryCallingCode(referencePhoneCountry)}` : '',
+        contactNational: referencePhoneNational,
         relation: this.textValue(formData, 'referenceRelation'),
       },
     };
@@ -847,6 +893,11 @@ export class BecomeCaregiverComponent implements OnInit {
 
     }
 
+    const referenceContact = this.textValue(formData, 'referenceContact');
+    if (referenceContact && !this.isValidReferencePhone(formData)) {
+      return 'Introduza um contacto de referência válido para o indicativo selecionado.';
+    }
+
     return this.getTrainingValidationMessage(formData);
   }
 
@@ -932,6 +983,42 @@ export class BecomeCaregiverComponent implements OnInit {
       month: '2-digit',
       year: 'numeric',
     }).format(date);
+  }
+
+  private loadReferencePhone(): void {
+    const storedCountry = this.fieldValue('private.reference.contactCountry');
+    const storedNational = this.fieldValue('private.reference.contactNational');
+    if (storedCountry && storedNational) {
+      this.referencePhoneCountry.set(storedCountry as CountryCode);
+      this.referencePhoneNational.set(storedNational);
+      return;
+    }
+
+    const parsedPhone = parsePhoneNumberFromString(this.fieldValue('private.reference.contact'));
+    if (parsedPhone?.country) {
+      this.referencePhoneCountry.set(parsedPhone.country);
+      this.referencePhoneNational.set(parsedPhone.nationalNumber);
+    }
+  }
+
+  private normalizedReferencePhone(formData: FormData): string {
+    const nationalPhone = this.textValue(formData, 'referenceContact');
+    if (!nationalPhone) {
+      return '';
+    }
+
+    const country = this.textValue(formData, 'referencePhoneCountry') as CountryCode;
+    return parsePhoneNumberFromString(nationalPhone, country)?.number ?? '';
+  }
+
+  private isValidReferencePhone(formData: FormData): boolean {
+    const country = this.textValue(formData, 'referencePhoneCountry') as CountryCode;
+    const phone = parsePhoneNumberFromString(this.textValue(formData, 'referenceContact'), country);
+    return !!phone && phone.country === country && phone.isValid();
+  }
+
+  private countryDisplayName(country: CountryCode): string {
+    return new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(country) ?? country;
   }
 
   private textValue(formData: FormData, key: string): string {

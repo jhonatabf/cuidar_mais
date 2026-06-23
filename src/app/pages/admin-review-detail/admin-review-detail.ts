@@ -62,8 +62,15 @@ import { Auth } from '../../core/services/auth';
               <div><dt>Data de nascimento</dt><dd>{{ mainValue('birthDate') }}</dd></div>
               <div><dt>NIF</dt><dd>{{ privateValue('nif') }}</dd></div>
               <div><dt>Documento</dt><dd>{{ privateValue('documentType') }} · {{ privateValue('idDocument') }}</dd></div>
+              <div><dt>Frente do documento</dt><dd><a [href]="documentUrl('identityFront')" target="_blank" rel="noopener">{{ documentFileName('identityFront') }}</a></dd></div>
+              @if (privateValue('documentType') !== 'Passaporte') {
+                <div><dt>Verso do documento</dt><dd><a [href]="documentUrl('identityBack')" target="_blank" rel="noopener">{{ documentFileName('identityBack') }}</a></dd></div>
+              }
               <div><dt>Morada</dt><dd>{{ privateValue('address') }}</dd></div>
               <div><dt>Código Postal</dt><dd>{{ privateValue('postalCode') }}</dd></div>
+              <div><dt>Comprovativo de morada</dt><dd><a [href]="documentUrl('addressProof')" target="_blank" rel="noopener">{{ documentFileName('addressProof') }}</a></dd></div>
+              <div><dt>Sem pendência criminal</dt><dd>{{ privateValue('criminalRecordNoPending') }}</dd></div>
+              <div><dt>Atestado de criminalidade</dt><dd><a [href]="documentUrl('criminalRecordCertificate')" target="_blank" rel="noopener">{{ documentFileName('criminalRecordCertificate') }}</a></dd></div>
             </dl>
           </article>
         </section>
@@ -305,6 +312,15 @@ export class AdminReviewDetailComponent implements OnInit {
     return this.valueAt(`private.${key}`);
   }
 
+  protected documentFileName(kind: string): string {
+    return this.valueAt(`private.documents.${kind}.fileName`);
+  }
+
+  protected documentUrl(kind: string): string | null {
+    const value = this.rawValueAt(`private.documents.${kind}.downloadUrl`);
+    return typeof value === 'string' && value.trim() ? value : null;
+  }
+
   protected caregiverPublicValue(key: string): string {
     return this.valueAt(`publicProfile.${key}`);
   }
@@ -351,13 +367,7 @@ export class AdminReviewDetailComponent implements OnInit {
   }
 
   private valueAt(path: string): string {
-    const value = path.split('.').reduce<unknown>((current, key) => {
-      if (!current || typeof current !== 'object') {
-        return undefined;
-      }
-
-      return (current as Record<string, unknown>)[key];
-    }, this.item()?.raw);
+    const value = this.rawValueAt(path);
 
     if (Array.isArray(value)) {
       return value.join(', ');
@@ -370,6 +380,18 @@ export class AdminReviewDetailComponent implements OnInit {
     }
 
     return typeof value === 'string' && value.trim() ? value : 'Não informado';
+  }
+
+  private rawValueAt(path: string): unknown {
+    const value = path.split('.').reduce<unknown>((current, key) => {
+      if (!current || typeof current !== 'object') {
+        return undefined;
+      }
+
+      return (current as Record<string, unknown>)[key];
+    }, this.item()?.raw);
+
+    return value;
   }
 
   private textValue(formData: FormData, key: string): string {

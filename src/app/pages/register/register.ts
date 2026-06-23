@@ -14,27 +14,30 @@ import { Auth } from '../../core/services/auth';
         <p class="lead">Escolha o tipo de conta e complete os dados essenciais do MVP.</p>
       </div>
       <form class="card card-body form-grid" novalidate (submit)="onSubmit($event)">
-        <label>Tipo de conta
+        <label><span class="label-line">Tipo de conta <strong>*</strong></span>
           <select name="accountType" required data-error-label="Tipo de conta">
             <option>Familia</option>
             <option>Cuidador</option>
           </select>
         </label>
-        <label>Nome<input name="fullName" required data-error-label="Nome" placeholder="Nome completo" /></label>
-        <label>Data de nascimento<input name="birthDate" type="date" required data-error-label="Data de nascimento" /></label>
-        <label>NIF<input name="nif" required inputmode="numeric" data-error-label="NIF" placeholder="Número de identificação fiscal" /></label>
-        <label>Tipo de documento
-          <select name="documentType" required data-error-label="Tipo de documento">
-            <option value="">Selecionar</option>
-            <option>Cartão de Cidadão</option>
-            <option>Passaporte</option>
-            <option>Título de residência</option>
-            <option>Outro</option>
-          </select>
-        </label>
-        <label>Número do documento<input name="idDocument" required data-error-label="Número do documento" placeholder="Número do documento" /></label>
-        <label>Email<input name="email" type="email" required data-error-label="Email" placeholder="email@exemplo.pt" /></label>
-        <label>Password<input name="password" type="password" required minlength="6" data-error-label="Password" placeholder="Crie uma password" /></label>
+        <label><span class="label-line">Nome <strong>*</strong></span><input name="fullName" required data-error-label="Nome" placeholder="Nome completo" /></label>
+        <label><span class="label-line">Data de nascimento <strong>*</strong></span><input name="birthDate" type="date" required data-error-label="Data de nascimento" /></label>
+        <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" data-error-label="NIF" placeholder="Número de identificação fiscal" /></label>
+        <fieldset class="document-fieldset">
+          <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
+          <label><span class="label-line">Tipo</span>
+            <select name="documentType" required data-error-label="Tipo de documento">
+              <option value="">Selecionar</option>
+              <option>Cartão de Cidadão</option>
+              <option>Passaporte</option>
+              <option>Título de residência</option>
+              <option>Outro</option>
+            </select>
+          </label>
+          <label><span class="label-line">Número</span><input name="idDocument" required data-error-label="Número do documento" placeholder="Número do documento" /></label>
+        </fieldset>
+        <label><span class="label-line">Email <strong>*</strong></span><input name="email" type="email" required data-error-label="Email" placeholder="email@exemplo.pt" /></label>
+        <label><span class="label-line">Password <strong>*</strong></span><input name="password" type="password" required minlength="6" data-error-label="Password" placeholder="Crie uma password" /></label>
         @if (errorMessage()) {
           <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
         }

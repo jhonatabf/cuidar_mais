@@ -17,6 +17,30 @@ import { firebaseAuth, firebaseStorage, firestoreDb } from '../firebase/firebase
 
 const FIREBASE_OPERATION_TIMEOUT_MS = 20000;
 
+export type UserPrivateDocumentKind =
+  | 'identityFront'
+  | 'identityBack'
+  | 'addressProof'
+  | 'criminalRecordCertificate';
+
+export interface UserPrivateDocument {
+  storagePath: string;
+  downloadUrl: string;
+  fileName: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  uploadedAt: string;
+}
+
+export interface UserPrivateDocumentUpload {
+  name: string;
+  contentType: string;
+  originalSize: number;
+  compressedSize: number;
+  blob: Blob;
+}
+
 export interface CaregiverTrainingCertificate {
   storagePath: string;
   fileName: string;
@@ -118,6 +142,9 @@ export interface UserPersonalData {
     idDocument: string;
     address: string;
     postalCode: string;
+    criminalRecordNoPending: boolean;
+    documents?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>;
+    documentUploads?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>;
   };
   location: {
     district: string;
@@ -144,6 +171,8 @@ export interface UserAccount {
     idDocument?: string;
     address?: string;
     postalCode?: string;
+    criminalRecordNoPending?: boolean;
+    documents?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>;
   };
   location?: {
     district?: string;
@@ -326,6 +355,14 @@ export class Auth {
       throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para alterar os dados pessoais.');
     }
 
+    const existingAccount = await this.getUserAccount(user.uid);
+    const documents = await this.uploadUserPrivateDocuments(
+      user.uid,
+      data.private.documents ?? existingAccount?.private?.documents ?? {},
+      data.private.documentUploads ?? {},
+    );
+    const { documentUploads: _documentUploads, ...privateData } = data.private;
+
     await Promise.all([
       updateProfile(user, { displayName: data.fullName }),
       setDoc(
@@ -343,7 +380,10 @@ export class Auth {
           phoneNational: data.phoneNational,
           acceptedTerms: data.acceptedTerms,
           acceptedPrivacy: data.acceptedPrivacy,
-          private: data.private,
+          private: {
+            ...privateData,
+            documents,
+          },
           location: data.location,
           updatedAt: serverTimestamp(),
         },
@@ -583,6 +623,53 @@ export class Auth {
     return profilePhoto;
   }
 
+  private async uploadUserPrivateDocuments(
+    uid: string,
+    existingDocuments: Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>,
+    uploads: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>,
+  ): Promise<Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>> {
+    const entries = await Promise.all(
+      (Object.entries(uploads) as Array<[UserPrivateDocumentKind, UserPrivateDocumentUpload | undefined]>)
+        .filter((entry): entry is [UserPrivateDocumentKind, UserPrivateDocumentUpload] => !!entry[1])
+        .map(async ([kind, upload]) => {
+          const document = await this.uploadUserPrivateDocument(uid, kind, upload);
+          return [kind, document] as const;
+        }),
+    );
+
+    return {
+      ...existingDocuments,
+      ...Object.fromEntries(entries),
+    };
+  }
+
+  private async uploadUserPrivateDocument(
+    uid: string,
+    kind: UserPrivateDocumentKind,
+    upload: UserPrivateDocumentUpload,
+  ): Promise<UserPrivateDocument> {
+    const storagePath = `users/${uid}/documents/${kind}.jpg`;
+    const storageRef = ref(firebaseStorage, storagePath);
+    const snapshot = await uploadBytes(storageRef, upload.blob, {
+      contentType: upload.contentType,
+      customMetadata: {
+        ownerUid: uid,
+        documentKind: kind,
+      },
+    });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+
+    return {
+      storagePath: snapshot.metadata.fullPath,
+      downloadUrl,
+      fileName: upload.name,
+      contentType: upload.contentType,
+      originalSize: upload.originalSize,
+      compressedSize: upload.compressedSize,
+      uploadedAt: new Date().toISOString(),
+    };
+  }
+
   private async uploadUserProfilePhoto(
     uid: string,
     profilePhotoUpload: UserProfilePhotoUpload,
@@ -614,6 +701,7 @@ export class Auth {
   }
 
   getMissingPersonalDataFields(account: UserAccount | null): string[] {
+    const documents = account?.private?.documents ?? {};
     const fields = [
       { value: account?.fullName, label: 'Nome completo' },
       { value: account?.birthDate, label: 'Data de nascimento' },
@@ -626,6 +714,14 @@ export class Auth {
       { value: account?.private?.documentType, label: 'Tipo de documento' },
       { value: account?.private?.idDocument, label: 'Documento de identificação' },
       { value: account?.private?.postalCode, label: 'Código Postal' },
+      { value: account?.private?.criminalRecordNoPending, label: 'Declaração de inexistência de pendência criminal' },
+      { value: documents.identityFront?.storagePath, label: 'Foto da frente do documento' },
+      {
+        value: account?.private?.documentType === 'Passaporte' ? true : documents.identityBack?.storagePath,
+        label: 'Foto do verso do documento',
+      },
+      { value: documents.addressProof?.storagePath, label: 'Foto do comprovativo de morada' },
+      { value: documents.criminalRecordCertificate?.storagePath, label: 'Foto do atestado de criminalidade' },
       { value: account?.location?.district, label: 'Distrito' },
       { value: account?.location?.county, label: 'Concelho' },
     ];

@@ -293,6 +293,45 @@ h3 {
   font-weight: 750;
 }
 
+.form-grid .label-line,
+.form-grid legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.form-grid strong {
+  color: #b83232;
+}
+
+.form-grid small {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f4efe8;
+  color: #7a5b2f;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.form-grid fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid rgba(220, 233, 216, 0.92);
+  border-radius: 14px;
+  background: #f8fbf6;
+}
+
+.form-grid legend {
+  padding: 0 4px;
+  color: var(--color-ink);
+  font-weight: 850;
+}
+
 .form-grid input,
 .form-grid select,
 .form-grid textarea {

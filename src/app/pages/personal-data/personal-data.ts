@@ -7,7 +7,15 @@ import {
   type CountryCode,
 } from 'libphonenumber-js';
 
-import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
+import {
+  Auth,
+  UserAccount,
+  UserPersonalData,
+  UserPrivateDocumentKind,
+  UserPrivateDocumentUpload,
+} from '../../core/services/auth';
+
+const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-personal-data',
@@ -37,7 +45,7 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Email <strong>*</strong><input type="email" name="email" required readonly [value]="email()" /></label>
+            <label><span class="label-line">Email <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
           </div>
           <div class="check-stack">
             <label><input type="checkbox" name="acceptedTerms" required [checked]="account()?.acceptedTerms === true" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
@@ -54,9 +62,9 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Nome completo <strong>*</strong><input name="fullName" required placeholder="Nome e apelido" [value]="value('fullName')" /></label>
-            <label>Data de nascimento <strong>*</strong><input type="date" name="birthDate" required [value]="value('birthDate')" /></label>
-            <label>Sexo <strong>*</strong>
+            <label><span class="label-line">Nome completo <strong>*</strong></span><input name="fullName" required placeholder="Nome e apelido" [value]="value('fullName')" /></label>
+            <label><span class="label-line">Data de nascimento <strong>*</strong></span><input type="date" name="birthDate" required [value]="value('birthDate')" /></label>
+            <label><span class="label-line">Sexo <strong>*</strong></span>
               <select name="gender" required [value]="value('gender')">
                 <option value="">Selecionar</option>
                 <option>Feminino</option>
@@ -65,36 +73,64 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
                 <option>Prefiro não indicar</option>
               </select>
             </label>
-            <label>Nacionalidade <strong>*</strong><input name="nationality" required placeholder="Portuguesa" [value]="value('nationality')" /></label>
-            <label>Indicativo internacional (DDI) <strong>*</strong>
-              <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event)">
-                @for (country of phoneCountries; track country.code) {
-                  <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+            <label><span class="label-line">Nacionalidade <strong>*</strong></span><input name="nationality" required placeholder="Portuguesa" [value]="value('nationality')" /></label>
+            <fieldset class="paired-fieldset span-2">
+              <legend>Contacto telefónico <strong>*</strong></legend>
+              <div class="paired-fields phone-fields">
+                <label><span class="label-line">Indicativo</span>
+                  <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event)">
+                    @for (country of phoneCountries; track country.code) {
+                      <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+                    }
+                  </select>
+                </label>
+                <label><span class="label-line">Telemóvel</span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    inputmode="tel"
+                    autocomplete="tel-national"
+                    placeholder="912 345 678"
+                    [value]="nationalPhone()"
+                  />
+                </label>
+              </div>
+            </fieldset>
+            <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="privateValue('nif')" /></label>
+            <fieldset class="paired-fieldset span-2">
+              <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
+              <div class="paired-fields document-fields">
+                <label>Tipo
+                  <select name="documentType" required [value]="documentType()" (change)="onDocumentTypeChange($event)">
+                    <option value="">Selecionar</option>
+                    <option>Cartão de Cidadão</option>
+                    <option>Passaporte</option>
+                    <option>Título de residência</option>
+                    <option>Outro</option>
+                  </select>
+                </label>
+                <label>Número
+                  <input name="idDocument" required placeholder="Número do documento" [value]="privateValue('idDocument')" />
+                </label>
+              </div>
+              <div class="document-upload-grid">
+                <label><span class="label-line">Foto da frente <strong>*</strong></span>
+                  <input type="file" name="identityFront" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+                  @if (documentFileName('identityFront')) {
+                    <small class="field-hint">Ficheiro atual: {{ documentFileName('identityFront') }}</small>
+                  }
+                </label>
+                @if (!isPassportDocument()) {
+                  <label><span class="label-line">Foto do verso <strong>*</strong></span>
+                    <input type="file" name="identityBack" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+                    @if (documentFileName('identityBack')) {
+                      <small class="field-hint">Ficheiro atual: {{ documentFileName('identityBack') }}</small>
+                    }
+                  </label>
                 }
-              </select>
-            </label>
-            <label>Telemóvel <strong>*</strong>
-              <input
-                type="tel"
-                name="phone"
-                required
-                inputmode="tel"
-                autocomplete="tel-national"
-                placeholder="912 345 678"
-                [value]="nationalPhone()"
-              />
-            </label>
-            <label>NIF <strong>*</strong> <small>privado</small><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="privateValue('nif')" /></label>
-            <label>Tipo de documento <strong>*</strong>
-              <select name="documentType" required [value]="privateValue('documentType')">
-                <option value="">Selecionar</option>
-                <option>Cartão de Cidadão</option>
-                <option>Passaporte</option>
-                <option>Título de residência</option>
-                <option>Outro</option>
-              </select>
-            </label>
-            <label>Documento de identificação <strong>*</strong> <small>privado</small><input name="idDocument" required placeholder="Número do documento" [value]="privateValue('idDocument')" /></label>
+              </div>
+            </fieldset>
           </div>
         </section>
 
@@ -107,10 +143,37 @@ import { Auth, UserAccount, UserPersonalData } from '../../core/services/auth';
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Distrito <strong>*</strong><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
-            <label>Concelho <strong>*</strong><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
-            <label>Código Postal <strong>*</strong><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
-            <label class="span-2">Morada completa <small>privada</small><input name="address" placeholder="Rua, número, localidade" [value]="privateValue('address')" /></label>
+            <label><span class="label-line">Distrito <strong>*</strong></span><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
+            <label><span class="label-line">Concelho <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
+            <label><span class="label-line">Código Postal <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
+            <label class="span-2"><span class="label-line">Morada completa <small>privada</small></span><input name="address" placeholder="Rua, número, localidade" [value]="privateValue('address')" /></label>
+            <label class="span-2"><span class="label-line">Foto do comprovativo de morada <strong>*</strong> <small>privado</small></span>
+              <input type="file" name="addressProof" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+              @if (documentFileName('addressProof')) {
+                <small class="field-hint">Ficheiro atual: {{ documentFileName('addressProof') }}</small>
+              }
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-title">
+            <span>4</span>
+            <div>
+              <h2>Registo criminal</h2>
+              <p>Declaração e comprovativo necessários para validação de segurança.</p>
+            </div>
+          </div>
+          <div class="check-stack">
+            <label><input type="checkbox" name="criminalRecordNoPending" required [checked]="account()?.private?.criminalRecordNoPending === true" /> Declaro que não possuo qualquer pendência criminal <strong>*</strong></label>
+          </div>
+          <div class="form-grid two-columns">
+            <label class="span-2"><span class="label-line">Foto do atestado de criminalidade <strong>*</strong> <small>privado</small></span>
+              <input type="file" name="criminalRecordCertificate" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+              @if (documentFileName('criminalRecordCertificate')) {
+                <small class="field-hint">Ficheiro atual: {{ documentFileName('criminalRecordCertificate') }}</small>
+              }
+            </label>
           </div>
         </section>
 
@@ -149,6 +212,7 @@ export class PersonalDataComponent implements OnInit {
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
   protected readonly phoneCountry = signal<CountryCode>('PT');
   protected readonly nationalPhone = signal('');
+  protected readonly documentType = signal('');
   protected readonly phoneCountries = getCountries()
     .map((code) => ({
       code,
@@ -181,6 +245,7 @@ export class PersonalDataComponent implements OnInit {
 
     const account = await this.auth.getUserAccount(user.uid);
     this.account.set(account);
+    this.documentType.set(account?.private?.documentType ?? '');
     this.loadPhone(account);
   }
 
@@ -199,7 +264,7 @@ export class PersonalDataComponent implements OnInit {
 
     this.isSubmitting.set(true);
     try {
-      await this.auth.updateUserPersonalData(this.buildPersonalData(formData));
+      await this.auth.updateUserPersonalData(await this.buildPersonalData(formData));
       this.account.set(await this.auth.getUserAccount((await this.auth.getCurrentUser())?.uid ?? ''));
       if (this.redirectTo()) {
         await this.router.navigateByUrl(this.redirectTo());
@@ -231,7 +296,40 @@ export class PersonalDataComponent implements OnInit {
     this.phoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
   }
 
-  private buildPersonalData(formData: FormData): UserPersonalData {
+  protected onDocumentTypeChange(event: Event): void {
+    this.documentType.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected isPassportDocument(): boolean {
+    return this.documentType() === 'Passaporte';
+  }
+
+  protected documentFileName(kind: UserPrivateDocumentKind): string {
+    return this.account()?.private?.documents?.[kind]?.fileName ?? '';
+  }
+
+  protected onPrivateDocumentFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.errorMessage.set('');
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.errorMessage.set('Os comprovativos devem ser enviados como imagem.');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > PRIVATE_DOCUMENT_MAX_FILE_BYTES) {
+      this.errorMessage.set('Cada imagem deve ter no máximo 5 MB.');
+      input.value = '';
+    }
+  }
+
+  private async buildPersonalData(formData: FormData): Promise<UserPersonalData> {
     const phoneCountry = this.textValue(formData, 'phoneCountry') as CountryCode;
     const phoneNational = this.textValue(formData, 'phone');
 
@@ -253,6 +351,9 @@ export class PersonalDataComponent implements OnInit {
         idDocument: this.textValue(formData, 'idDocument'),
         address: this.textValue(formData, 'address'),
         postalCode: this.textValue(formData, 'postalCode'),
+        criminalRecordNoPending: formData.has('criminalRecordNoPending'),
+        documents: this.account()?.private?.documents ?? {},
+        documentUploads: await this.privateDocumentUploads(formData),
       },
       location: {
         district: this.textValue(formData, 'district'),
@@ -265,6 +366,7 @@ export class PersonalDataComponent implements OnInit {
     const requiredFields = [
       { key: 'acceptedTerms', label: 'Aceitação dos Termos e Condições', type: 'checkbox' },
       { key: 'acceptedPrivacy', label: 'Aceitação da Política de Privacidade', type: 'checkbox' },
+      { key: 'criminalRecordNoPending', label: 'Declaração de inexistência de pendência criminal', type: 'checkbox' },
       { key: 'fullName', label: 'Nome completo' },
       { key: 'birthDate', label: 'Data de nascimento', type: 'birthDate' },
       { key: 'gender', label: 'Sexo' },
@@ -301,6 +403,43 @@ export class PersonalDataComponent implements OnInit {
 
       if (field.key === 'phone' && !this.isValidPhone(formData)) {
         return 'Introduza um número de telemóvel válido para o indicativo selecionado.';
+      }
+    }
+
+    const documentValidationMessage = this.getPrivateDocumentsValidationMessage(formData);
+    if (documentValidationMessage) {
+      return documentValidationMessage;
+    }
+
+    return '';
+  }
+
+  private getPrivateDocumentsValidationMessage(formData: FormData): string {
+    const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [
+      { key: 'identityFront', label: 'Foto da frente do documento' },
+      { key: 'addressProof', label: 'Foto do comprovativo de morada' },
+      { key: 'criminalRecordCertificate', label: 'Foto do atestado de criminalidade' },
+    ];
+
+    if (this.textValue(formData, 'documentType') !== 'Passaporte') {
+      requiredDocuments.splice(1, 0, { key: 'identityBack', label: 'Foto do verso do documento' });
+    }
+
+    for (const document of requiredDocuments) {
+      const file = formData.get(document.key);
+      const existingDocument = this.account()?.private?.documents?.[document.key];
+      if (!(file instanceof File) || !file.name) {
+        if (!existingDocument) {
+          return `${document.label} é obrigatória.`;
+        }
+        continue;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        return `${document.label} deve ser uma imagem.`;
+      }
+      if (file.size > PRIVATE_DOCUMENT_MAX_FILE_BYTES) {
+        return `${document.label} deve ter no máximo 5 MB.`;
       }
     }
 
@@ -365,6 +504,96 @@ export class PersonalDataComponent implements OnInit {
 
   private countryDisplayName(country: CountryCode): string {
     return new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(country) ?? country;
+  }
+
+  private async privateDocumentUploads(
+    formData: FormData,
+  ): Promise<Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>> {
+    const uploads: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>> = {};
+    const kinds: UserPrivateDocumentKind[] = [
+      'identityFront',
+      'identityBack',
+      'addressProof',
+      'criminalRecordCertificate',
+    ];
+
+    for (const kind of kinds) {
+      const file = formData.get(kind);
+      if (!(file instanceof File) || !file.name) {
+        continue;
+      }
+
+      uploads[kind] = await this.privateDocumentUploadValue(file);
+    }
+
+    return uploads;
+  }
+
+  private async privateDocumentUploadValue(file: File): Promise<UserPrivateDocumentUpload> {
+    const blob = await this.compressPrivateDocumentImage(file);
+    return {
+      name: file.name,
+      contentType: 'image/jpeg',
+      originalSize: file.size,
+      compressedSize: blob.size,
+      blob,
+    };
+  }
+
+  private async compressPrivateDocumentImage(file: File): Promise<Blob> {
+    const dataUrl = await this.readFileAsDataUrl(file);
+    const image = await this.loadImage(dataUrl);
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Não foi possível otimizar a imagem.');
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return this.canvasToJpegBlob(canvas, 0.82);
+  }
+
+  private canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+
+          reject(new Error('Não foi possível processar a imagem.'));
+        },
+        'image/jpeg',
+        quality,
+      );
+    });
+  }
+
+  private loadImage(dataUrl: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+      image.src = dataUrl;
+    });
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('Não foi possível ler o ficheiro.'));
+      reader.readAsDataURL(file);
+    });
   }
 
   private textValue(formData: FormData, key: string): string {

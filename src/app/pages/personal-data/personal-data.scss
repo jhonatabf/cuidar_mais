@@ -95,6 +95,13 @@ label strong {
   color: #b83232;
 }
 
+.label-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 label small {
   width: fit-content;
   padding: 4px 8px;
@@ -103,6 +110,55 @@ label small {
   color: #7a5b2f;
   font-size: 0.74rem;
   font-weight: 900;
+}
+
+.paired-fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid rgba(220, 233, 216, 0.92);
+  border-radius: 14px;
+  background: #f8fbf6;
+}
+
+.paired-fieldset legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 0 4px;
+  color: var(--color-ink);
+  font-weight: 850;
+}
+
+.paired-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.document-fields {
+  grid-template-columns: minmax(180px, 0.85fr) minmax(220px, 1.15fr);
+}
+
+.phone-fields {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(220px, 1.1fr);
+}
+
+.document-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-hint {
+  width: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 750;
 }
 
 input,
@@ -172,6 +228,14 @@ select:focus {
 
   .span-2 {
     grid-column: auto;
+  }
+
+  .paired-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .document-upload-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-section {

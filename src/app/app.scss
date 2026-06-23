@@ -15,6 +15,14 @@
   overflow: clip;
 }
 
+.app-shell.admin-shell {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .site-header {
   position: static;
   z-index: 10;

@@ -212,6 +212,18 @@ export class Auth {
       },
       caregiverProfileStatus: data.accountType === 'Cuidador' ? 'pending' : null,
       familyProfileStatus: data.accountType === 'Cuidador' ? null : 'pending',
+      familyReview:
+        data.accountType === 'Cuidador'
+          ? null
+          : {
+              status: 'pending',
+              requestedAt: serverTimestamp(),
+              lockedBy: null,
+              lockedAt: null,
+              decidedBy: null,
+              decidedAt: null,
+              rejectionReason: null,
+            },
       emailVerified: credential.user.emailVerified,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -485,11 +497,21 @@ export class Auth {
           doc(firestoreDb, 'caregivers', uid),
           {
             uid,
+            email: user.email ?? account.email,
             status: 'pending',
             approvalDate: isNewProfile ? null : existingProfile['approvalDate'] ?? null,
             approvalUserId: null,
             approvalStatus: 'pending',
             approval: false,
+            review: {
+              status: 'pending',
+              requestedAt: serverTimestamp(),
+              lockedBy: null,
+              lockedAt: null,
+              decidedBy: null,
+              decidedAt: null,
+              rejectionReason: null,
+            },
             publicProfile: {
               fullName: account.fullName,
               gender: account.gender,
@@ -640,8 +662,14 @@ export class Auth {
   }
 
   private async syncEmailVerificationStatus(user: User): Promise<void> {
+    const userRef = doc(firestoreDb, 'users', user.uid);
+    const snapshot = await getDoc(userRef);
+    if (!snapshot.exists()) {
+      return;
+    }
+
     await setDoc(
-      doc(firestoreDb, 'users', user.uid),
+      userRef,
       {
         uid: user.uid,
         emailVerified: user.emailVerified,

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { caregiverSignupGuard } from './core/guards/caregiver-signup.guard';
 import { caregiverDashboardGuard, familyDashboardGuard } from './core/guards/dashboard.guard';
@@ -59,6 +60,28 @@ export const routes: Routes = [
     path: 'login',
     title: 'Login | Cuidar+',
     loadComponent: () => import('./pages/login/login').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'admin/login',
+    title: 'Administração | Cuidar+',
+    loadComponent: () =>
+      import('./pages/admin-login/admin-login').then((m) => m.AdminLoginComponent),
+  },
+  {
+    path: 'admin',
+    title: 'Administração | Cuidar+',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./pages/admin-dashboard/admin-dashboard').then((m) => m.AdminDashboardComponent),
+  },
+  {
+    path: 'admin/revisoes/:type/:id',
+    title: 'Análise de Cadastro | Cuidar+',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./pages/admin-review-detail/admin-review-detail').then(
+        (m) => m.AdminReviewDetailComponent,
+      ),
   },
   {
     path: 'cadastro',

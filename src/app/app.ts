@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from 'firebase/auth';
+import { Subscription } from 'rxjs';
 
 import { Auth, UserProfilePhotoUpload } from './core/services/auth';
 
@@ -19,6 +20,7 @@ export class App implements OnInit, OnDestroy {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private unsubscribeAuth?: () => void;
+  private routeSubscription?: Subscription;
 
   protected readonly user = signal<User | null>(null);
   protected readonly displayName = signal('');
@@ -30,6 +32,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly accountMenuOpen = signal(false);
   protected readonly photoMessage = signal('');
   protected readonly isUpdatingPhoto = signal(false);
+  protected readonly isAdminArea = signal(this.router.url.startsWith('/admin'));
 
   protected readonly mainLinks = [
     { label: 'Como funciona', path: '/como-funciona' },
@@ -57,10 +60,16 @@ export class App implements OnInit, OnDestroy {
     this.unsubscribeAuth = this.auth.onUserChange((user) => {
       void this.setUserState(user);
     });
+    this.routeSubscription = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.isAdminArea.set(event.urlAfterRedirects.startsWith('/admin'));
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.unsubscribeAuth?.();
+    this.routeSubscription?.unsubscribe();
   }
 
   protected getInitials(): string {

@@ -1,5 +1,6 @@
-<div class="app-shell">
-  <header class="site-header">
+<div class="app-shell" [class.admin-shell]="isAdminArea()">
+  @if (!isAdminArea()) {
+    <header class="site-header">
     <a class="brand" routerLink="/" aria-label="Cuidar+">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 42 46" focusable="false">
@@ -79,13 +80,15 @@
         </div>
       }
     </div>
-  </header>
+    </header>
+  }
 
   <main>
     <router-outlet />
   </main>
 
-  <footer class="site-footer">
+  @if (!isAdminArea()) {
+    <footer class="site-footer">
     <div class="footer-about">
       <a class="brand footer-brand" routerLink="/">
         <span class="brand-mark" aria-hidden="true">
@@ -131,5 +134,6 @@
     </div>
 
     <p class="copyright">© 2024 Cuidar+. Todos os direitos reservados.</p>
-  </footer>
+    </footer>
+  }
 </div>

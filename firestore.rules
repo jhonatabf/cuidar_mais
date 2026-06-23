@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function hasAdminProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/adminProfiles/$(request.auth.uid));
+    }
+
+    function adminProfile() {
+      return get(/databases/$(database)/documents/adminProfiles/$(request.auth.uid));
+    }
+
+    function isActiveAdmin() {
+      return hasAdminProfile()
+        && adminProfile().data.enabled == true
+        && adminProfile().data.role in ['super_user', 'admin', 'reviewer'];
+    }
+
+    function isSuperUser() {
+      return isActiveAdmin() && adminProfile().data.role == 'super_user';
+    }
+
+    function canManageAdmins() {
+      return isActiveAdmin() && adminProfile().data.role in ['super_user', 'admin'];
+    }
+
+    function canReview() {
+      return isActiveAdmin() && adminProfile().data.role in ['super_user', 'reviewer'];
+    }
+
+    match /adminProfiles/{uid} {
+      allow get: if isOwner(uid) || canManageAdmins();
+      allow list: if canManageAdmins();
+      allow create, update: if canManageAdmins()
+        && request.resource.data.role in ['super_user', 'admin', 'reviewer']
+        && (request.resource.data.role != 'super_user' || isSuperUser());
+      allow delete: if false;
+    }
+
+    match /users/{uid} {
+      allow create: if isOwner(uid);
+      allow get: if isOwner(uid) || isActiveAdmin();
+      allow list: if isActiveAdmin();
+      allow update: if isOwner(uid) || canReview();
+      allow delete: if false;
+    }
+
+    match /caregivers/{uid} {
+      allow create: if isOwner(uid);
+      allow get: if isOwner(uid) || isActiveAdmin();
+      allow list: if isActiveAdmin();
+      allow update: if isOwner(uid) || canReview();
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

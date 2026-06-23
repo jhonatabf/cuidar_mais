@@ -12,8 +12,9 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
+import { getDownloadURL, ref } from 'firebase/storage';
 
-import { firestoreDb } from '../firebase/firebase.config';
+import { firebaseStorage, firestoreDb } from '../firebase/firebase.config';
 import { Auth, CaregiverProfileDocument, UserAccount } from './auth';
 
 export type AdminRole = 'super_user' | 'admin' | 'reviewer';
@@ -161,7 +162,10 @@ export class AdminService {
         return null;
       }
 
-      return this.toFamilyReviewQueueItem(snapshot.id, snapshot.data() as UserAccount & Record<string, unknown>);
+      const data = await this.withPrivateDocumentDownloadUrls(
+        snapshot.data() as UserAccount & Record<string, unknown>,
+      );
+      return this.toFamilyReviewQueueItem(snapshot.id, data);
     }
 
     const [caregiverSnapshot, userSnapshot] = await Promise.all([
@@ -177,10 +181,10 @@ export class AdminService {
       ? (userSnapshot.data() as UserAccount & Record<string, unknown>)
       : null;
 
-    return this.toCaregiverReviewQueueItem(
-      caregiverSnapshot.id,
+    const data = await this.withPrivateDocumentDownloadUrls(
       this.withCaregiverAccountData(caregiverData, userData),
     );
+    return this.toCaregiverReviewQueueItem(caregiverSnapshot.id, data);
   }
 
   async startReview(type: ReviewProfileType, id: string): Promise<void> {
@@ -456,11 +460,58 @@ export class AdminService {
       return caregiverData;
     }
 
+    const caregiverPrivate = this.objectAt(caregiverData, 'private');
+    const userPrivate = this.objectAt(userData, 'private');
+
     return {
       ...caregiverData,
       email: userData.email ?? caregiverData['email'],
+      private: {
+        ...caregiverPrivate,
+        ...userPrivate,
+      },
       account: userData,
     };
+  }
+
+  private async withPrivateDocumentDownloadUrls<T extends Record<string, unknown>>(data: T): Promise<T> {
+    const privateData = this.objectAt(data, 'private');
+    const documents = this.objectAt(privateData, 'documents');
+    const enrichedDocuments: Record<string, unknown> = {};
+
+    await Promise.all(
+      Object.entries(documents).map(async ([kind, value]) => {
+        if (!value || typeof value !== 'object') {
+          enrichedDocuments[kind] = value;
+          return;
+        }
+
+        const document = value as Record<string, unknown>;
+        const storagePath = typeof document['storagePath'] === 'string' ? document['storagePath'] : '';
+        const existingUrl = typeof document['downloadUrl'] === 'string' ? document['downloadUrl'] : '';
+
+        enrichedDocuments[kind] = {
+          ...document,
+          downloadUrl: existingUrl || (storagePath ? await this.downloadUrlForStoragePath(storagePath) : ''),
+        };
+      }),
+    );
+
+    return {
+      ...data,
+      private: {
+        ...privateData,
+        documents: enrichedDocuments,
+      },
+    };
+  }
+
+  private async downloadUrlForStoragePath(storagePath: string): Promise<string> {
+    try {
+      return await getDownloadURL(ref(firebaseStorage, storagePath));
+    } catch {
+      return '';
+    }
   }
 
   private toFamilyReviewQueueItem(id: string, data: UserAccount & Record<string, unknown>): ReviewQueueItem | null {

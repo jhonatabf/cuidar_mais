@@ -62,17 +62,38 @@ import { Auth } from '../../core/services/auth';
               <div><dt>Data de nascimento</dt><dd>{{ mainValue('birthDate') }}</dd></div>
               <div><dt>NIF</dt><dd>{{ privateValue('nif') }}</dd></div>
               <div><dt>Documento</dt><dd>{{ privateValue('documentType') }} · {{ privateValue('idDocument') }}</dd></div>
-              <div><dt>Frente do documento</dt><dd><a [href]="documentUrl('identityFront')" target="_blank" rel="noopener">{{ documentFileName('identityFront') }}</a></dd></div>
-              @if (privateValue('documentType') !== 'Passaporte') {
-                <div><dt>Verso do documento</dt><dd><a [href]="documentUrl('identityBack')" target="_blank" rel="noopener">{{ documentFileName('identityBack') }}</a></dd></div>
-              }
               <div><dt>Morada</dt><dd>{{ privateValue('address') }}</dd></div>
               <div><dt>Código Postal</dt><dd>{{ privateValue('postalCode') }}</dd></div>
-              <div><dt>Comprovativo de morada</dt><dd><a [href]="documentUrl('addressProof')" target="_blank" rel="noopener">{{ documentFileName('addressProof') }}</a></dd></div>
               <div><dt>Sem pendência criminal</dt><dd>{{ privateValue('criminalRecordNoPending') }}</dd></div>
-              <div><dt>Atestado de criminalidade</dt><dd><a [href]="documentUrl('criminalRecordCertificate')" target="_blank" rel="noopener">{{ documentFileName('criminalRecordCertificate') }}</a></dd></div>
             </dl>
           </article>
+        </section>
+
+        <section class="card card-body document-review-section">
+          <div>
+            <span class="badge">Documentos</span>
+            <h2>Documentos para análise</h2>
+            <p class="muted">Abra a imagem em nova aba para ampliar e conferir os detalhes.</p>
+          </div>
+          <div class="document-review-grid">
+            @for (document of reviewDocuments(); track document.kind) {
+              <article class="document-card">
+                <div>
+                  <h3>{{ document.label }}</h3>
+                  <p class="muted">{{ document.fileName }}</p>
+                </div>
+                @if (document.url) {
+                  <a [href]="document.url" target="_blank" rel="noopener" [attr.aria-label]="'Abrir ' + document.label">
+                    <img [src]="document.url" [alt]="document.label" />
+                  </a>
+                } @else {
+                  <div class="document-missing">
+                    <span>Imagem não disponível</span>
+                  </div>
+                }
+              </article>
+            }
+          </div>
         </section>
 
         @if (item()?.type === 'caregiver') {
@@ -163,6 +184,61 @@ import { Auth } from '../../core/services/auth';
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .document-review-section {
+      display: grid;
+      gap: 18px;
+    }
+
+    .document-review-section h2 {
+      margin: 10px 0 6px;
+    }
+
+    .document-review-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .document-card {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .document-card h3,
+    .document-card p {
+      margin: 0;
+    }
+
+    .document-card a,
+    .document-missing {
+      display: grid;
+      min-height: 230px;
+      overflow: hidden;
+      place-items: center;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      background: #f8fbf6;
+    }
+
+    .document-card img {
+      width: 100%;
+      height: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      background: #fff;
+    }
+
+    .document-missing {
+      color: var(--color-muted);
+      font-weight: 800;
+      text-align: center;
+    }
+
     dt {
       color: var(--color-muted);
       font-weight: 850;
@@ -192,6 +268,10 @@ import { Auth } from '../../core/services/auth';
       }
 
       .compact-list {
+        grid-template-columns: 1fr;
+      }
+
+      .document-review-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -319,6 +399,33 @@ export class AdminReviewDetailComponent implements OnInit {
   protected documentUrl(kind: string): string | null {
     const value = this.rawValueAt(`private.documents.${kind}.downloadUrl`);
     return typeof value === 'string' && value.trim() ? value : null;
+  }
+
+  protected reviewDocuments(): Array<{ kind: string; label: string; fileName: string; url: string | null }> {
+    const documents = [
+      { kind: 'identityFront', label: 'Frente do documento' },
+      { kind: 'identityBack', label: 'Verso do documento' },
+      { kind: 'addressProof', label: 'Comprovativo de morada' },
+      { kind: 'criminalRecordCertificate', label: 'Atestado de criminalidade' },
+    ];
+
+    return documents
+      .filter((document) => document.kind !== 'identityBack' || privateDocumentType(this.item()?.raw) !== 'Passaporte')
+      .map((document) => ({
+        ...document,
+        fileName: this.documentFileName(document.kind),
+        url: this.documentUrl(document.kind),
+      }));
+
+    function privateDocumentType(raw: Record<string, unknown> | undefined): string {
+      const privateData = raw?.['private'];
+      if (!privateData || typeof privateData !== 'object') {
+        return '';
+      }
+
+      const value = (privateData as Record<string, unknown>)['documentType'];
+      return typeof value === 'string' ? value : '';
+    }
   }
 
   protected caregiverPublicValue(key: string): string {

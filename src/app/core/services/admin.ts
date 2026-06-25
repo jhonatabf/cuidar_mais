@@ -520,6 +520,11 @@ export class AdminService {
       return null;
     }
 
+    const familyProfile = this.objectAt(data, 'familyProfile');
+    if (familyProfile['completed'] !== true) {
+      return null;
+    }
+
     const familyReview = this.objectAt(data, 'familyReview');
 
     return {

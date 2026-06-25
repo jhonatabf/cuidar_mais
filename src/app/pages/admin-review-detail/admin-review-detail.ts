@@ -109,6 +109,29 @@ import { Auth } from '../../core/services/auth';
           </section>
         }
 
+        @if (item()?.type === 'family') {
+          <section class="card card-body">
+            <h2>Cadastro da família</h2>
+            <dl class="detail-list compact-list">
+              <div><dt>Nome da família</dt><dd>{{ familyValue('householdName') }}</dd></div>
+              <div><dt>Relação com o utente</dt><dd>{{ familyValue('relationToCareRecipient') }}</dd></div>
+              <div><dt>Quantidade de utentes</dt><dd>{{ familyValue('careRecipients.count') }}</dd></div>
+              <div><dt>Faixas etárias</dt><dd>{{ familyValue('careRecipients.ageGroups') }}</dd></div>
+              <div><dt>Cuidados necessários</dt><dd>{{ familyValue('careNeeds.services') }}</dd></div>
+              <div><dt>Rotina desejada</dt><dd>{{ familyValue('careNeeds.schedule') }}</dd></div>
+              <div><dt>Tipo de acompanhamento</dt><dd>{{ familyValue('careNeeds.preferredCareType') }}</dd></div>
+              <div><dt>Orçamento</dt><dd>{{ familyBudgetValue() }}</dd></div>
+              <div><dt>Código postal / CEP</dt><dd>{{ familyValue('location.postalCode') }}</dd></div>
+              <div><dt>Morada de referência</dt><dd>{{ familyValue('location.address') }}</dd></div>
+              <div><dt>Membros indicados</dt><dd>{{ familyMembersValue() }}</dd></div>
+              <div><dt>Convites por email</dt><dd>{{ familyInvitesValue() }}</dd></div>
+              <div><dt>Acessibilidade</dt><dd>{{ familyValue('home.accessibility') }}</dd></div>
+              <div><dt>Animais em casa</dt><dd>{{ familyValue('home.pets') }}</dd></div>
+              <div><dt>Contacto de emergência</dt><dd>{{ familyEmergencyContactValue() }}</dd></div>
+            </dl>
+          </section>
+        }
+
         @if (permissions().canReview && item()?.status === 'analysing') {
           <section class="card card-body decision-panel">
             <h2>Decisão</h2>
@@ -430,6 +453,66 @@ export class AdminReviewDetailComponent implements OnInit {
 
   protected caregiverPublicValue(key: string): string {
     return this.valueAt(`publicProfile.${key}`);
+  }
+
+  protected familyValue(path: string): string {
+    return this.valueAt(`familyProfile.${path}`);
+  }
+
+  protected familyBudgetValue(): string {
+    const amount = this.familyValue('budget.amount');
+    const period = this.familyValue('budget.period');
+    if (amount === 'Não informado' && period === 'Não informado') {
+      return 'Não informado';
+    }
+
+    return `${amount} € · ${period}`;
+  }
+
+  protected familyMembersValue(): string {
+    const members = this.rawValueAt('familyProfile.members');
+    if (!Array.isArray(members) || members.length === 0) {
+      return 'Não informado';
+    }
+
+    return members
+      .map((member) => {
+        if (!member || typeof member !== 'object') {
+          return '';
+        }
+
+        const data = member as Record<string, unknown>;
+        return [data['name'], data['relation'], data['email']]
+          .filter((value): value is string => typeof value === 'string' && !!value.trim())
+          .join(' · ');
+      })
+      .filter(Boolean)
+      .join('; ') || 'Não informado';
+  }
+
+  protected familyInvitesValue(): string {
+    const members = this.rawValueAt('familyProfile.members');
+    if (!Array.isArray(members)) {
+      return 'Não informado';
+    }
+
+    const invites = members
+      .filter((member): member is Record<string, unknown> => !!member && typeof member === 'object')
+      .filter((member) => member['invite'] === true)
+      .map((member) => member['email'])
+      .filter((email): email is string => typeof email === 'string' && !!email.trim());
+
+    return invites.length ? invites.join(', ') : 'Nenhum convite solicitado';
+  }
+
+  protected familyEmergencyContactValue(): string {
+    const values = [
+      this.familyValue('emergencyContact.name'),
+      this.familyValue('emergencyContact.relation'),
+      this.familyValue('emergencyContact.phone'),
+    ].filter((value) => value !== 'Não informado');
+
+    return values.length ? values.join(' · ') : 'Não informado';
   }
 
   protected statusLabel(status: string): string {

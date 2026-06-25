@@ -124,6 +124,54 @@ export interface CaregiverRegistration {
   };
 }
 
+export interface FamilyRegistration {
+  householdName: string;
+  relationToCareRecipient: string;
+  members: {
+    name: string;
+    email: string;
+    relation: string;
+    invite: boolean;
+  }[];
+  careRecipients: {
+    count: number;
+    ageGroups: string[];
+    notes: string;
+  };
+  careNeeds: {
+    services: string[];
+    description: string;
+    schedule: string;
+    preferredCareType: string;
+  };
+  budget: {
+    amount: number;
+    period: string;
+  };
+  location: {
+    postalCode: string;
+    address: string;
+    district: string;
+    county: string;
+    notes: string;
+  };
+  home: {
+    type: string;
+    accessibility: string[];
+    pets: boolean;
+    notes: string;
+  };
+  emergencyContact: {
+    name: string;
+    phone: string;
+    phoneCountry: string;
+    phoneCallingCode: string;
+    phoneNational: string;
+    relation: string;
+  };
+  automaticMatchConsent: boolean;
+}
+
 export interface UserPersonalData {
   email: string;
   fullName: string;
@@ -185,6 +233,10 @@ export interface UserAccount {
   };
   caregiverProfileStatus?: string;
   familyProfileStatus?: string;
+  familyProfile?: (FamilyRegistration & {
+    completed?: boolean;
+    submittedAt?: unknown;
+  }) | null;
   profilePhoto?: UserProfilePhoto | null;
   profilePhotoName?: string;
   emailVerified?: boolean;
@@ -240,13 +292,13 @@ export class Auth {
         family: data.accountType !== 'Cuidador',
       },
       caregiverProfileStatus: data.accountType === 'Cuidador' ? 'pending' : null,
-      familyProfileStatus: data.accountType === 'Cuidador' ? null : 'pending',
+      familyProfileStatus: data.accountType === 'Cuidador' ? null : 'draft',
       familyReview:
         data.accountType === 'Cuidador'
           ? null
           : {
-              status: 'pending',
-              requestedAt: serverTimestamp(),
+              status: 'draft',
+              requestedAt: null,
               lockedBy: null,
               lockedAt: null,
               decidedBy: null,
@@ -448,6 +500,63 @@ export class Auth {
     }
 
     return account.familyProfileStatus ?? 'pending';
+  }
+
+  async registerFamily(data: FamilyRegistration): Promise<string> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para criar o cadastro de família.');
+    }
+
+    const uid = user.uid;
+    const account = await this.getUserAccount(uid);
+    if (!this.hasCompletePersonalData(account)) {
+      throw new FirebaseError(
+        'failed-precondition',
+        'Complete os seus dados pessoais antes de criar ou atualizar o cadastro de família.',
+      );
+    }
+
+    if (!this.isAdult(account.birthDate)) {
+      throw new FirebaseError(
+        'failed-precondition',
+        'É necessário ser maior de idade para cadastrar uma família.',
+      );
+    }
+
+    await this.withTimeout(
+      setDoc(
+        doc(firestoreDb, 'users', uid),
+        {
+          uid,
+          email: user.email ?? account.email,
+          role: 'family',
+          roles: {
+            family: true,
+          },
+          familyProfileStatus: 'pending',
+          familyProfile: {
+            ...data,
+            completed: true,
+            submittedAt: serverTimestamp(),
+          },
+          familyReview: {
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            lockedBy: null,
+            lockedAt: null,
+            decidedBy: null,
+            decidedAt: null,
+            rejectionReason: null,
+          },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+      'Não foi possível gravar o cadastro de família. Verifique a ligação e tente novamente.',
+    );
+
+    return uid;
   }
 
   async getPostLoginRedirect(uid: string): Promise<string> {
@@ -854,6 +963,22 @@ export class Auth {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
+  }
+
+  private isAdult(birthDate: string | undefined): boolean {
+    if (!birthDate) {
+      return false;
+    }
+
+    const parsedBirthDate = new Date(`${birthDate}T00:00:00`);
+    if (Number.isNaN(parsedBirthDate.getTime())) {
+      return false;
+    }
+
+    const today = new Date();
+    const eighteenthBirthday = new Date(parsedBirthDate);
+    eighteenthBirthday.setFullYear(parsedBirthDate.getFullYear() + 18);
+    return eighteenthBirthday <= today;
   }
 
   private formatDate(date: Date | null): string {

@@ -121,11 +121,11 @@ const CAREGIVER_SIGNUP_COPY = {
             </div>
           </div>
           <div class="form-grid">
-            <label>Resumo profissional <strong>*</strong><textarea name="summary" required maxlength="650" placeholder="Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.">{{ fieldValue('publicProfile.summary') }}</textarea></label>
-            <label>Anos de experiência <strong>*</strong><input type="number" name="experienceYears" required min="0" max="60" placeholder="Ex.: 5" [value]="fieldValue('publicProfile.experienceYears')" /></label>
+            <label><span class="label-line">Resumo profissional <strong>*</strong></span><textarea name="summary" required maxlength="650" placeholder="Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.">{{ fieldValue('publicProfile.summary') }}</textarea></label>
+            <label><span class="label-line">Anos de experiência <strong>*</strong></span><input type="number" name="experienceYears" required min="0" max="60" placeholder="Ex.: 5" [value]="fieldValue('publicProfile.experienceYears')" /></label>
           </div>
           <fieldset>
-            <legend>Tipos de serviço prestados <strong>*</strong></legend>
+            <legend class="label-line">Tipos de serviço prestados <strong>*</strong></legend>
             <div class="checkbox-grid">
               @for (service of serviceTypes; track service) {
                 <label><input type="checkbox" name="serviceTypes" [value]="service" [checked]="isChecked('publicProfile.serviceTypes', service)" /> {{ service }}</label>
@@ -206,7 +206,7 @@ const CAREGIVER_SIGNUP_COPY = {
             </div>
           </div>
           <fieldset>
-            <legend>Dias da semana <strong>*</strong></legend>
+            <legend class="label-line">Dias da semana <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (day of weekDays; track day) {
                 <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('publicProfile.availability.weekDays', day)" /> {{ day }}</label>
@@ -214,7 +214,7 @@ const CAREGIVER_SIGNUP_COPY = {
             </div>
           </fieldset>
           <fieldset>
-            <legend>Períodos <strong>*</strong></legend>
+            <legend class="label-line">Períodos <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (period of periods; track period) {
                 <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('publicProfile.availability.periods', period)" /> {{ period }}</label>
@@ -240,7 +240,7 @@ const CAREGIVER_SIGNUP_COPY = {
             </div>
           </div>
           <div class="form-grid four-columns">
-            <label>Valor por hora (€) <strong>*</strong><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
+            <label><span class="label-line">Valor por hora (€) <strong>*</strong></span><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
             <label>Valor por turno<input type="number" name="shiftRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.shiftRate')" /></label>
             <label>Valor por dia<input type="number" name="dayRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.dayRate')" /></label>
             <label>Valor mensal<input type="number" name="monthlyRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.monthlyRate')" /></label>
@@ -287,7 +287,7 @@ const CAREGIVER_SIGNUP_COPY = {
             </div>
           </fieldset>
           <div class="form-grid two-columns mobility-radius">
-            <label>Raio máximo de deslocação <strong>*</strong>
+            <label><span class="label-line">Raio máximo de deslocação <strong>*</strong></span>
               <select name="travelRadius" required [value]="fieldValue('publicProfile.travelRadius')">
                 <option value="">Selecionar</option>
                 <option>Até 5 km</option>

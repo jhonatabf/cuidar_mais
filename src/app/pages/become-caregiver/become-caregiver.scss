@@ -288,6 +288,13 @@ label {
   font-weight: 780;
 }
 
+.label-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 label strong,
 legend strong {
   color: #b83232;

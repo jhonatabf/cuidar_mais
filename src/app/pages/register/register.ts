@@ -41,10 +41,10 @@ import { Auth } from '../../core/services/auth';
         @if (errorMessage()) {
           <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
         }
-        <button class="button" type="submit" [disabled]="isSubmitting()">
+        <button class="btn btn-register" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? 'A criar conta...' : 'Criar conta' }}
         </button>
-        <a class="button-secondary" routerLink="/login" [queryParams]="{ redirectTo: redirectTo() }">Ja tenho conta</a>
+        <a class="btn btn-login" routerLink="/login" [queryParams]="{ redirectTo: redirectTo() }">Ja tenho conta</a>
       </form>
     </section>
   `,

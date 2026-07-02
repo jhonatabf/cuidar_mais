@@ -11,8 +11,8 @@ import { RouterLink } from '@angular/router';
         <p class="lead">Conectamos familias a cuidadores qualificados e confiaveis.</p>
 
         <div class="actions">
-          <a class="button" routerLink="/encontrar-cuidador">Sou uma familia</a>
-          <a class="button-secondary" routerLink="/seja-cuidador">Sou cuidador</a>
+          <a class="btn btn-primary" routerLink="/encontrar-cuidador">Sou uma familia</a>
+          <a class="btn btn-secondary" routerLink="/seja-cuidador">Sou cuidador</a>
         </div>
       </div>
 
@@ -24,7 +24,7 @@ import { RouterLink } from '@angular/router';
     <section class="page benefit-strip" aria-label="Beneficios principais">
       @for (benefit of benefits; track benefit.title) {
         <article>
-          <span class="line-icon">{{ benefit.icon }}</span>
+          <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">{{ benefit.icon }}</span>
           <div>
             <h3>{{ benefit.title }}</h3>
             <p>{{ benefit.text }}</p>
@@ -40,7 +40,7 @@ import { RouterLink } from '@angular/router';
       <div class="steps-row">
         @for (step of steps; track step.title) {
           <article>
-            <span class="round-icon">{{ step.icon }}</span>
+            <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">{{ step.icon }}</span>
             <strong>{{ step.number }}</strong>
             <h3>{{ step.title }}</h3>
             <p>{{ step.text }}</p>
@@ -56,7 +56,7 @@ import { RouterLink } from '@angular/router';
       <div class="service-grid">
         @for (service of services; track service.title) {
           <article>
-            <span class="round-icon">{{ service.icon }}</span>
+            <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">{{ service.icon }}</span>
             <h3>{{ service.title }}</h3>
           </article>
         }
@@ -70,21 +70,21 @@ import { RouterLink } from '@angular/router';
 
       <div class="audience-grid">
         <article class="audience-card family-card">
-          <span class="round-icon">👥</span>
+          <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">family_restroom</span>
           <div>
             <h3>Para familias</h3>
             <p>Encontre cuidadores experientes, proximos a voce, com avaliacoes reais de outras familias.</p>
-            <a class="button" routerLink="/encontrar-cuidador">Quero encontrar</a>
+            <a class="btn btn-primary" routerLink="/encontrar-cuidador">Quero encontrar</a>
           </div>
           <div class="mini-photo family-photo"></div>
         </article>
 
         <article class="audience-card caregiver-card">
-          <span class="round-icon">♡</span>
+          <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">medical_services</span>
           <div>
             <h3>Para cuidadores</h3>
             <p>Cadastre-se gratuitamente, destaque suas habilidades e encontre familias que precisam de voce.</p>
-            <a class="button" routerLink="/seja-cuidador">Quero me cadastrar</a>
+            <a class="btn btn-register" routerLink="/seja-cuidador">Quero me cadastrar</a>
           </div>
           <div class="mini-photo caregiver-photo"></div>
         </article>
@@ -99,7 +99,7 @@ import { RouterLink } from '@angular/router';
         <article class="phone-card">
           <div>
             <h3>Cadastre-se gratis e encontre a melhor conexao.</h3>
-            <a class="button" routerLink="/cadastro">Comece agora</a>
+            <a class="btn btn-action" routerLink="/cadastro">Comece agora</a>
           </div>
           <div class="phone-mock" aria-hidden="true">
             <span>Cuidar+</span>
@@ -114,7 +114,7 @@ import { RouterLink } from '@angular/router';
     <section class="page section safety-grid">
       @for (item of safety; track item.title) {
         <article>
-          <span class="line-icon">{{ item.icon }}</span>
+          <span class="material-symbols-rounded icon-badge icon-badge--soft" aria-hidden="true">{{ item.icon }}</span>
           <div>
             <h3>{{ item.title }}</h3>
             <p>{{ item.text }}</p>
@@ -127,32 +127,32 @@ import { RouterLink } from '@angular/router';
 })
 export class HomeComponent {
   protected readonly benefits = [
-    { icon: '↯', title: 'Conexao rapida', text: 'Encontre o perfil ideal em poucos cliques.' },
-    { icon: '□', title: 'Perfis verificados', text: 'Documentos e antecedentes checados.' },
-    { icon: '☆', title: 'Avaliacoes mutuas', text: 'Mais transparencia para ambas as partes.' },
-    { icon: '♧', title: 'Suporte humano', text: 'Estamos aqui para ajudar sempre que precisar.' },
+    { icon: 'speed', title: 'Conexão rápida', text: 'Encontre o perfil ideal em poucos cliques.' },
+    { icon: 'verified_user', title: 'Perfis verificados', text: 'Documentos e dados analisados para mais confiança.' },
+    { icon: 'reviews', title: 'Avaliações mútuas', text: 'Mais transparência para ambas as partes.' },
+    { icon: 'support_agent', title: 'Suporte humano', text: 'Ajuda próxima sempre que precisar.' },
   ];
 
   protected readonly steps = [
-    { icon: '♙', number: '1', title: 'Cadastre-se', text: 'Crie seu perfil de forma simples e rapida.' },
-    { icon: '☷', number: '2', title: 'Busque ou ofereca', text: 'Encontre cuidadores ou oportunidades compativeis.' },
-    { icon: '☏', number: '3', title: 'Converse', text: 'Tire duvidas e alinhe detalhes pelo chat interno.' },
-    { icon: '□', number: '4', title: 'Contrate com seguranca', text: 'Avalie, combine e comece a jornada.' },
+    { icon: 'person_add', number: '1', title: 'Cadastre-se', text: 'Crie o seu perfil de forma simples e rápida.' },
+    { icon: 'manage_search', number: '2', title: 'Busque ou ofereça', text: 'Encontre cuidadores ou oportunidades compatíveis.' },
+    { icon: 'chat', number: '3', title: 'Converse', text: 'Tire dúvidas e alinhe detalhes pelo chat interno.' },
+    { icon: 'gavel', number: '4', title: 'Contrate com segurança', text: 'Avalie, combine e avance com responsabilidade.' },
   ];
 
   protected readonly services = [
-    { icon: '♙', title: 'Acompanhamento hospitalar' },
-    { icon: '☼', title: 'Cuidados diarios' },
-    { icon: '♁', title: 'Companhia' },
-    { icon: '⌂', title: 'Higiene pessoal' },
-    { icon: '♨', title: 'Refeicoes' },
-    { icon: '☾', title: 'Noite / Pernoite' },
+    { icon: 'local_hospital', title: 'Acompanhamento hospitalar' },
+    { icon: 'home_health', title: 'Cuidados diários' },
+    { icon: 'diversity_1', title: 'Companhia' },
+    { icon: 'shower', title: 'Higiene pessoal' },
+    { icon: 'restaurant', title: 'Refeições' },
+    { icon: 'nightlight', title: 'Noite / Pernoite' },
   ];
 
   protected readonly safety = [
-    { icon: '□', title: 'Perfis verificados', text: 'Documentos analisados para mais confianca.' },
-    { icon: '☷', title: 'Antecedentes checados', text: 'Cuidadores com antecedentes criminais verificados.' },
-    { icon: '☆', title: 'Avaliacoes reais', text: 'Avaliacoes mutuas para uma comunidade mais segura.' },
-    { icon: '▢', title: 'Ambiente seguro', text: 'Seu dados protegidos com criptografia e sigilo.' },
+    { icon: 'verified_user', title: 'Perfis verificados', text: 'Documentos analisados para mais confiança.' },
+    { icon: 'fact_check', title: 'Antecedentes checados', text: 'Cuidadores com antecedentes criminais verificados.' },
+    { icon: 'stars', title: 'Avaliações reais', text: 'Avaliações mútuas para uma comunidade mais segura.' },
+    { icon: 'lock', title: 'Ambiente seguro', text: 'Os seus dados protegidos com criptografia e sigilo.' },
   ];
 }

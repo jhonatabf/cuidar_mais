@@ -19,10 +19,10 @@ import { Auth } from '../../core/services/auth';
         @if (errorMessage()) {
           <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
         }
-        <button class="button" type="submit" [disabled]="isSubmitting()">
+        <button class="btn btn-login" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? 'A entrar...' : 'Entrar' }}
         </button>
-        <a class="button-secondary" routerLink="/cadastro" [queryParams]="{ redirectTo: redirectTo() }">Criar conta</a>
+        <a class="btn btn-register" routerLink="/cadastro" [queryParams]="{ redirectTo: redirectTo() }">Criar conta</a>
       </form>
     </section>
   `,

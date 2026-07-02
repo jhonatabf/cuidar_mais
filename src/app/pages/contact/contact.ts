@@ -13,7 +13,7 @@ import { Component } from '@angular/core';
         <label>Nome<input placeholder="O seu nome" /></label>
         <label>Email<input type="email" placeholder="email@exemplo.pt" /></label>
         <label>Mensagem<textarea placeholder="Como podemos ajudar?"></textarea></label>
-        <button class="button" type="button">Enviar mensagem</button>
+        <button class="btn btn-login" type="button">Enviar mensagem</button>
       </form>
     </section>
   `,

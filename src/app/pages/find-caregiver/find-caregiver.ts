@@ -27,7 +27,7 @@ import { RouterLink } from '@angular/router';
             <option>Noites</option>
           </select>
         </label>
-        <button class="button" type="button">Aplicar filtros</button>
+        <button class="btn btn-primary" type="button">Aplicar filtros</button>
       </form>
     </section>
 
@@ -39,7 +39,7 @@ import { RouterLink } from '@angular/router';
           <p class="muted">{{ caregiver.summary }}</p>
           <p><strong>{{ caregiver.price }}</strong> · {{ caregiver.location }}</p>
           <div class="actions">
-            <a class="button-secondary" [routerLink]="['/cuidador', caregiver.id]">Ver perfil</a>
+            <a class="btn btn-secondary" [routerLink]="['/cuidador', caregiver.id]">Ver perfil</a>
           </div>
         </article>
       }

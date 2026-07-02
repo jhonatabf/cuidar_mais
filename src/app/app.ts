@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from 'firebase/auth';
 import { Subscription } from 'rxjs';
@@ -33,6 +33,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly photoMessage = signal('');
   protected readonly isUpdatingPhoto = signal(false);
   protected readonly isAdminArea = signal(this.router.url.startsWith('/admin'));
+  protected readonly isScrolled = signal(false);
+  protected readonly isMobileMenuOpen = signal(false);
 
   protected readonly mainLinks = [
     { label: 'Como funciona', path: '/como-funciona' },
@@ -57,12 +59,14 @@ export class App implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    this.updateHeaderScrollState();
     this.unsubscribeAuth = this.auth.onUserChange((user) => {
       void this.setUserState(user);
     });
     this.routeSubscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.isAdminArea.set(event.urlAfterRedirects.startsWith('/admin'));
+        this.closeMobileMenu();
       }
     });
   }
@@ -72,12 +76,40 @@ export class App implements OnInit, OnDestroy {
     this.routeSubscription?.unsubscribe();
   }
 
+  @HostListener('window:scroll')
+  protected updateHeaderScrollState(): void {
+    this.isScrolled.set(window.scrollY > 40);
+  }
+
+  @HostListener('window:keydown.escape')
+  protected closeMenusOnEscape(): void {
+    this.closeMobileMenu();
+    this.closeAccountMenu();
+  }
+
+  @HostListener('window:resize')
+  protected closeMobileMenuOnDesktop(): void {
+    if (window.innerWidth > 900) {
+      this.closeMobileMenu();
+    }
+  }
+
+  protected toggleMobileMenu(): void {
+    this.accountMenuOpen.set(false);
+    this.isMobileMenuOpen.update((isOpen) => !isOpen);
+  }
+
+  protected closeMobileMenu(): void {
+    this.isMobileMenuOpen.set(false);
+  }
+
   protected getInitials(): string {
     const name = this.displayName() || this.user()?.email || 'U';
     return name.trim().charAt(0).toUpperCase();
   }
 
   protected toggleAccountMenu(): void {
+    this.closeMobileMenu();
     this.accountMenuOpen.update((isOpen) => !isOpen);
   }
 

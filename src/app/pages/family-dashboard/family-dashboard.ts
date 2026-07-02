@@ -110,7 +110,7 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
                         Convidar por email
                       </label>
                       @if (memberEntryIds().length > 1) {
-                        <button type="button" class="button-secondary button-small" (click)="removeMemberEntry(entryId)">Remover</button>
+                        <button type="button" class="btn btn-danger button-small" (click)="removeMemberEntry(entryId)">Remover</button>
                       }
                     </div>
                   </div>
@@ -299,7 +299,7 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
               </label>
               <div class="form-actions">
                 @if (account()?.familyProfile?.completed) {
-                  <button type="button" class="button-secondary" (click)="cancelEdit()">Cancelar</button>
+                  <button type="button" class="btn btn-danger" (click)="cancelEdit()">Cancelar</button>
                 }
                 <button class="button" type="submit" [disabled]="isSubmitting()">
                   {{ isSubmitting() ? 'A guardar...' : 'Guardar cadastro de família' }}

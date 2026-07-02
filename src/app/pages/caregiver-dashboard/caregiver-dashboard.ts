@@ -106,7 +106,7 @@ import { Auth } from '../../core/services/auth';
               @if (canEditProfile()) {
                 <a class="button action-link" routerLink="/seja-cuidador"><svg lucideSquarePen size="18"></svg>Editar dados</a>
               } @else {
-                <button class="button-secondary action-link" type="button" disabled><svg lucideLockKeyhole size="18"></svg>Alteração bloqueada</button>
+                <button class="btn btn-disabled action-link" type="button" disabled><svg lucideLockKeyhole size="18"></svg>Alteração bloqueada</button>
               }
             </article>
           }

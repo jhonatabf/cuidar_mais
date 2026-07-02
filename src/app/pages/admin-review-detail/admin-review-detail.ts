@@ -137,7 +137,7 @@ import { Auth } from '../../core/services/auth';
             <h2>Decisão</h2>
             <div class="detail-actions">
               <button class="button" type="button" (click)="approve()">Aprovar</button>
-              <button class="button-secondary" type="button" (click)="showRejectForm()">Rejeitar</button>
+              <button class="btn btn-danger" type="button" (click)="showRejectForm()">Rejeitar</button>
             </div>
             @if (rejectFormVisible()) {
               <form class="form-grid reject-form" (submit)="reject($event)">
@@ -145,8 +145,8 @@ import { Auth } from '../../core/services/auth';
                   <textarea name="rejectionReason" required placeholder="Explique o que precisa ser corrigido."></textarea>
                 </label>
                 <div class="detail-actions">
-                  <button class="button-secondary" type="submit">Confirmar rejeição</button>
-                  <button class="button-secondary" type="button" (click)="hideRejectForm()">Cancelar</button>
+                  <button class="btn btn-danger" type="submit">Confirmar rejeição</button>
+                  <button class="btn btn-secondary" type="button" (click)="hideRejectForm()">Cancelar</button>
                 </div>
               </form>
             }

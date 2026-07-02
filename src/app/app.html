@@ -1,6 +1,11 @@
 <div class="app-shell" [class.admin-shell]="isAdminArea()">
   @if (!isAdminArea()) {
-    <header class="site-header">
+    <header
+      class="site-header"
+      [class.scrolled]="isScrolled()"
+      [class.header--scrolled]="isScrolled()"
+      [class.header--compact]="isScrolled()"
+    >
     <a class="brand" routerLink="/" aria-label="Cuidar+">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 42 46" focusable="false">
@@ -25,7 +30,10 @@
 
     <div class="header-actions">
       @if (!user()) {
-        <a class="button button-small" routerLink="/login">Entrar / Cadastrar</a>
+        <a class="btn btn-register button-small header-cta" routerLink="/login">
+          <span class="header-cta__full">Entrar / Cadastrar</span>
+          <span class="header-cta__short">Entrar</span>
+        </a>
       } @else {
         <div class="account-menu">
           <button class="account-trigger" type="button" (click)="toggleAccountMenu()" [attr.aria-expanded]="accountMenuOpen()">
@@ -80,6 +88,40 @@
         </div>
       }
     </div>
+
+    <button
+      class="mobile-menu-trigger"
+      type="button"
+      aria-label="Abrir ou fechar menu de navegação"
+      aria-controls="mobile-navigation"
+      [attr.aria-expanded]="isMobileMenuOpen()"
+      (click)="toggleMobileMenu()"
+    >
+      <span class="material-symbols-rounded" aria-hidden="true">
+        {{ isMobileMenuOpen() ? 'close' : 'menu' }}
+      </span>
+    </button>
+
+    @if (isMobileMenuOpen()) {
+      <nav id="mobile-navigation" class="mobile-navigation" aria-label="Navegação mobile">
+        @for (link of mainLinks; track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: link.path === '/' }"
+            (click)="closeMobileMenu()"
+          >
+            {{ link.label }}
+          </a>
+        }
+        @if (!user()) {
+          <div class="mobile-navigation__actions">
+            <a class="btn btn-login" routerLink="/login" (click)="closeMobileMenu()">Entrar</a>
+            <a class="btn btn-register" routerLink="/cadastro" (click)="closeMobileMenu()">Cadastrar</a>
+          </div>
+        }
+      </nav>
+    }
     </header>
   }
 

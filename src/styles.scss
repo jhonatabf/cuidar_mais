@@ -1,16 +1,26 @@
 :root {
+  --color-background: #fafaf8;
   --color-canvas: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-soft: #f1f8ed;
-  --color-primary: #0b7a3b;
-  --color-primary-strong: #07582d;
-  --color-primary-deep: #064322;
-  --color-primary-soft: #e4f2df;
-  --color-accent: #77bd83;
-  --color-mint: #dcefd4;
-  --color-ink: #102a24;
+  --color-surface-soft: #f4f8ff;
+  --color-primary: #15803d;
+  --color-primary-strong: #102a22;
+  --color-primary-deep: #0f3d2e;
+  --color-primary-soft: #ddf4e4;
+  --color-blue: #2563eb;
+  --color-register: #16a34a;
+  --color-disabled: #cbd5e1;
+  --color-disabled-text: #64748b;
+  --color-amber: #f59e0b;
+  --color-amber-soft: #fffbea;
+  --color-coral: #d97757;
+  --color-coral-soft: #fff4ef;
+  --color-footer: #0f3d2e;
+  --color-accent: #2563eb;
+  --color-mint: #ddf4e4;
+  --color-ink: #102a22;
   --color-muted: #52665d;
-  --color-border: #dce9d8;
+  --color-border: #dce7e1;
   --shadow-soft: 0 20px 60px rgba(16, 82, 43, 0.12);
   --shadow-card: 0 14px 34px rgba(15, 91, 49, 0.08);
   --radius: 18px;
@@ -26,17 +36,60 @@
 }
 
 html {
+  max-width: 100%;
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
+  max-width: 100%;
   min-width: 320px;
   margin: 0;
   color: var(--color-ink);
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 28rem),
-    radial-gradient(circle at top right, rgba(186, 219, 176, 0.45), transparent 34rem),
-    var(--color-background);
+  background: var(--color-background);
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 32;
+}
+
+.icon-badge {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-badge--soft {
+  background: #ddf4e4;
+  color: #15803d;
+}
+
+.icon-badge--solid {
+  background: #15803d;
+  color: #fff;
 }
 
 button,
@@ -56,9 +109,18 @@ a {
 }
 
 .page {
+  min-width: 0;
   width: min(var(--container), calc(100% - 48px));
   margin-inline: auto;
   padding: 48px 0;
+}
+
+main,
+section,
+article,
+form,
+nav {
+  min-width: 0;
 }
 
 .hero {
@@ -142,7 +204,8 @@ h3 {
 }
 
 .button,
-.button-secondary {
+.button-secondary,
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -155,21 +218,64 @@ h3 {
   cursor: pointer;
 }
 
-.button {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+.button,
+.btn-primary {
+  background: var(--color-primary);
   color: #fff;
   box-shadow: 0 12px 24px rgba(11, 122, 59, 0.22);
 }
 
-.button:hover {
+.button:hover,
+.btn-primary:hover {
   background: var(--color-primary-strong);
 }
 
-.button-secondary {
+.button-secondary,
+.btn-secondary {
   border-color: var(--color-primary);
   background: #fff;
   color: var(--color-primary-strong);
 }
+
+.btn-register {
+  background: var(--color-register);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.2);
+}
+
+.btn-login {
+  background: var(--color-blue);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+}
+
+.btn-action {
+  background: var(--color-amber);
+  color: var(--color-ink);
+  box-shadow: 0 12px 24px rgba(245, 158, 11, 0.2);
+}
+
+.btn-danger {
+  background: var(--color-coral);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(217, 119, 87, 0.18);
+}
+
+.btn-disabled,
+.btn:disabled,
+.button:disabled,
+.button-secondary:disabled {
+  border-color: var(--color-disabled);
+  background: var(--color-disabled);
+  color: var(--color-disabled-text);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-register:hover { background: #138a40; }
+.btn-login:hover { background: #1d4ed8; }
+.btn-action:hover { background: #d98b08; }
+.btn-danger:hover { background: #c46547; }
 
 .button-small {
   min-height: 42px;
@@ -480,7 +586,8 @@ h3 {
   }
 
   .button,
-  .button-secondary {
+  .button-secondary,
+  .btn {
     width: 100%;
   }
 }

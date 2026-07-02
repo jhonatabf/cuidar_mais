@@ -14,6 +14,7 @@ import {
   UserPrivateDocumentKind,
   UserPrivateDocumentUpload,
 } from '../../core/services/auth';
+import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
 const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -97,7 +98,7 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
                 </label>
               </div>
             </fieldset>
-            <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" placeholder="Número de identificação fiscal" [value]="privateValue('nif')" /></label>
+            <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" autocomplete="off" placeholder="123456789" [value]="privateValue('nif')" /></label>
             <fieldset class="paired-fieldset span-2">
               <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
               <div class="paired-fields document-fields">
@@ -346,7 +347,7 @@ export class PersonalDataComponent implements OnInit {
       acceptedTerms: formData.has('acceptedTerms'),
       acceptedPrivacy: formData.has('acceptedPrivacy'),
       private: {
-        nif: this.textValue(formData, 'nif'),
+        nif: normalizePortugueseNif(this.textValue(formData, 'nif')),
         documentType: this.textValue(formData, 'documentType'),
         idDocument: this.textValue(formData, 'idDocument'),
         address: this.textValue(formData, 'address'),
@@ -403,6 +404,10 @@ export class PersonalDataComponent implements OnInit {
 
       if (field.key === 'phone' && !this.isValidPhone(formData)) {
         return 'Introduza um número de telemóvel válido para o indicativo selecionado.';
+      }
+
+      if (field.key === 'nif' && !isValidPortugueseNif(value)) {
+        return 'Introduza um NIF português válido com 9 dígitos.';
       }
     }
 

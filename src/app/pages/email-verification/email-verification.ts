@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Auth } from '../../core/services/auth';
@@ -12,7 +12,9 @@ import { Auth } from '../../core/services/auth';
         <p class="eyebrow">Confirmação de email</p>
         <h1>Confirme o seu email para continuar.</h1>
         <p class="lead">
-          Enviámos uma mensagem para o email da conta. Abra o email e confirme o endereço antes de avançar.
+          Enviámos uma mensagem de confirmação para
+          <strong class="verification-email">{{ email() || 'o email associado à sua conta' }}</strong>.
+          Abra o email e confirme o endereço antes de avançar.
         </p>
       </div>
 
@@ -55,18 +57,28 @@ import { Auth } from '../../core/services/auth';
       gap: 12px;
       margin-top: 10px;
     }
+
+    .verification-email {
+      color: var(--color-primary);
+      overflow-wrap: anywhere;
+    }
   `,
 })
-export class EmailVerificationComponent {
+export class EmailVerificationComponent implements OnInit {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '/');
+  protected readonly email = signal('');
   protected readonly message = signal('');
   protected readonly errorMessage = signal('');
   protected readonly isChecking = signal(false);
   protected readonly isSending = signal(false);
+
+  async ngOnInit(): Promise<void> {
+    this.email.set((await this.auth.getCurrentUser())?.email ?? '');
+  }
 
   protected async confirmEmail(): Promise<void> {
     this.message.set('');
@@ -95,7 +107,7 @@ export class EmailVerificationComponent {
 
     try {
       await this.auth.sendCurrentUserEmailVerification();
-      this.message.set('Email de confirmação reenviado.');
+      this.message.set(`Email de confirmação reenviado para ${this.email() || 'o email da conta'}.`);
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
     } finally {

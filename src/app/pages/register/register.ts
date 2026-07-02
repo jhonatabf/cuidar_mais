@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Auth } from '../../core/services/auth';
+import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
 @Component({
   selector: 'app-register',
@@ -22,7 +23,7 @@ import { Auth } from '../../core/services/auth';
         </label>
         <label><span class="label-line">Nome <strong>*</strong></span><input name="fullName" required data-error-label="Nome" placeholder="Nome completo" /></label>
         <label><span class="label-line">Data de nascimento <strong>*</strong></span><input name="birthDate" type="date" required data-error-label="Data de nascimento" /></label>
-        <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" data-error-label="NIF" placeholder="Número de identificação fiscal" /></label>
+        <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" autocomplete="off" data-error-label="NIF" placeholder="123456789" /></label>
         <fieldset class="document-fieldset">
           <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
           <label><span class="label-line">Tipo</span>
@@ -77,7 +78,7 @@ export class RegisterComponent {
         accountType,
         fullName: this.textValue(formData, 'fullName'),
         birthDate: this.textValue(formData, 'birthDate'),
-        nif: this.textValue(formData, 'nif'),
+        nif: normalizePortugueseNif(this.textValue(formData, 'nif')),
         documentType: this.textValue(formData, 'documentType'),
         idDocument: this.textValue(formData, 'idDocument'),
         email: this.textValue(formData, 'email'),
@@ -113,6 +114,10 @@ export class RegisterComponent {
 
       if (control.name === 'birthDate' && !this.isAdult(control.value)) {
         return 'É necessário ter pelo menos 18 anos para se cadastrar.';
+      }
+
+      if (control.name === 'nif' && !isValidPortugueseNif(control.value)) {
+        return 'Introduza um NIF português válido com 9 dígitos.';
       }
     }
 

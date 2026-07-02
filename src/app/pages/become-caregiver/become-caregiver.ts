@@ -96,15 +96,22 @@ const CAREGIVER_SIGNUP_COPY = {
       </aside>
 
       <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
+        @if (showReviewNotice()) {
+          <div class="caregiver-snackbar" role="status" aria-live="polite">
+            <span class="material-symbols-rounded caregiver-snackbar__icon" aria-hidden="true">info</span>
+            <div>
+              <strong>Validação pela Cuidar+</strong>
+              <p>
+                Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa Cuidar+.
+                O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.
+              </p>
+            </div>
+            <button type="button" aria-label="Fechar aviso" (click)="showReviewNotice.set(false)">
+              <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+          </div>
+        }
         <fieldset class="form-disabled-shell" [disabled]="!canEditProfile()">
-        <div class="review-notice">
-          <strong>Validação pela Cuidar+</strong>
-          <p>
-            Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa Cuidar+.
-            O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.
-          </p>
-        </div>
-
         <section id="perfil-profissional" class="signup-section">
           <div class="section-title">
             <span>1</span>
@@ -361,6 +368,7 @@ export class BecomeCaregiverComponent implements OnInit {
   protected successMessage = '';
   protected readonly hasExistingCaregiverProfile = signal(false);
   protected readonly canEditProfile = signal(true);
+  protected readonly showReviewNotice = signal(true);
   protected readonly approvalLockMessage = signal('');
   protected readonly submitButtonLabel = signal('Guardar registo inicial');
   protected readonly locale = signal<CaregiverSignupLocale>('pt-PT');

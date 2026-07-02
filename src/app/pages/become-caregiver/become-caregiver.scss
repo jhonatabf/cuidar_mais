@@ -94,24 +94,72 @@
   }
 }
 
-.review-notice {
-  display: grid;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid rgba(39, 103, 143, 0.22);
-  border-radius: 16px;
-  background: #f4f9fd;
-  color: #27678f;
+.caregiver-snackbar {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(600px, calc(100vw - 48px));
+  padding: 14px 16px;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 12px;
+  background: #f4f8ff;
+  color: #1e4f9a;
+  box-shadow: 0 16px 40px rgba(16, 42, 34, 0.16);
+  animation: caregiver-snackbar-enter 0.25s ease-out;
 
   strong {
-    color: #245f84;
-    font-weight: 760;
+    color: inherit;
+    font-weight: 850;
   }
 
   p {
-    margin: 0;
-    font-weight: 400;
+    margin: 4px 0 0;
     line-height: 1.55;
+  }
+
+  button {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: currentColor;
+    cursor: pointer;
+  }
+
+  button:hover,
+  button:focus-visible {
+    background: rgba(37, 99, 235, 0.1);
+  }
+
+  .material-symbols-rounded {
+    font-size: 20px;
+  }
+}
+
+.caregiver-snackbar__icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+@keyframes caregiver-snackbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -406,6 +454,12 @@ legend {
 }
 
 @media (max-width: 640px) {
+  .caregiver-snackbar {
+    right: 14px;
+    bottom: 14px;
+    width: calc(100vw - 28px);
+  }
+
   .caregiver-signup-hero {
     padding-top: 34px;
   }

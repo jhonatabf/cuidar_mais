@@ -44,10 +44,7 @@
   width: min(100%, 650px);
   min-height: 430px;
   border-radius: 34px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.88), transparent 20%),
-    url("https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1000&q=85")
-      right center/cover;
+  background: url("/images/hero-companhia.jpg") center/cover;
   filter: saturate(1.02);
 }
 
@@ -213,15 +210,11 @@
 }
 
 .family-photo {
-  background-image:
-    linear-gradient(90deg, transparent, rgba(241, 248, 237, 0.18)),
-    url("https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=700&q=85");
+  background-image: url("/images/familia-memorias.jpg");
 }
 
 .caregiver-photo {
-  background-image:
-    linear-gradient(90deg, transparent, rgba(241, 248, 237, 0.18)),
-    url("https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=700&q=85");
+  background-image: url("/images/cuidador-companhia.jpg");
 }
 
 .testimonial-card,

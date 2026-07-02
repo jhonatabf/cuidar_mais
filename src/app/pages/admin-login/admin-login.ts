@@ -37,8 +37,7 @@ import { Auth } from '../../core/services/auth';
         min-height: 100dvh;
         background:
           linear-gradient(135deg, rgba(245, 250, 242, 0.96), rgba(255, 255, 255, 0.88)),
-          url("https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1600&q=80")
-            center/cover;
+          url("/images/passeio-acompanhado.jpg") center/cover;
       }
 
       .admin-auth-page {

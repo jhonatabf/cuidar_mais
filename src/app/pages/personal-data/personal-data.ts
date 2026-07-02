@@ -27,11 +27,6 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
         <p class="eyebrow">{{ isRequiredStep() ? 'Conclusão obrigatória' : 'Meus dados pessoais' }}</p>
         <h1>{{ pageTitle() }}</h1>
         <p class="lead">{{ pageLead() }}</p>
-        @if (isRequiredStep()) {
-          <p class="required-note">
-            Preencha os campos obrigatórios abaixo. Depois de guardar, continuará automaticamente para a próxima etapa.
-          </p>
-        }
       </div>
     </section>
 
@@ -178,18 +173,6 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
           </div>
         </section>
 
-        @if (errorMessage()) {
-          <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
-        }
-        @if (redirectTo() && !successMessage()) {
-          <p class="form-message info-message" role="status">
-            Complete estes dados para continuar a criação ou edição do seu perfil.
-          </p>
-        }
-        @if (successMessage()) {
-          <p class="form-message success-message" role="status">{{ successMessage() }}</p>
-        }
-
         <div class="form-actions">
           <button class="button" type="submit" [disabled]="isSubmitting()">
             {{ isSubmitting() ? 'A guardar...' : 'Guardar dados pessoais' }}
@@ -197,6 +180,22 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
         </div>
       </form>
     </section>
+
+    @if (snackbarMessage()) {
+      <div
+        class="snackbar"
+        [class.snackbar--error]="snackbarKind() === 'error'"
+        [class.snackbar--success]="snackbarKind() === 'success'"
+        [attr.role]="snackbarKind() === 'error' ? 'alert' : 'status'"
+        aria-live="polite"
+      >
+        <span class="material-symbols-rounded snackbar__icon" aria-hidden="true">{{ snackbarIcon() }}</span>
+        <p>{{ snackbarMessage() }}</p>
+        <button type="button" aria-label="Fechar mensagem" (click)="closeSnackbar()">
+          <span class="material-symbols-rounded" aria-hidden="true">close</span>
+        </button>
+      </div>
+    }
   `,
   styleUrl: './personal-data.scss',
 })
@@ -210,6 +209,7 @@ export class PersonalDataComponent implements OnInit {
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly isSubmitting = signal(false);
+  protected readonly showRequiredNotice = signal(true);
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
   protected readonly phoneCountry = signal<CountryCode>('PT');
   protected readonly nationalPhone = signal('');
@@ -226,6 +226,24 @@ export class PersonalDataComponent implements OnInit {
       return first.name.localeCompare(second.name, 'pt-PT');
     });
   protected readonly isRequiredStep = computed(() => !!this.redirectTo());
+  protected readonly snackbarKind = computed<'error' | 'success' | 'info'>(() => {
+    if (this.errorMessage()) return 'error';
+    if (this.successMessage()) return 'success';
+    return 'info';
+  });
+  protected readonly snackbarMessage = computed(() => {
+    if (this.errorMessage()) return this.errorMessage();
+    if (this.successMessage()) return this.successMessage();
+    if (this.isRequiredStep() && this.showRequiredNotice()) {
+      return 'Preencha os campos obrigatórios abaixo. Depois de guardar, continuará automaticamente para a próxima etapa.';
+    }
+    return '';
+  });
+  protected readonly snackbarIcon = computed(() => {
+    if (this.snackbarKind() === 'error') return 'error';
+    if (this.snackbarKind() === 'success') return 'check_circle';
+    return 'info';
+  });
   protected readonly pageTitle = computed(() =>
     this.isRequiredStep()
       ? 'Conclua os seus dados pessoais para continuar.'
@@ -250,6 +268,20 @@ export class PersonalDataComponent implements OnInit {
     this.loadPhone(account);
   }
 
+  protected closeSnackbar(): void {
+    if (this.errorMessage()) {
+      this.errorMessage.set('');
+      return;
+    }
+
+    if (this.successMessage()) {
+      this.successMessage.set('');
+      return;
+    }
+
+    this.showRequiredNotice.set(false);
+  }
+
   protected async onSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     this.errorMessage.set('');
@@ -263,12 +295,29 @@ export class PersonalDataComponent implements OnInit {
       return;
     }
 
+    const shouldContinueRegistration =
+      this.isRequiredStep() || !this.auth.hasCompletePersonalData(this.account());
     this.isSubmitting.set(true);
     try {
       await this.auth.updateUserPersonalData(await this.buildPersonalData(formData));
-      this.account.set(await this.auth.getUserAccount((await this.auth.getCurrentUser())?.uid ?? ''));
-      if (this.redirectTo()) {
-        await this.router.navigateByUrl(this.redirectTo());
+      const user = await this.auth.getCurrentUser();
+      const account = await this.auth.getUserAccount(user?.uid ?? '');
+      this.account.set(account);
+
+      if (shouldContinueRegistration && user) {
+        const nextRoute = await this.auth.getPostLoginRedirect(user.uid);
+        const registrationType = nextRoute.includes('cuidador') ? 'cuidador' : 'família';
+        this.successMessage.set(
+          `Dados pessoais concluídos. A encaminhar para o cadastro de ${registrationType}...`,
+        );
+        await this.showTransitionFeedback();
+        const navigated = await this.router.navigateByUrl(nextRoute);
+        if (!navigated) {
+          this.successMessage.set('');
+          this.errorMessage.set(
+            'Os dados foram guardados, mas não foi possível avançar para a próxima etapa. Tente novamente.',
+          );
+        }
         return;
       }
 
@@ -278,6 +327,10 @@ export class PersonalDataComponent implements OnInit {
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  private showTransitionFeedback(): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, 600));
   }
 
   protected value(key: keyof UserAccount): string {

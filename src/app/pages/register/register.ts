@@ -2,9 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { Auth } from '../../core/services/auth';
+import { AppLocale, LocaleService } from '../../core/services/locale';
 import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
-
-type RegisterLocale = 'pt-PT' | 'en-GB';
 
 const REGISTER_COPY = {
   'pt-PT': {
@@ -18,11 +17,14 @@ const REGISTER_COPY = {
     name: 'Nome completo',
     birthDate: 'Data de nascimento',
     private: 'privado',
-    document: 'Documento de identificação',
+    document: 'Documento de identificação emitido em Portugal',
+    citizenCard: 'Cartão de Cidadão português',
+    passport: 'Passaporte português',
+    residencePermit: 'Título de residência emitido em Portugal',
     type: 'Tipo',
     number: 'Número',
     select: 'Selecionar',
-    other: 'Outro',
+    other: 'Outro documento emitido em Portugal',
     password: 'Palavra-passe',
     passwordConfirmation: 'Confirmar palavra-passe',
     createPassword: 'Crie uma palavra-passe',
@@ -42,11 +44,14 @@ const REGISTER_COPY = {
     name: 'Full name',
     birthDate: 'Date of birth',
     private: 'private',
-    document: 'Identification document',
+    document: 'Identification document issued in Portugal',
+    citizenCard: 'Portuguese Citizen Card',
+    passport: 'Portuguese passport',
+    residencePermit: 'Residence permit issued in Portugal',
     type: 'Type',
     number: 'Number',
     select: 'Select',
-    other: 'Other',
+    other: 'Other document issued in Portugal',
     password: 'Password',
     passwordConfirmation: 'Confirm password',
     createPassword: 'Create a password',
@@ -91,9 +96,9 @@ const REGISTER_COPY = {
           <label><span class="label-line">{{ copy().type }}</span>
             <select name="documentType" required data-error-label="Tipo de documento">
               <option value="">{{ copy().select }}</option>
-              <option>Cartão de Cidadão</option>
-              <option>Passaporte</option>
-              <option>Título de residência</option>
+              <option value="Cartão de Cidadão">{{ copy().citizenCard }}</option>
+              <option value="Passaporte">{{ copy().passport }}</option>
+              <option value="Título de residência">{{ copy().residencePermit }}</option>
               <option value="Outro">{{ copy().other }}</option>
             </select>
           </label>
@@ -118,14 +123,13 @@ export class RegisterComponent {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly localeService = inject(LocaleService);
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
-  protected readonly locale = signal<RegisterLocale>('pt-PT');
-
-  protected copy(): (typeof REGISTER_COPY)[RegisterLocale] {
-    return REGISTER_COPY[this.locale()];
+  protected copy(): (typeof REGISTER_COPY)[AppLocale] {
+    return REGISTER_COPY[this.localeService.locale()];
   }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {

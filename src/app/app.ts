@@ -1,14 +1,52 @@
-import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from 'firebase/auth';
 import { Subscription } from 'rxjs';
 
 import { Auth, UserProfilePhotoUpload } from './core/services/auth';
+import { AppLocale, LocaleService } from './core/services/locale';
 
 const USER_PROFILE_PHOTO_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const USER_PROFILE_PHOTO_TARGET_BYTES = 300 * 1024;
 const USER_PROFILE_PHOTO_MAX_DIMENSION = 800;
 const USER_PROFILE_PHOTO_MIN_QUALITY = 0.58;
+
+const SHELL_COPY = {
+  'pt-PT': {
+    tagline: 'Conectando com cuidado',
+    navigation: 'Navegação principal',
+    mobileNavigation: 'Navegação móvel',
+    menu: 'Abrir ou fechar o menu de navegação',
+    enterRegister: 'Entrar / Registar',
+    enter: 'Entrar',
+    register: 'Registar',
+    mainLinks: ['Como funciona', 'Cuidadores', 'Famílias', 'Segurança', 'Sobre'],
+    institutional: 'Institucional',
+    help: 'Ajuda',
+    follow: 'Siga-nos',
+    footerText: 'Plataforma que liga famílias a cuidadores com segurança, respeito e carinho.',
+    footerLinks: ['Sobre nós', 'Como funciona', 'Segurança', 'Blog', 'Contacto'],
+    helpLinks: ['Perguntas frequentes', 'Termos', 'Política de privacidade'],
+    copyright: '© 2024 Cuidar+. Todos os direitos reservados.',
+  },
+  'en-GB': {
+    tagline: 'Connecting with care',
+    navigation: 'Main navigation',
+    mobileNavigation: 'Mobile navigation',
+    menu: 'Open or close the navigation menu',
+    enterRegister: 'Sign in / Register',
+    enter: 'Sign in',
+    register: 'Register',
+    mainLinks: ['How it works', 'Caregivers', 'Families', 'Safety', 'About'],
+    institutional: 'Company',
+    help: 'Help',
+    follow: 'Follow us',
+    footerText: 'A platform connecting families and caregivers with safety, respect and kindness.',
+    footerLinks: ['About us', 'How it works', 'Safety', 'Blog', 'Contact'],
+    helpLinks: ['Frequently asked questions', 'Terms', 'Privacy policy'],
+    copyright: '© 2024 Cuidar+. All rights reserved.',
+  },
+} as const;
 
 @Component({
   selector: 'app-root',
@@ -19,6 +57,7 @@ const USER_PROFILE_PHOTO_MIN_QUALITY = 0.58;
 export class App implements OnInit, OnDestroy {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
+  protected readonly localeService = inject(LocaleService);
   private unsubscribeAuth?: () => void;
   private routeSubscription?: Subscription;
 
@@ -36,27 +75,23 @@ export class App implements OnInit, OnDestroy {
   protected readonly isScrolled = signal(false);
   protected readonly isMobileMenuOpen = signal(false);
 
-  protected readonly mainLinks = [
-    { label: 'Como funciona', path: '/como-funciona' },
-    { label: 'Cuidadores', path: '/como-funciona/cuidadores' },
-    { label: 'Famílias', path: '/como-funciona/familias' },
-    { label: 'Segurança', path: '/rgpd' },
-    { label: 'Sobre', path: '/faq' },
-  ];
+  protected readonly shellCopy = computed(() => SHELL_COPY[this.localeService.locale()]);
+  protected readonly mainLinks = computed(() =>
+    ['/como-funciona', '/como-funciona/cuidadores', '/como-funciona/familias', '/rgpd', '/faq']
+      .map((path, index) => ({ path, label: this.shellCopy().mainLinks[index] })),
+  );
+  protected readonly footerLinks = computed(() =>
+    ['/faq', '/como-funciona', '/rgpd', '/faq', '/contacto']
+      .map((path, index) => ({ path, label: this.shellCopy().footerLinks[index] })),
+  );
+  protected readonly helpLinks = computed(() =>
+    ['/faq', '/termos', '/privacidade']
+      .map((path, index) => ({ path, label: this.shellCopy().helpLinks[index] })),
+  );
 
-  protected readonly footerLinks = [
-    { label: 'Sobre nós', path: '/faq' },
-    { label: 'Como funciona', path: '/como-funciona' },
-    { label: 'Segurança', path: '/rgpd' },
-    { label: 'Blog', path: '/faq' },
-    { label: 'Contato', path: '/contacto' },
-  ];
-
-  protected readonly helpLinks = [
-    { label: 'Perguntas frequentes', path: '/faq' },
-    { label: 'Termos', path: '/termos' },
-    { label: 'Política de privacidade', path: '/privacidade' },
-  ];
+  protected changeLocale(event: Event): void {
+    this.localeService.setLocale((event.target as HTMLSelectElement).value as AppLocale);
+  }
 
   ngOnInit(): void {
     this.updateHeaderScrollState();
@@ -89,7 +124,7 @@ export class App implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   protected closeMobileMenuOnDesktop(): void {
-    if (window.innerWidth > 900) {
+    if (window.innerWidth > 1040) {
       this.closeMobileMenu();
     }
   }

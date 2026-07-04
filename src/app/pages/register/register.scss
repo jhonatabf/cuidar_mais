@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.register-page {
+  align-items: start;
+  min-height: auto;
+  padding-top: 46px;
+}
+
+.register-intro {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.registration-step {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px 12px;
+  width: min(100%, 320px);
+  margin-bottom: 24px;
+  color: var(--color-ink);
+}
+
+.registration-step__number {
+  display: grid;
+  grid-row: span 2;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 900;
+}
+
+.registration-step > div:not(.registration-step__progress) {
+  display: grid;
+  gap: 2px;
+
+  strong {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 750;
+  }
+}
+
+.registration-step__progress {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+
+  span {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-border);
+  }
+
+  .is-active {
+    background: var(--color-primary);
+  }
+}
+
+@media (max-width: 920px) {
+  .register-page {
+    gap: 28px;
+    padding-top: 32px;
+  }
+}

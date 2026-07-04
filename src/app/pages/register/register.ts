@@ -4,51 +4,115 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Auth } from '../../core/services/auth';
 import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
+type RegisterLocale = 'pt-PT' | 'en-GB';
+
+const REGISTER_COPY = {
+  'pt-PT': {
+    step: 'Etapa 1 de 3',
+    stepName: 'Criação da conta',
+    title: 'Crie uma conta para começar a sua jornada na Cuidar+.',
+    lead: 'Escolha o tipo de conta e indique os dados necessários para criar o seu acesso.',
+    accountType: 'Tipo de conta',
+    family: 'Família',
+    caregiver: 'Cuidador',
+    name: 'Nome completo',
+    birthDate: 'Data de nascimento',
+    private: 'privado',
+    document: 'Documento de identificação',
+    type: 'Tipo',
+    number: 'Número',
+    select: 'Selecionar',
+    other: 'Outro',
+    password: 'Palavra-passe',
+    passwordConfirmation: 'Confirmar palavra-passe',
+    createPassword: 'Crie uma palavra-passe',
+    repeatPassword: 'Repita a palavra-passe',
+    creating: 'A criar conta...',
+    createAccount: 'Criar conta',
+    existingAccount: 'Já tenho conta',
+  },
+  'en-GB': {
+    step: 'Step 1 of 3',
+    stepName: 'Account creation',
+    title: 'Create an account to begin your journey with Cuidar+.',
+    lead: 'Choose the account type and provide the details required to create your access.',
+    accountType: 'Account type',
+    family: 'Family',
+    caregiver: 'Caregiver',
+    name: 'Full name',
+    birthDate: 'Date of birth',
+    private: 'private',
+    document: 'Identification document',
+    type: 'Type',
+    number: 'Number',
+    select: 'Select',
+    other: 'Other',
+    password: 'Password',
+    passwordConfirmation: 'Confirm password',
+    createPassword: 'Create a password',
+    repeatPassword: 'Repeat the password',
+    creating: 'Creating account...',
+    createAccount: 'Create account',
+    existingAccount: 'I already have an account',
+  },
+} as const;
+
 @Component({
   selector: 'app-register',
   imports: [RouterLink],
   template: `
-    <section class="page hero hero-compact">
-      <div>
-        <p class="eyebrow">Cadastro</p>
-        <h1>Crie uma conta para comecar a sua jornada na CuidarPlus.</h1>
-        <p class="lead">Escolha o tipo de conta e complete os dados essenciais do MVP.</p>
+    <section class="page hero hero-compact register-page">
+      <div class="register-intro">
+        <div class="registration-step" aria-label="Etapa 1 de 3: criação da conta">
+          <span class="registration-step__number">1</span>
+          <div>
+            <strong>{{ copy().step }}</strong>
+            <span>{{ copy().stepName }}</span>
+          </div>
+          <div class="registration-step__progress" aria-hidden="true">
+            <span class="is-active"></span><span></span><span></span>
+          </div>
+        </div>
+        <h1>{{ copy().title }}</h1>
+        <p class="lead">{{ copy().lead }}</p>
       </div>
       <form class="card card-body form-grid" novalidate (submit)="onSubmit($event)">
-        <label><span class="label-line">Tipo de conta <strong>*</strong></span>
+        <label><span class="label-line">{{ copy().accountType }} <strong>*</strong></span>
           <select name="accountType" required data-error-label="Tipo de conta">
-            <option>Familia</option>
-            <option>Cuidador</option>
+            <option value="Familia">{{ copy().family }}</option>
+            <option value="Cuidador">{{ copy().caregiver }}</option>
           </select>
         </label>
-        <label><span class="label-line">Nome <strong>*</strong></span><input name="fullName" required data-error-label="Nome" placeholder="Nome completo" /></label>
-        <label><span class="label-line">Data de nascimento <strong>*</strong></span><input name="birthDate" type="date" required data-error-label="Data de nascimento" /></label>
-        <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" autocomplete="off" data-error-label="NIF" placeholder="123456789" /></label>
+        <label><span class="label-line">{{ copy().name }} <strong>*</strong></span><input name="fullName" required data-error-label="Nome" [placeholder]="copy().name" /></label>
+        <label><span class="label-line">{{ copy().birthDate }} <strong>*</strong></span><input name="birthDate" type="date" required data-error-label="Data de nascimento" /></label>
+        <label><span class="label-line">NIF <strong>*</strong> <small>{{ copy().private }}</small></span><input name="nif" required inputmode="numeric" autocomplete="off" data-error-label="NIF" placeholder="123456789" /></label>
         <fieldset class="document-fieldset">
-          <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
-          <label><span class="label-line">Tipo</span>
+          <legend>{{ copy().document }} <strong>*</strong> <small>{{ copy().private }}</small></legend>
+          <label><span class="label-line">{{ copy().type }}</span>
             <select name="documentType" required data-error-label="Tipo de documento">
-              <option value="">Selecionar</option>
+              <option value="">{{ copy().select }}</option>
               <option>Cartão de Cidadão</option>
               <option>Passaporte</option>
               <option>Título de residência</option>
-              <option>Outro</option>
+              <option value="Outro">{{ copy().other }}</option>
             </select>
           </label>
-          <label><span class="label-line">Número</span><input name="idDocument" required data-error-label="Número do documento" placeholder="Número do documento" /></label>
+          <label><span class="label-line">{{ copy().number }}</span><input name="idDocument" required data-error-label="Número do documento" [placeholder]="copy().number" /></label>
         </fieldset>
         <label><span class="label-line">Email <strong>*</strong></span><input name="email" type="email" required data-error-label="Email" placeholder="email@exemplo.pt" /></label>
-        <label><span class="label-line">Password <strong>*</strong></span><input name="password" type="password" required minlength="6" data-error-label="Password" placeholder="Crie uma password" /></label>
+        <label><span class="label-line">{{ copy().password }} <strong>*</strong></span><input name="password" type="password" required minlength="6" autocomplete="new-password" data-error-label="Palavra-passe" [placeholder]="copy().createPassword" /></label>
+        <label><span class="label-line">{{ copy().passwordConfirmation }} <strong>*</strong></span><input name="passwordConfirmation" type="password" required minlength="6" autocomplete="new-password" data-error-label="Confirmação da palavra-passe" [placeholder]="copy().repeatPassword" /></label>
         @if (errorMessage()) {
           <p class="form-message error-message" role="alert">{{ errorMessage() }}</p>
         }
         <button class="btn btn-register" type="submit" [disabled]="isSubmitting()">
-          {{ isSubmitting() ? 'A criar conta...' : 'Criar conta' }}
+          {{ isSubmitting() ? copy().creating : copy().createAccount }}
         </button>
-        <a class="btn btn-login" routerLink="/login" [queryParams]="{ redirectTo: redirectTo() }">Ja tenho conta</a>
+        <a class="btn btn-login" routerLink="/login" [queryParams]="{ redirectTo: redirectTo() }">{{ copy().existingAccount }}</a>
       </form>
     </section>
   `,
+  styleUrl: './register.scss',
 })
 export class RegisterComponent {
   private readonly auth = inject(Auth);
@@ -58,6 +122,11 @@ export class RegisterComponent {
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
+  protected readonly locale = signal<RegisterLocale>('pt-PT');
+
+  protected copy(): (typeof REGISTER_COPY)[RegisterLocale] {
+    return REGISTER_COPY[this.locale()];
+  }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -119,6 +188,16 @@ export class RegisterComponent {
       if (control.name === 'nif' && !isValidPortugueseNif(control.value)) {
         return 'Introduza um NIF português válido com 9 dígitos.';
       }
+    }
+
+    const password = form.elements.namedItem('password');
+    const passwordConfirmation = form.elements.namedItem('passwordConfirmation');
+    if (
+      password instanceof HTMLInputElement &&
+      passwordConfirmation instanceof HTMLInputElement &&
+      password.value !== passwordConfirmation.value
+    ) {
+      return 'A confirmação da palavra-passe deve ser igual à palavra-passe.';
     }
 
     return '';

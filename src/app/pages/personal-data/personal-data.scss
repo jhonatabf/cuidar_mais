@@ -159,6 +159,19 @@
   gap: 22px;
 }
 
+.personal-data-form.show-validation-errors {
+  input:required:invalid,
+  select:required:invalid {
+    border-color: #b83232;
+    box-shadow: 0 0 0 1px rgba(184, 50, 50, 0.18);
+  }
+
+  input[type='checkbox']:required:invalid {
+    outline: 2px solid rgba(184, 50, 50, 0.72);
+    outline-offset: 2px;
+  }
+}
+
 .form-section {
   display: grid;
   gap: 18px;

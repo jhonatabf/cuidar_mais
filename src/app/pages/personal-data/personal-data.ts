@@ -102,7 +102,12 @@ const PERSONAL_DATA_COPY = {
     </section>
 
     <section class="page personal-data-page">
-      <form class="card card-body personal-data-form" novalidate (submit)="onSubmit($event)">
+      <form
+        class="card card-body personal-data-form"
+        [class.show-validation-errors]="hasSubmitted()"
+        novalidate
+        (submit)="onSubmit($event)"
+      >
         <section class="form-section">
           <div class="section-title">
             <span>1</span>
@@ -130,7 +135,7 @@ const PERSONAL_DATA_COPY = {
           </div>
           <div class="form-grid two-columns">
             <label><span class="label-line">{{ copy().fullName }} <strong>*</strong></span><input name="fullName" required [placeholder]="copy().fullNamePlaceholder" [value]="value('fullName')" /></label>
-            <label><span class="label-line">{{ copy().birthDate }} <strong>*</strong></span><input type="date" name="birthDate" required [value]="value('birthDate')" /></label>
+            <label><span class="label-line">{{ copy().birthDate }} <strong>*</strong></span><input type="date" name="birthDate" required [value]="value('birthDate')" (input)="onValidatedFieldInput($event)" /></label>
             <label><span class="label-line">{{ copy().gender }} <strong>*</strong></span>
               <select name="gender" required [value]="value('gender')">
                 <option value="">{{ copy().select }}</option>
@@ -145,7 +150,7 @@ const PERSONAL_DATA_COPY = {
               <legend>{{ copy().phoneContact }} <strong>*</strong></legend>
               <div class="paired-fields phone-fields">
                 <label><span class="label-line">{{ copy().callingCode }}</span>
-                  <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event)">
+                  <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event); validatePhoneField($event)">
                     @for (country of phoneCountries(); track country.code) {
                       <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
                     }
@@ -160,11 +165,12 @@ const PERSONAL_DATA_COPY = {
                     autocomplete="tel-national"
                     placeholder="912 345 678"
                     [value]="nationalPhone()"
+                    (input)="onValidatedFieldInput($event)"
                   />
                 </label>
               </div>
             </fieldset>
-            <label><span class="label-line">NIF <strong>*</strong> <small>{{ copy().private }}</small></span><input name="nif" required inputmode="numeric" autocomplete="off" placeholder="123456789" [value]="privateValue('nif')" /></label>
+            <label><span class="label-line">NIF <strong>*</strong> <small>{{ copy().private }}</small></span><input name="nif" required inputmode="numeric" autocomplete="off" placeholder="123456789" [value]="privateValue('nif')" (input)="onValidatedFieldInput($event)" /></label>
             <fieldset class="paired-fieldset span-2">
               <legend>{{ copy().portugueseId }} <strong>*</strong> <small>{{ copy().private }}</small></legend>
               <div class="paired-fields document-fields">
@@ -183,14 +189,14 @@ const PERSONAL_DATA_COPY = {
               </div>
               <div class="document-upload-grid">
                 <label><span class="label-line">{{ copy().frontPhoto }} <strong>*</strong></span>
-                  <input type="file" name="identityFront" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+                  <input type="file" name="identityFront" accept="image/*" [required]="!documentFileName('identityFront')" (change)="onPrivateDocumentFileChange($event)" />
                   @if (documentFileName('identityFront')) {
                     <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityFront') }}</small>
                   }
                 </label>
                 @if (!isPassportDocument()) {
                   <label><span class="label-line">{{ copy().backPhoto }} <strong>*</strong></span>
-                    <input type="file" name="identityBack" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+                    <input type="file" name="identityBack" accept="image/*" [required]="!documentFileName('identityBack')" (change)="onPrivateDocumentFileChange($event)" />
                     @if (documentFileName('identityBack')) {
                       <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityBack') }}</small>
                     }
@@ -215,7 +221,7 @@ const PERSONAL_DATA_COPY = {
             <label><span class="label-line">{{ copy().postalCode }} <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
             <label class="span-2"><span class="label-line">{{ copy().address }} <small>{{ copy().private }}</small></span><input name="address" [placeholder]="copy().addressPlaceholder" [value]="privateValue('address')" /></label>
             <label class="span-2"><span class="label-line">{{ copy().addressProof }} <strong>*</strong> <small>{{ copy().private }}</small></span>
-              <input type="file" name="addressProof" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+              <input type="file" name="addressProof" accept="image/*" [required]="!documentFileName('addressProof')" (change)="onPrivateDocumentFileChange($event)" />
               @if (documentFileName('addressProof')) {
                 <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('addressProof') }}</small>
               }
@@ -236,7 +242,7 @@ const PERSONAL_DATA_COPY = {
           </div>
           <div class="form-grid two-columns">
             <label class="span-2"><span class="label-line">{{ copy().criminalCertificate }} <strong>*</strong> <small>{{ copy().private }}</small></span>
-              <input type="file" name="criminalRecordCertificate" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
+              <input type="file" name="criminalRecordCertificate" accept="image/*" [required]="!documentFileName('criminalRecordCertificate')" (change)="onPrivateDocumentFileChange($event)" />
               @if (documentFileName('criminalRecordCertificate')) {
                 <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('criminalRecordCertificate') }}</small>
               }
@@ -281,6 +287,7 @@ export class PersonalDataComponent implements OnInit {
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
   protected readonly isSubmitting = signal(false);
+  protected readonly hasSubmitted = signal(false);
   protected readonly showRequiredNotice = signal(true);
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
   protected readonly phoneCountry = signal<CountryCode>('PT');
@@ -362,11 +369,13 @@ export class PersonalDataComponent implements OnInit {
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
+    this.hasSubmitted.set(true);
     this.errorMessage.set('');
     this.successMessage.set('');
 
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
+    this.updateCustomFieldValidity(form, formData);
     const validationMessage = this.getValidationMessage(form, formData);
     if (validationMessage) {
       this.errorMessage.set(validationMessage);
@@ -425,6 +434,22 @@ export class PersonalDataComponent implements OnInit {
 
   protected onPhoneCountryChange(event: Event): void {
     this.phoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
+  }
+
+  protected onValidatedFieldInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const form = input.form;
+    if (!form) return;
+
+    this.updateCustomFieldValidity(form, new FormData(form));
+  }
+
+  protected validatePhoneField(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const form = select.form;
+    if (!form) return;
+
+    this.updateCustomFieldValidity(form, new FormData(form));
   }
 
   protected onDocumentTypeChange(event: Event): void {
@@ -550,6 +575,30 @@ export class PersonalDataComponent implements OnInit {
     return '';
   }
 
+  private updateCustomFieldValidity(form: HTMLFormElement, formData: FormData): void {
+    const birthDate = form.elements.namedItem('birthDate');
+    const phone = form.elements.namedItem('phone');
+    const nif = form.elements.namedItem('nif');
+
+    if (birthDate instanceof HTMLInputElement) {
+      birthDate.setCustomValidity(
+        birthDate.value && !this.isAdult(birthDate.value) ? this.copy().adult : '',
+      );
+    }
+
+    if (phone instanceof HTMLInputElement) {
+      phone.setCustomValidity(
+        phone.value && !this.isValidPhone(formData) ? this.copy().invalidPhone : '',
+      );
+    }
+
+    if (nif instanceof HTMLInputElement) {
+      nif.setCustomValidity(
+        nif.value && !isValidPortugueseNif(nif.value) ? this.copy().invalidNif : '',
+      );
+    }
+  }
+
   private getPrivateDocumentsValidationMessage(formData: FormData): string {
     const copy = this.copy();
     const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [
@@ -584,6 +633,10 @@ export class PersonalDataComponent implements OnInit {
   }
 
   private controlValidationMessage(control: HTMLInputElement | HTMLSelectElement, label: string): string {
+    if (control.validity.customError) {
+      return control.validationMessage;
+    }
+
     if (control.validity.valueMissing) {
       return this.copy().required(label);
     }

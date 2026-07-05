@@ -14,9 +14,73 @@ import {
   UserPrivateDocumentKind,
   UserPrivateDocumentUpload,
 } from '../../core/services/auth';
+import { AppLocale, LocaleService } from '../../core/services/locale';
 import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
 const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+const PERSONAL_DATA_COPY = {
+  'pt-PT': {
+    step: 'Etapa 2 de 3', stepName: 'Dados pessoais', stepAria: 'Etapa 2 de 3: dados pessoais',
+    eyebrowRequired: 'Conclusão obrigatória', eyebrow: 'Os meus dados pessoais',
+    titleRequired: 'Conclua os seus dados pessoais para continuar.', title: 'Dados da sua conta, identidade e localização.',
+    leadRequired: 'Esta etapa é necessária antes de criar ou editar um perfil na wecareparents.',
+    lead: 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
+    account: 'Dados da conta', accountHelp: 'Informação base da sua conta na plataforma.', email: 'Email',
+    acceptTerms: 'Aceito os', terms: 'Termos e Condições', acceptPrivacy: 'Aceito a', privacy: 'Política de Privacidade',
+    personal: 'Dados pessoais', personalHelp: 'Dados essenciais para identificação e contacto.',
+    fullName: 'Nome completo', fullNamePlaceholder: 'Nome e apelido', birthDate: 'Data de nascimento', gender: 'Sexo', select: 'Selecionar',
+    female: 'Feminino', male: 'Masculino', other: 'Outro', preferNot: 'Prefiro não indicar', nationality: 'Nacionalidade', nationalityPlaceholder: 'Portuguesa',
+    phoneContact: 'Contacto telefónico', callingCode: 'Indicativo', mobile: 'Telemóvel', private: 'privado',
+    portugueseId: 'Documento de identificação emitido em Portugal', type: 'Tipo', number: 'Número', documentNumber: 'Número do documento',
+    citizenCard: 'Cartão de Cidadão português', passport: 'Passaporte português', residencePermit: 'Título de residência emitido em Portugal', otherPortugueseId: 'Outro documento emitido em Portugal',
+    frontPhoto: 'Foto da frente', backPhoto: 'Foto do verso', currentFile: 'Ficheiro atual',
+    location: 'Localização', locationHelp: 'Esta localização será usada pelos seus perfis na plataforma.',
+    district: 'Distrito', county: 'Concelho', postalCode: 'Código postal', address: 'Morada completa', addressPlaceholder: 'Rua, número, localidade', addressProof: 'Foto do comprovativo de morada',
+    criminal: 'Registo criminal', criminalHelp: 'Declaração e comprovativo necessários para validação de segurança.',
+    criminalDeclaration: 'Declaro que não possuo qualquer pendência criminal', criminalCertificate: 'Foto do certificado de registo criminal',
+    saving: 'A guardar...', save: 'Guardar dados pessoais', close: 'Fechar mensagem',
+    requiredNotice: 'Preencha os campos obrigatórios abaixo. Depois de guardar, continuará automaticamente para a próxima etapa.',
+    imageOnly: 'Os comprovativos devem ser enviados como imagem.', imageMax: 'Cada imagem deve ter no máximo 5 MB.',
+    saved: 'Dados pessoais guardados com sucesso.', nextCaregiver: 'Dados pessoais concluídos. A encaminhar para o cadastro de cuidador...', nextFamily: 'Dados pessoais concluídos. A encaminhar para o cadastro de família...',
+    nextError: 'Os dados foram guardados, mas não foi possível avançar para a próxima etapa. Tente novamente.',
+    termsAcceptance: 'Aceitação dos Termos e Condições', privacyAcceptance: 'Aceitação da Política de Privacidade', criminalAcceptance: 'Declaração de inexistência de pendência criminal',
+    documentType: 'Tipo de documento', idDocument: 'Documento de identificação', frontDocument: 'Foto da frente do documento', backDocument: 'Foto do verso do documento',
+    adult: 'É necessário ter pelo menos 18 anos.', invalidPhone: 'Introduza um número de telemóvel válido para o indicativo selecionado.', invalidNif: 'Introduza um NIF português válido com 9 dígitos.',
+    required: (label: string) => `${label} é obrigatório.`, requiredFemale: (label: string) => `${label} é obrigatória.`, invalid: (label: string) => `${label} não está válido.`, mustImage: (label: string) => `${label} deve ser uma imagem.`, maxImage: (label: string) => `${label} deve ter no máximo 5 MB.`,
+    optimizeImage: 'Não foi possível otimizar a imagem.', processImage: 'Não foi possível processar a imagem.', readImage: 'Não foi possível ler a imagem.', readFile: 'Não foi possível ler o ficheiro.',
+  },
+  'en-GB': {
+    step: 'Step 2 of 3', stepName: 'Personal details', stepAria: 'Step 2 of 3: personal details',
+    eyebrowRequired: 'Required step', eyebrow: 'My personal details',
+    titleRequired: 'Complete your personal details to continue.', title: 'Your account, identity and location details.',
+    leadRequired: 'This step is required before creating or editing a profile on wecareparents.',
+    lead: 'These details belong to the user and may be used for family and caregiver profiles.',
+    account: 'Account details', accountHelp: 'Basic information about your account on the platform.', email: 'Email',
+    acceptTerms: 'I accept the', terms: 'Terms and Conditions', acceptPrivacy: 'I accept the', privacy: 'Privacy Policy',
+    personal: 'Personal details', personalHelp: 'Essential identification and contact details.',
+    fullName: 'Full name', fullNamePlaceholder: 'First and last name', birthDate: 'Date of birth', gender: 'Gender', select: 'Select',
+    female: 'Female', male: 'Male', other: 'Other', preferNot: 'Prefer not to say', nationality: 'Nationality', nationalityPlaceholder: 'Portuguese',
+    phoneContact: 'Telephone contact', callingCode: 'Country calling code', mobile: 'Mobile number', private: 'private',
+    portugueseId: 'Identification document issued in Portugal', type: 'Type', number: 'Number', documentNumber: 'Document number',
+    citizenCard: 'Portuguese Citizen Card', passport: 'Portuguese passport', residencePermit: 'Residence permit issued in Portugal', otherPortugueseId: 'Other document issued in Portugal',
+    frontPhoto: 'Front image', backPhoto: 'Back image', currentFile: 'Current file',
+    location: 'Location', locationHelp: 'This location will be used by your profiles on the platform.',
+    district: 'District', county: 'Municipality', postalCode: 'Postcode', address: 'Full address', addressPlaceholder: 'Street, number, town or city', addressProof: 'Address proof image',
+    criminal: 'Criminal record', criminalHelp: 'A declaration and supporting document are required for security checks.',
+    criminalDeclaration: 'I declare that I have no pending criminal matters', criminalCertificate: 'Criminal record certificate image',
+    saving: 'Saving...', save: 'Save personal details', close: 'Close message',
+    requiredNotice: 'Complete the required fields below. After saving, you will automatically continue to the next step.',
+    imageOnly: 'Supporting documents must be uploaded as images.', imageMax: 'Each image must be no larger than 5 MB.',
+    saved: 'Personal details saved successfully.', nextCaregiver: 'Personal details completed. Taking you to caregiver registration...', nextFamily: 'Personal details completed. Taking you to family registration...',
+    nextError: 'Your details were saved, but we could not continue to the next step. Please try again.',
+    termsAcceptance: 'Acceptance of the Terms and Conditions', privacyAcceptance: 'Acceptance of the Privacy Policy', criminalAcceptance: 'Declaration of no pending criminal matters',
+    documentType: 'Document type', idDocument: 'Identification document', frontDocument: 'Front image of the document', backDocument: 'Back image of the document',
+    adult: 'You must be at least 18 years old.', invalidPhone: 'Enter a valid mobile number for the selected country calling code.', invalidNif: 'Enter a valid 9-digit Portuguese NIF.',
+    required: (label: string) => `${label} is required.`, requiredFemale: (label: string) => `${label} is required.`, invalid: (label: string) => `${label} is not valid.`, mustImage: (label: string) => `${label} must be an image.`, maxImage: (label: string) => `${label} must be no larger than 5 MB.`,
+    optimizeImage: 'The image could not be optimised.', processImage: 'The image could not be processed.', readImage: 'The image could not be read.', readFile: 'The file could not be read.',
+  },
+} as const;
 
 @Component({
   selector: 'app-personal-data',
@@ -24,7 +88,17 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
   template: `
     <section class="page hero hero-compact personal-data-hero" [class.required-step]="isRequiredStep()">
       <div>
-        <p class="eyebrow">{{ isRequiredStep() ? 'Conclusão obrigatória' : 'Meus dados pessoais' }}</p>
+        <div class="registration-step" [attr.aria-label]="copy().stepAria">
+          <span class="registration-step__number">2</span>
+          <div>
+            <strong>{{ copy().step }}</strong>
+            <span>{{ copy().stepName }}</span>
+          </div>
+          <div class="registration-step__progress" aria-hidden="true">
+            <span class="is-active"></span><span class="is-active"></span><span></span>
+          </div>
+        </div>
+        <p class="eyebrow">{{ isRequiredStep() ? copy().eyebrowRequired : copy().eyebrow }}</p>
         <h1>{{ pageTitle() }}</h1>
         <p class="lead">{{ pageLead() }}</p>
       </div>
@@ -36,16 +110,16 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
           <div class="section-title">
             <span>1</span>
             <div>
-              <h2>Dados de conta</h2>
-              <p>Informação base da sua conta na plataforma.</p>
+              <h2>{{ copy().account }}</h2>
+              <p>{{ copy().accountHelp }}</p>
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label><span class="label-line">Email <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
+            <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
           </div>
           <div class="check-stack">
-            <label><input type="checkbox" name="acceptedTerms" required [checked]="account()?.acceptedTerms === true" /> Aceito os <a routerLink="/termos">Termos e Condições</a> <strong>*</strong></label>
-            <label><input type="checkbox" name="acceptedPrivacy" required [checked]="account()?.acceptedPrivacy === true" /> Aceito a <a routerLink="/privacidade">Política de Privacidade</a> <strong>*</strong></label>
+            <label><input type="checkbox" name="acceptedTerms" required [checked]="account()?.acceptedTerms === true" /> {{ copy().acceptTerms }} <a routerLink="/termos">{{ copy().terms }}</a> <strong>*</strong></label>
+            <label><input type="checkbox" name="acceptedPrivacy" required [checked]="account()?.acceptedPrivacy === true" /> {{ copy().acceptPrivacy }} <a routerLink="/privacidade">{{ copy().privacy }}</a> <strong>*</strong></label>
           </div>
         </section>
 
@@ -53,34 +127,34 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
           <div class="section-title">
             <span>2</span>
             <div>
-              <h2>Dados pessoais</h2>
-              <p>Dados essenciais para identificação e contacto.</p>
+              <h2>{{ copy().personal }}</h2>
+              <p>{{ copy().personalHelp }}</p>
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label><span class="label-line">Nome completo <strong>*</strong></span><input name="fullName" required placeholder="Nome e apelido" [value]="value('fullName')" /></label>
-            <label><span class="label-line">Data de nascimento <strong>*</strong></span><input type="date" name="birthDate" required [value]="value('birthDate')" /></label>
-            <label><span class="label-line">Sexo <strong>*</strong></span>
+            <label><span class="label-line">{{ copy().fullName }} <strong>*</strong></span><input name="fullName" required [placeholder]="copy().fullNamePlaceholder" [value]="value('fullName')" /></label>
+            <label><span class="label-line">{{ copy().birthDate }} <strong>*</strong></span><input type="date" name="birthDate" required [value]="value('birthDate')" /></label>
+            <label><span class="label-line">{{ copy().gender }} <strong>*</strong></span>
               <select name="gender" required [value]="value('gender')">
-                <option value="">Selecionar</option>
-                <option>Feminino</option>
-                <option>Masculino</option>
-                <option>Outro</option>
-                <option>Prefiro não indicar</option>
+                <option value="">{{ copy().select }}</option>
+                <option value="Feminino">{{ copy().female }}</option>
+                <option value="Masculino">{{ copy().male }}</option>
+                <option value="Outro">{{ copy().other }}</option>
+                <option value="Prefiro não indicar">{{ copy().preferNot }}</option>
               </select>
             </label>
-            <label><span class="label-line">Nacionalidade <strong>*</strong></span><input name="nationality" required placeholder="Portuguesa" [value]="value('nationality')" /></label>
+            <label><span class="label-line">{{ copy().nationality }} <strong>*</strong></span><input name="nationality" required [placeholder]="copy().nationalityPlaceholder" [value]="value('nationality')" /></label>
             <fieldset class="paired-fieldset span-2">
-              <legend>Contacto telefónico <strong>*</strong></legend>
+              <legend>{{ copy().phoneContact }} <strong>*</strong></legend>
               <div class="paired-fields phone-fields">
-                <label><span class="label-line">Indicativo</span>
+                <label><span class="label-line">{{ copy().callingCode }}</span>
                   <select name="phoneCountry" required [value]="phoneCountry()" (change)="onPhoneCountryChange($event)">
-                    @for (country of phoneCountries; track country.code) {
+                    @for (country of phoneCountries(); track country.code) {
                       <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
                     }
                   </select>
                 </label>
-                <label><span class="label-line">Telemóvel</span>
+                <label><span class="label-line">{{ copy().mobile }}</span>
                   <input
                     type="tel"
                     name="phone"
@@ -93,35 +167,35 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
                 </label>
               </div>
             </fieldset>
-            <label><span class="label-line">NIF <strong>*</strong> <small>privado</small></span><input name="nif" required inputmode="numeric" autocomplete="off" placeholder="123456789" [value]="privateValue('nif')" /></label>
+            <label><span class="label-line">NIF <strong>*</strong> <small>{{ copy().private }}</small></span><input name="nif" required inputmode="numeric" autocomplete="off" placeholder="123456789" [value]="privateValue('nif')" /></label>
             <fieldset class="paired-fieldset span-2">
-              <legend>Documento de identificação <strong>*</strong> <small>privado</small></legend>
+              <legend>{{ copy().portugueseId }} <strong>*</strong> <small>{{ copy().private }}</small></legend>
               <div class="paired-fields document-fields">
-                <label>Tipo
+                <label>{{ copy().type }}
                   <select name="documentType" required [value]="documentType()" (change)="onDocumentTypeChange($event)">
-                    <option value="">Selecionar</option>
-                    <option>Cartão de Cidadão</option>
-                    <option>Passaporte</option>
-                    <option>Título de residência</option>
-                    <option>Outro</option>
+                    <option value="">{{ copy().select }}</option>
+                    <option value="Cartão de Cidadão">{{ copy().citizenCard }}</option>
+                    <option value="Passaporte">{{ copy().passport }}</option>
+                    <option value="Título de residência">{{ copy().residencePermit }}</option>
+                    <option value="Outro">{{ copy().otherPortugueseId }}</option>
                   </select>
                 </label>
-                <label>Número
-                  <input name="idDocument" required placeholder="Número do documento" [value]="privateValue('idDocument')" />
+                <label>{{ copy().number }}
+                  <input name="idDocument" required [placeholder]="copy().documentNumber" [value]="privateValue('idDocument')" />
                 </label>
               </div>
               <div class="document-upload-grid">
-                <label><span class="label-line">Foto da frente <strong>*</strong></span>
+                <label><span class="label-line">{{ copy().frontPhoto }} <strong>*</strong></span>
                   <input type="file" name="identityFront" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
                   @if (documentFileName('identityFront')) {
-                    <small class="field-hint">Ficheiro atual: {{ documentFileName('identityFront') }}</small>
+                    <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityFront') }}</small>
                   }
                 </label>
                 @if (!isPassportDocument()) {
-                  <label><span class="label-line">Foto do verso <strong>*</strong></span>
+                  <label><span class="label-line">{{ copy().backPhoto }} <strong>*</strong></span>
                     <input type="file" name="identityBack" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
                     @if (documentFileName('identityBack')) {
-                      <small class="field-hint">Ficheiro atual: {{ documentFileName('identityBack') }}</small>
+                      <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityBack') }}</small>
                     }
                   </label>
                 }
@@ -134,19 +208,19 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
           <div class="section-title">
             <span>3</span>
             <div>
-              <h2>Localização</h2>
-              <p>Esta localização será usada pelos seus perfis na plataforma.</p>
+              <h2>{{ copy().location }}</h2>
+              <p>{{ copy().locationHelp }}</p>
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label><span class="label-line">Distrito <strong>*</strong></span><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
-            <label><span class="label-line">Concelho <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
-            <label><span class="label-line">Código Postal <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
-            <label class="span-2"><span class="label-line">Morada completa <small>privada</small></span><input name="address" placeholder="Rua, número, localidade" [value]="privateValue('address')" /></label>
-            <label class="span-2"><span class="label-line">Foto do comprovativo de morada <strong>*</strong> <small>privado</small></span>
+            <label><span class="label-line">{{ copy().district }} <strong>*</strong></span><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
+            <label><span class="label-line">{{ copy().county }} <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
+            <label><span class="label-line">{{ copy().postalCode }} <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
+            <label class="span-2"><span class="label-line">{{ copy().address }} <small>{{ copy().private }}</small></span><input name="address" [placeholder]="copy().addressPlaceholder" [value]="privateValue('address')" /></label>
+            <label class="span-2"><span class="label-line">{{ copy().addressProof }} <strong>*</strong> <small>{{ copy().private }}</small></span>
               <input type="file" name="addressProof" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
               @if (documentFileName('addressProof')) {
-                <small class="field-hint">Ficheiro atual: {{ documentFileName('addressProof') }}</small>
+                <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('addressProof') }}</small>
               }
             </label>
           </div>
@@ -156,18 +230,18 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
           <div class="section-title">
             <span>4</span>
             <div>
-              <h2>Registo criminal</h2>
-              <p>Declaração e comprovativo necessários para validação de segurança.</p>
+              <h2>{{ copy().criminal }}</h2>
+              <p>{{ copy().criminalHelp }}</p>
             </div>
           </div>
           <div class="check-stack">
-            <label><input type="checkbox" name="criminalRecordNoPending" required [checked]="account()?.private?.criminalRecordNoPending === true" /> Declaro que não possuo qualquer pendência criminal <strong>*</strong></label>
+            <label><input type="checkbox" name="criminalRecordNoPending" required [checked]="account()?.private?.criminalRecordNoPending === true" /> {{ copy().criminalDeclaration }} <strong>*</strong></label>
           </div>
           <div class="form-grid two-columns">
-            <label class="span-2"><span class="label-line">Foto do atestado de criminalidade <strong>*</strong> <small>privado</small></span>
+            <label class="span-2"><span class="label-line">{{ copy().criminalCertificate }} <strong>*</strong> <small>{{ copy().private }}</small></span>
               <input type="file" name="criminalRecordCertificate" accept="image/*" (change)="onPrivateDocumentFileChange($event)" />
               @if (documentFileName('criminalRecordCertificate')) {
-                <small class="field-hint">Ficheiro atual: {{ documentFileName('criminalRecordCertificate') }}</small>
+                <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('criminalRecordCertificate') }}</small>
               }
             </label>
           </div>
@@ -175,7 +249,7 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 
         <div class="form-actions">
           <button class="button" type="submit" [disabled]="isSubmitting()">
-            {{ isSubmitting() ? 'A guardar...' : 'Guardar dados pessoais' }}
+            {{ isSubmitting() ? copy().saving : copy().save }}
           </button>
         </div>
       </form>
@@ -191,7 +265,7 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
       >
         <span class="material-symbols-rounded snackbar__icon" aria-hidden="true">{{ snackbarIcon() }}</span>
         <p>{{ snackbarMessage() }}</p>
-        <button type="button" aria-label="Fechar mensagem" (click)="closeSnackbar()">
+        <button type="button" [attr.aria-label]="copy().close" (click)="closeSnackbar()">
           <span class="material-symbols-rounded" aria-hidden="true">close</span>
         </button>
       </div>
@@ -203,6 +277,7 @@ export class PersonalDataComponent implements OnInit {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly localeService = inject(LocaleService);
 
   protected readonly account = signal<UserAccount | null>(null);
   protected readonly email = signal('');
@@ -214,17 +289,19 @@ export class PersonalDataComponent implements OnInit {
   protected readonly phoneCountry = signal<CountryCode>('PT');
   protected readonly nationalPhone = signal('');
   protected readonly documentType = signal('');
-  protected readonly phoneCountries = getCountries()
-    .map((code) => ({
-      code,
-      name: this.countryDisplayName(code),
-      callingCode: getCountryCallingCode(code),
-    }))
-    .sort((first, second) => {
-      if (first.code === 'PT') return -1;
-      if (second.code === 'PT') return 1;
-      return first.name.localeCompare(second.name, 'pt-PT');
-    });
+  protected readonly phoneCountries = computed(() =>
+    getCountries()
+      .map((code) => ({
+        code,
+        name: this.countryDisplayName(code),
+        callingCode: getCountryCallingCode(code),
+      }))
+      .sort((first, second) => {
+        if (first.code === 'PT') return -1;
+        if (second.code === 'PT') return 1;
+        return first.name.localeCompare(second.name, this.localeService.locale());
+      }),
+  );
   protected readonly isRequiredStep = computed(() => !!this.redirectTo());
   protected readonly snackbarKind = computed<'error' | 'success' | 'info'>(() => {
     if (this.errorMessage()) return 'error';
@@ -235,7 +312,7 @@ export class PersonalDataComponent implements OnInit {
     if (this.errorMessage()) return this.errorMessage();
     if (this.successMessage()) return this.successMessage();
     if (this.isRequiredStep() && this.showRequiredNotice()) {
-      return 'Preencha os campos obrigatórios abaixo. Depois de guardar, continuará automaticamente para a próxima etapa.';
+      return this.copy().requiredNotice;
     }
     return '';
   });
@@ -246,14 +323,18 @@ export class PersonalDataComponent implements OnInit {
   });
   protected readonly pageTitle = computed(() =>
     this.isRequiredStep()
-      ? 'Conclua os seus dados pessoais para continuar.'
-      : 'Dados da sua conta, identidade e localização.',
+      ? this.copy().titleRequired
+      : this.copy().title,
   );
   protected readonly pageLead = computed(() =>
     this.isRequiredStep()
-      ? 'Esta etapa é necessária antes de criar ou editar um perfil na wecareparents.'
-      : 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
+      ? this.copy().leadRequired
+      : this.copy().lead,
   );
+
+  protected copy(): (typeof PERSONAL_DATA_COPY)[AppLocale] {
+    return PERSONAL_DATA_COPY[this.localeService.locale()];
+  }
 
   async ngOnInit(): Promise<void> {
     const user = await this.auth.getCurrentUser();
@@ -306,22 +387,21 @@ export class PersonalDataComponent implements OnInit {
 
       if (shouldContinueRegistration && user) {
         const nextRoute = await this.auth.getPostLoginRedirect(user.uid);
-        const registrationType = nextRoute.includes('cuidador') ? 'cuidador' : 'família';
         this.successMessage.set(
-          `Dados pessoais concluídos. A encaminhar para o cadastro de ${registrationType}...`,
+          nextRoute.includes('cuidador') ? this.copy().nextCaregiver : this.copy().nextFamily,
         );
         await this.showTransitionFeedback();
         const navigated = await this.router.navigateByUrl(nextRoute);
         if (!navigated) {
           this.successMessage.set('');
           this.errorMessage.set(
-            'Os dados foram guardados, mas não foi possível avançar para a próxima etapa. Tente novamente.',
+            this.copy().nextError,
           );
         }
         return;
       }
 
-      this.successMessage.set('Dados pessoais guardados com sucesso.');
+      this.successMessage.set(this.copy().saved);
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
     } finally {
@@ -372,13 +452,13 @@ export class PersonalDataComponent implements OnInit {
     }
 
     if (!file.type.startsWith('image/')) {
-      this.errorMessage.set('Os comprovativos devem ser enviados como imagem.');
+      this.errorMessage.set(this.copy().imageOnly);
       input.value = '';
       return;
     }
 
     if (file.size > PRIVATE_DOCUMENT_MAX_FILE_BYTES) {
-      this.errorMessage.set('Cada imagem deve ter no máximo 5 MB.');
+      this.errorMessage.set(this.copy().imageMax);
       input.value = '';
     }
   }
@@ -417,31 +497,32 @@ export class PersonalDataComponent implements OnInit {
   }
 
   private getValidationMessage(form: HTMLFormElement, formData: FormData): string {
+    const copy = this.copy();
     const requiredFields = [
-      { key: 'acceptedTerms', label: 'Aceitação dos Termos e Condições', type: 'checkbox' },
-      { key: 'acceptedPrivacy', label: 'Aceitação da Política de Privacidade', type: 'checkbox' },
-      { key: 'criminalRecordNoPending', label: 'Declaração de inexistência de pendência criminal', type: 'checkbox' },
-      { key: 'fullName', label: 'Nome completo' },
-      { key: 'birthDate', label: 'Data de nascimento', type: 'birthDate' },
-      { key: 'gender', label: 'Sexo' },
-      { key: 'nationality', label: 'Nacionalidade' },
-      { key: 'phone', label: 'Telemóvel' },
+      { key: 'acceptedTerms', label: copy.termsAcceptance, type: 'checkbox' },
+      { key: 'acceptedPrivacy', label: copy.privacyAcceptance, type: 'checkbox' },
+      { key: 'criminalRecordNoPending', label: copy.criminalAcceptance, type: 'checkbox' },
+      { key: 'fullName', label: copy.fullName },
+      { key: 'birthDate', label: copy.birthDate, type: 'birthDate' },
+      { key: 'gender', label: copy.gender },
+      { key: 'nationality', label: copy.nationality },
+      { key: 'phone', label: copy.mobile },
       { key: 'nif', label: 'NIF' },
-      { key: 'documentType', label: 'Tipo de documento' },
-      { key: 'idDocument', label: 'Documento de identificação' },
-      { key: 'district', label: 'Distrito' },
-      { key: 'county', label: 'Concelho' },
-      { key: 'postalCode', label: 'Código Postal' },
+      { key: 'documentType', label: copy.documentType },
+      { key: 'idDocument', label: copy.idDocument },
+      { key: 'district', label: copy.district },
+      { key: 'county', label: copy.county },
+      { key: 'postalCode', label: copy.postalCode },
     ];
 
     for (const field of requiredFields) {
       if (field.type === 'checkbox' && !formData.has(field.key)) {
-        return `${field.label} é obrigatório.`;
+        return copy.required(field.label);
       }
 
       const value = this.textValue(formData, field.key);
       if (!field.type && !value) {
-        return `${field.label} é obrigatório.`;
+        return copy.required(field.label);
       }
 
       const control = form.elements.namedItem(field.key);
@@ -452,15 +533,15 @@ export class PersonalDataComponent implements OnInit {
       }
 
       if (field.type === 'birthDate' && !this.isAdult(value)) {
-        return 'É necessário ter pelo menos 18 anos.';
+        return copy.adult;
       }
 
       if (field.key === 'phone' && !this.isValidPhone(formData)) {
-        return 'Introduza um número de telemóvel válido para o indicativo selecionado.';
+        return copy.invalidPhone;
       }
 
       if (field.key === 'nif' && !isValidPortugueseNif(value)) {
-        return 'Introduza um NIF português válido com 9 dígitos.';
+        return copy.invalidNif;
       }
     }
 
@@ -473,14 +554,15 @@ export class PersonalDataComponent implements OnInit {
   }
 
   private getPrivateDocumentsValidationMessage(formData: FormData): string {
+    const copy = this.copy();
     const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [
-      { key: 'identityFront', label: 'Foto da frente do documento' },
-      { key: 'addressProof', label: 'Foto do comprovativo de morada' },
-      { key: 'criminalRecordCertificate', label: 'Foto do atestado de criminalidade' },
+      { key: 'identityFront', label: copy.frontDocument },
+      { key: 'addressProof', label: copy.addressProof },
+      { key: 'criminalRecordCertificate', label: copy.criminalCertificate },
     ];
 
     if (this.textValue(formData, 'documentType') !== 'Passaporte') {
-      requiredDocuments.splice(1, 0, { key: 'identityBack', label: 'Foto do verso do documento' });
+      requiredDocuments.splice(1, 0, { key: 'identityBack', label: copy.backDocument });
     }
 
     for (const document of requiredDocuments) {
@@ -488,16 +570,16 @@ export class PersonalDataComponent implements OnInit {
       const existingDocument = this.account()?.private?.documents?.[document.key];
       if (!(file instanceof File) || !file.name) {
         if (!existingDocument) {
-          return `${document.label} é obrigatória.`;
+          return copy.requiredFemale(document.label);
         }
         continue;
       }
 
       if (!file.type.startsWith('image/')) {
-        return `${document.label} deve ser uma imagem.`;
+        return copy.mustImage(document.label);
       }
       if (file.size > PRIVATE_DOCUMENT_MAX_FILE_BYTES) {
-        return `${document.label} deve ter no máximo 5 MB.`;
+        return copy.maxImage(document.label);
       }
     }
 
@@ -506,13 +588,13 @@ export class PersonalDataComponent implements OnInit {
 
   private controlValidationMessage(control: HTMLInputElement | HTMLSelectElement, label: string): string {
     if (control.validity.valueMissing) {
-      return `${label} é obrigatório.`;
+      return this.copy().required(label);
     }
     if (control.validity.typeMismatch || control.validity.badInput) {
-      return `${label} não está válido.`;
+      return this.copy().invalid(label);
     }
 
-    return `${label} não está válido.`;
+    return this.copy().invalid(label);
   }
 
   private isAdult(value: string): boolean {
@@ -561,7 +643,7 @@ export class PersonalDataComponent implements OnInit {
   }
 
   private countryDisplayName(country: CountryCode): string {
-    return new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(country) ?? country;
+    return new Intl.DisplayNames([this.localeService.locale()], { type: 'region' }).of(country) ?? country;
   }
 
   private async privateDocumentUploads(
@@ -609,7 +691,7 @@ export class PersonalDataComponent implements OnInit {
 
     const context = canvas.getContext('2d');
     if (!context) {
-      throw new Error('Não foi possível otimizar a imagem.');
+      throw new Error(this.copy().optimizeImage);
     }
 
     context.fillStyle = '#ffffff';
@@ -628,7 +710,7 @@ export class PersonalDataComponent implements OnInit {
             return;
           }
 
-          reject(new Error('Não foi possível processar a imagem.'));
+          reject(new Error(this.copy().processImage));
         },
         'image/jpeg',
         quality,
@@ -640,7 +722,7 @@ export class PersonalDataComponent implements OnInit {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+      image.onerror = () => reject(new Error(this.copy().readImage));
       image.src = dataUrl;
     });
   }
@@ -649,7 +731,7 @@ export class PersonalDataComponent implements OnInit {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result ?? ''));
-      reader.onerror = () => reject(new Error('Não foi possível ler o ficheiro.'));
+      reader.onerror = () => reject(new Error(this.copy().readFile));
       reader.readAsDataURL(file);
     });
   }

@@ -22,7 +22,6 @@ const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const PERSONAL_DATA_COPY = {
   'pt-PT': {
     step: 'Etapa 2 de 3', stepName: 'Dados pessoais', stepAria: 'Etapa 2 de 3: dados pessoais',
-    eyebrowRequired: 'Conclusão obrigatória', eyebrow: 'Os meus dados pessoais',
     titleRequired: 'Conclua os seus dados pessoais para continuar.', title: 'Dados da sua conta, identidade e localização.',
     leadRequired: 'Esta etapa é necessária antes de criar ou editar um perfil na wecareparents.',
     lead: 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
@@ -52,7 +51,6 @@ const PERSONAL_DATA_COPY = {
   },
   'en-GB': {
     step: 'Step 2 of 3', stepName: 'Personal details', stepAria: 'Step 2 of 3: personal details',
-    eyebrowRequired: 'Required step', eyebrow: 'My personal details',
     titleRequired: 'Complete your personal details to continue.', title: 'Your account, identity and location details.',
     leadRequired: 'This step is required before creating or editing a profile on wecareparents.',
     lead: 'These details belong to the user and may be used for family and caregiver profiles.',
@@ -98,7 +96,6 @@ const PERSONAL_DATA_COPY = {
             <span class="is-active"></span><span class="is-active"></span><span></span>
           </div>
         </div>
-        <p class="eyebrow">{{ isRequiredStep() ? copy().eyebrowRequired : copy().eyebrow }}</p>
         <h1>{{ pageTitle() }}</h1>
         <p class="lead">{{ pageLead() }}</p>
       </div>

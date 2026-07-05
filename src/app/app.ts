@@ -27,7 +27,7 @@ const SHELL_COPY = {
     footerText: 'Plataforma que liga famílias a cuidadores com segurança, respeito e carinho.',
     footerLinks: ['Sobre nós', 'Como funciona', 'Segurança', 'Blog', 'Contacto'],
     helpLinks: ['Perguntas frequentes', 'Termos', 'Política de privacidade'],
-    copyright: '© 2024 Cuidar+. Todos os direitos reservados.',
+    rights: 'Todos os direitos reservados.',
   },
   'en-GB': {
     tagline: 'Connecting with care',
@@ -44,7 +44,7 @@ const SHELL_COPY = {
     footerText: 'A platform connecting families and caregivers with safety, respect and kindness.',
     footerLinks: ['About us', 'How it works', 'Safety', 'Blog', 'Contact'],
     helpLinks: ['Frequently asked questions', 'Terms', 'Privacy policy'],
-    copyright: '© 2024 Cuidar+. All rights reserved.',
+    rights: 'All rights reserved.',
   },
 } as const;
 
@@ -74,6 +74,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly isAdminArea = signal(this.router.url.startsWith('/admin'));
   protected readonly isScrolled = signal(false);
   protected readonly isMobileMenuOpen = signal(false);
+  protected readonly currentYear = new Date().getFullYear();
 
   protected readonly shellCopy = computed(() => SHELL_COPY[this.localeService.locale()]);
   protected readonly mainLinks = computed(() =>

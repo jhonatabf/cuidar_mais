@@ -125,7 +125,7 @@ export class App implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   protected closeMobileMenuOnDesktop(): void {
-    if (window.innerWidth > 1040) {
+    if (window.innerWidth > 1200) {
       this.closeMobileMenu();
     }
   }

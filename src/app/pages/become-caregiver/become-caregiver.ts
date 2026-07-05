@@ -100,9 +100,9 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="caregiver-snackbar" role="status" aria-live="polite">
             <span class="material-symbols-rounded caregiver-snackbar__icon" aria-hidden="true">info</span>
             <div>
-              <strong>Validação pela Cuidar+</strong>
+              <strong>Validação pela wecareparents</strong>
               <p>
-                Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa Cuidar+.
+                Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa wecareparents.
                 O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.
               </p>
             </div>
@@ -498,7 +498,7 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       await this.authService.registerCaregiver(data);
       form.reset();
-      this.successMessage = 'Cadastro submetido para validação. Será notificado quando a equipa Cuidar+ terminar a análise.';
+      this.successMessage = 'Cadastro submetido para validação. Será notificado quando a equipa wecareparents terminar a análise.';
       await this.router.navigateByUrl('/dashboard/cuidador');
     } catch (error) {
       this.errorMessage = this.authService.getFirebaseErrorMessage(error);

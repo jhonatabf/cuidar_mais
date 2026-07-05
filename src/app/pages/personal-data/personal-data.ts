@@ -251,7 +251,7 @@ export class PersonalDataComponent implements OnInit {
   );
   protected readonly pageLead = computed(() =>
     this.isRequiredStep()
-      ? 'Esta etapa é necessária antes de criar ou editar um perfil na Cuidar+.'
+      ? 'Esta etapa é necessária antes de criar ou editar um perfil na wecareparents.'
       : 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
   );
 

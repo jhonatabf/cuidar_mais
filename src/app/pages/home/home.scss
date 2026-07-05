@@ -288,7 +288,9 @@
     display: block;
     margin-bottom: 12px;
     color: var(--color-primary);
+    font-size: 0.78rem;
     font-weight: 900;
+    overflow-wrap: anywhere;
   }
 
   div {

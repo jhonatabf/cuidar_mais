@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
       <p class="eyebrow">Termos</p>
       <h1>Termos de utilizacao.</h1>
       <div class="legal-content">
-        <p>Estes termos definem as regras gerais de utilizacao da CuidarPlus durante o MVP.</p>
+        <p>Estes termos definem as regras gerais de utilizacao da wecareparents durante o MVP.</p>
         <h2>Conta e elegibilidade</h2>
         <p>O utilizador deve fornecer dados verdadeiros e manter as credenciais em seguranca.</p>
         <h2>Servicos de cuidado</h2>

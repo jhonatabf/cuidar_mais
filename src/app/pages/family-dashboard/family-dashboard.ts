@@ -23,7 +23,7 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
           <p class="eyebrow">Cadastro de família</p>
           <h1>Conte-nos quem precisa de cuidado e como podemos ajudar.</h1>
           <p class="lead">
-            O cadastro de família ajuda a Cuidar+ entender a casa, os utentes, os cuidados necessários e o orçamento
+            O cadastro de família ajuda a equipa da wecareparents a compreender a casa, os utentes, os cuidados necessários e o orçamento
             disponível para futuros matches automáticos.
           </p>
         </div>
@@ -728,15 +728,15 @@ export class FamilyDashboardComponent implements OnInit {
   protected familyStatusMessage(): string {
     const status = this.account()?.familyProfileStatus;
     if (status === 'approved') {
-      return 'O cadastro da família foi aprovado pela equipa Cuidar+.';
+      return 'O cadastro da família foi aprovado pela equipa wecareparents.';
     }
     if (status === 'analysing') {
-      return 'O cadastro está sendo analisado pela equipa Cuidar+.';
+      return 'O cadastro está sendo analisado pela equipa wecareparents.';
     }
     if (status === 'rejected') {
       return 'O cadastro foi rejeitado. Atualize as informações solicitadas e envie novamente.';
     }
-    return 'O cadastro foi enviado e aguarda análise da equipa Cuidar+.';
+    return 'O cadastro foi enviado e aguarda análise da equipa wecareparents.';
   }
 
   private async loadAccount(showLoading = true): Promise<void> {

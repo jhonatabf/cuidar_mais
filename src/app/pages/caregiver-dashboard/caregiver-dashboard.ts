@@ -478,7 +478,7 @@ export class CaregiverDashboardComponent implements OnInit {
 
     if (!caregiverProfile) {
       this.approvalStatusLabel.set('Por concluir');
-      this.approvalMessage.set('Conclua o cadastro de cuidador para o submeter à validação da equipa Cuidar+.');
+      this.approvalMessage.set('Conclua o cadastro de cuidador para o submeter à validação da equipa wecareparents.');
       this.statusTone.set('incomplete');
       return;
     }
@@ -554,11 +554,11 @@ export class CaregiverDashboardComponent implements OnInit {
     }
 
     if (summary.approvalStatus === 'analysing') {
-      return 'A equipa Cuidar+ está a analisar os dados e documentos enviados. Aguarde pela conclusão da validação.';
+      return 'A equipa wecareparents está a analisar os dados e documentos enviados. Aguarde pela conclusão da validação.';
     }
 
     if (summary.approvalStatus === 'pending') {
-      return 'O cadastro foi recebido e aguarda o início da validação pela equipa Cuidar+.';
+      return 'O cadastro foi recebido e aguarda o início da validação pela equipa wecareparents.';
     }
 
     const approvalDate = this.formatDate(summary.approvalDate);

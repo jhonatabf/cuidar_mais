@@ -17,7 +17,7 @@ import { Auth } from '../../core/services/auth';
       <div class="section-header">
         <p class="eyebrow">Administração</p>
         <h1>Revisões e permissões.</h1>
-        <p class="lead">Área restrita para validação de cadastros e gestão dos perfis administrativos da Cuidar+.</p>
+        <p class="lead">Área restrita para validação de cadastros e gestão dos perfis administrativos da wecareparents.</p>
       </div>
 
       @if (message()) {

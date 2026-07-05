@@ -9,7 +9,7 @@ const REGISTER_COPY = {
   'pt-PT': {
     step: 'Etapa 1 de 3',
     stepName: 'Criação da conta',
-    title: 'Crie uma conta para começar a sua jornada na Cuidar+.',
+    title: 'Crie uma conta para começar a sua jornada na wecareparents.',
     lead: 'Escolha o tipo de conta e indique os dados necessários para criar o seu acesso.',
     accountType: 'Tipo de conta',
     family: 'Família',
@@ -36,7 +36,7 @@ const REGISTER_COPY = {
   'en-GB': {
     step: 'Step 1 of 3',
     stepName: 'Account creation',
-    title: 'Create an account to begin your journey with Cuidar+.',
+    title: 'Create an account to begin your journey with wecareparents.',
     lead: 'Choose the account type and provide the details required to create your access.',
     accountType: 'Account type',
     family: 'Family',

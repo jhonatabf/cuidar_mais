@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
       <p class="eyebrow">RGPD</p>
       <h1>Compromisso com o RGPD.</h1>
       <div class="legal-content">
-        <p>A CuidarPlus foi estruturada para respeitar principios de minimizacao, transparencia e seguranca.</p>
+        <p>A wecareparents foi estruturada para respeitar principios de minimizacao, transparencia e seguranca.</p>
         <h2>Base legal</h2>
         <p>Tratamos dados com base em contrato, consentimento, obrigacao legal ou interesse legitimo.</p>
         <h2>Retencao</h2>

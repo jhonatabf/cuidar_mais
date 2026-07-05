@@ -12,7 +12,7 @@ import { Auth } from '../../core/services/auth';
       <div class="admin-auth-panel">
         <div>
           <p class="eyebrow">Administração</p>
-          <h1>Painel administrativo Cuidar+.</h1>
+          <h1>Painel administrativo wecareparents.</h1>
           <p class="lead">Acesso independente para revisão operacional e gestão interna.</p>
         </div>
 

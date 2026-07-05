@@ -34,7 +34,7 @@ const HOME_COPY = {
       { icon: 'restaurant', title: 'Refeições' },
       { icon: 'nightlight', title: 'Noite / Pernoita' },
     ],
-    audienceTitle: 'Para quem é a Cuidar+?',
+    audienceTitle: 'Para quem é a wecareparents?',
     familyTitle: 'Para famílias',
     familyText: 'Encontre cuidadores experientes perto de si, com avaliações reais de outras famílias.',
     familyCta: 'Quero encontrar',
@@ -81,7 +81,7 @@ const HOME_COPY = {
       { icon: 'restaurant', title: 'Meals' },
       { icon: 'nightlight', title: 'Night / Overnight care' },
     ],
-    audienceTitle: 'Who is Cuidar+ for?',
+    audienceTitle: 'Who is wecareparents for?',
     familyTitle: 'For families',
     familyText: 'Find experienced caregivers near you, with genuine reviews from other families.',
     familyCta: 'Find a caregiver',
@@ -201,7 +201,7 @@ const HOME_COPY = {
             <a class="btn btn-action" routerLink="/cadastro">{{ copy().joinCta }}</a>
           </div>
           <div class="phone-mock" aria-hidden="true">
-            <span>Cuidar+</span>
+            <span>wecareparents</span>
             <div></div>
             <div></div>
             <div></div>

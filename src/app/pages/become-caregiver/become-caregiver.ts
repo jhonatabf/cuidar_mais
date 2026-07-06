@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
   getCountries,
@@ -13,6 +13,7 @@ import {
   CaregiverRegistration,
   CaregiverTrainingCertificate,
 } from '../../core/services/auth';
+import { AppLocale, LocaleService } from '../../core/services/locale';
 
 const CERTIFICATE_IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const CERTIFICATE_IMAGE_TARGET_BYTES = 900 * 1024;
@@ -29,11 +30,11 @@ type TrainingEntryData = {
   certificate: CaregiverTrainingCertificate | null;
 };
 
-type CaregiverSignupLocale = 'pt-PT' | 'en' | 'es';
-
 const CAREGIVER_SIGNUP_COPY = {
   'pt-PT': {
-    eyebrow: 'Cadastro de cuidadores',
+    step: 'Etapa 3 de 3',
+    stepName: 'Perfil de cuidador',
+    stepAria: 'Etapa 3 de 3: perfil de cuidador',
     badge: 'Uma dica',
     title: 'Crie um perfil claro, fiável e rápido de avaliar.',
     lead:
@@ -42,9 +43,24 @@ const CAREGIVER_SIGNUP_COPY = {
     summaryText:
       'As famílias verão o resumo, os serviços, a disponibilidade, a localização aproximada, os idiomas e as competências.',
     privacyNote: 'NIF, documento, morada e contactos privados não aparecem no perfil público.',
+    summaryAria: 'Resumo do registo', reviewTitle: 'Validação pela wecareparents', reviewText: 'Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa wecareparents. O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.', closeNotice: 'Fechar aviso',
+    professional: 'Perfil profissional', professionalHelp: 'Informação pública que ajuda a família a decidir.', professionalSummary: 'Resumo profissional', professionalPlaceholder: 'Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.', experienceYears: 'Anos de experiência', exampleFive: 'Ex.: 5', serviceTypes: 'Tipos de serviço prestados',
+    training: 'Formação', trainingHelp: 'Opcional, mas recomendado para perfis profissionais.', remove: 'Remover', professionalTraining: 'Formação profissional', selectTraining: 'Selecionar formação', courseName: 'Nome do curso', coursePlaceholder: 'Ex.: Curso de cuidador sénior', trainingEntity: 'Entidade formadora', institutionPlaceholder: 'Nome da instituição', completionDate: 'Data de conclusão', certificateImage: 'Imagem do certificado', certificateHint: 'Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.', currentFile: 'Ficheiro atual', addTraining: 'Informar outra formação profissional',
+    availability: 'Disponibilidade', availabilityHelp: 'Dias, períodos e formatos de trabalho aceites.', weekDays: 'Dias da semana', periods: 'Períodos', availableFor: 'Disponível para',
+    rates: 'Valores', ratesHelp: 'Comece pelo valor por hora; outros valores podem ser adicionados depois.', hourlyRate: 'Valor por hora (€)', shiftRate: 'Valor por turno', dayRate: 'Valor por dia', monthlyRate: 'Valor mensal',
+    skills: 'Competências', skillsHelp: 'Assinale competências que fazem parte da sua prática.',
+    languagesMobility: 'Idiomas e mobilidade', languagesMobilityHelp: 'Ajuda a família a entender comunicação e deslocação.', languages: 'Idiomas', mobility: 'Mobilidade', drivingLicense: 'Possui carta de condução', ownVehicle: 'Possui viatura própria', acceptsTravel: 'Aceita deslocações', travelRadius: 'Raio máximo de deslocação', select: 'Selecionar',
+    references: 'Referências', referencesHelp: 'Opcional, mas útil para validação posterior.', referenceName: 'Nome da referência', fullName: 'Nome completo', professionalRelation: 'Relação profissional', relationPlaceholder: 'Ex.: antiga família, instituição', callingCode: 'Indicativo internacional (DDI)', mobile: 'Telemóvel',
+    saving: 'A gravar...', update: 'Atualizar dados do cuidador', save: 'Guardar registo inicial', dashboard: 'Voltar ao Dashboard', howItWorks: 'Ver como funciona',
+    submitted: 'Cadastro submetido para validação. Será notificado quando a equipa wecareparents terminar a análise.', processError: 'Não foi possível processar o cadastro.', certificateImageOnly: 'O certificado deve ser enviado como imagem.', certificateMax: 'A imagem do certificado deve ter no máximo 5 MB.',
+    required: (label: string) => `${label} é obrigatório.`, selectOne: (label: string) => `Selecione pelo menos uma opção em ${label}.`, invalid: (label: string) => `${label} não está válido.`, outOfRange: (label: string) => `${label} está fora do intervalo permitido.`, invalidReference: 'Introduza um contacto de referência válido para o indicativo selecionado.',
+    courseIn: (type: string) => `Nome do curso em ${type}`, entityIn: (type: string) => `Entidade formadora em ${type}`, completionIn: (type: string) => `Data de conclusão em ${type}`, certificateMustImage: (type: string) => `A imagem do certificado em ${type} deve ser um ficheiro de imagem.`, certificateMaxFor: (type: string) => `A imagem do certificado em ${type} deve ter no máximo 5 MB.`, certificateRequired: (type: string) => `A imagem do certificado em ${type} é obrigatória.`,
+    approved: (date: string, editDate: string) => `O cadastro foi aprovado no dia ${date}. Os dados pessoais só poderão ser alterados novamente a partir de ${editDate}, 5 dias após a aprovação.`, dateUnavailable: 'data não informada', optimizeImage: 'Não foi possível otimizar a imagem.',
   },
-  en: {
-    eyebrow: 'Caregiver registration',
+  'en-GB': {
+    step: 'Step 3 of 3',
+    stepName: 'Caregiver profile',
+    stepAria: 'Step 3 of 3: caregiver profile',
     badge: 'A tip',
     title: 'Create a clear, reliable profile that is quick to review.',
     lead:
@@ -53,19 +69,33 @@ const CAREGIVER_SIGNUP_COPY = {
     summaryText:
       'Families will see the summary, services, availability, approximate location, languages and skills.',
     privacyNote: 'Tax ID, document, address and private contacts do not appear on the public profile.',
-  },
-  es: {
-    eyebrow: 'Registro de cuidadores',
-    badge: 'Un consejo',
-    title: 'Crea un perfil claro, fiable y rápido de evaluar.',
-    lead:
-      'El registro inicial recoge solo lo esencial para presentar al cuidador a las familias, manteniendo los datos sensibles privados.',
-    summaryTitle: 'Perfil público simple',
-    summaryText:
-      'Las familias verán el resumen, los servicios, la disponibilidad, la ubicación aproximada, los idiomas y las competencias.',
-    privacyNote: 'NIF, documento, dirección y contactos privados no aparecen en el perfil público.',
+    summaryAria: 'Registration summary', reviewTitle: 'wecareparents review', reviewText: 'After saving your caregiver registration, the profile will be submitted to the wecareparents team for review. It will only become available after approval, and you will be notified when the review is complete.', closeNotice: 'Close notice',
+    professional: 'Professional profile', professionalHelp: 'Public information that helps families decide.', professionalSummary: 'Professional summary', professionalPlaceholder: 'Describe your experience, care style and the type of person you usually support.', experienceYears: 'Years of experience', exampleFive: 'E.g. 5', serviceTypes: 'Services provided',
+    training: 'Training', trainingHelp: 'Optional, but recommended for professional profiles.', remove: 'Remove', professionalTraining: 'Professional training', selectTraining: 'Select training', courseName: 'Course name', coursePlaceholder: 'E.g. Senior caregiver course', trainingEntity: 'Training provider', institutionPlaceholder: 'Institution name', completionDate: 'Completion date', certificateImage: 'Certificate image', certificateHint: 'You may upload an image up to 5 MB. It will be optimised automatically.', currentFile: 'Current file', addTraining: 'Add another professional qualification',
+    availability: 'Availability', availabilityHelp: 'Accepted days, periods and working arrangements.', weekDays: 'Days of the week', periods: 'Periods', availableFor: 'Available for',
+    rates: 'Rates', ratesHelp: 'Start with the hourly rate; other rates can be added afterwards.', hourlyRate: 'Hourly rate (€)', shiftRate: 'Rate per shift', dayRate: 'Daily rate', monthlyRate: 'Monthly rate',
+    skills: 'Skills', skillsHelp: 'Select the skills that are part of your practice.',
+    languagesMobility: 'Languages and mobility', languagesMobilityHelp: 'Helps families understand communication and travel arrangements.', languages: 'Languages', mobility: 'Mobility', drivingLicense: 'I have a driving licence', ownVehicle: 'I have my own vehicle', acceptsTravel: 'I am willing to travel', travelRadius: 'Maximum travel radius', select: 'Select',
+    references: 'References', referencesHelp: 'Optional, but useful for subsequent checks.', referenceName: 'Reference name', fullName: 'Full name', professionalRelation: 'Professional relationship', relationPlaceholder: 'E.g. previous family, institution', callingCode: 'International calling code', mobile: 'Mobile number',
+    saving: 'Saving...', update: 'Update caregiver details', save: 'Save initial registration', dashboard: 'Back to Dashboard', howItWorks: 'See how it works',
+    submitted: 'Registration submitted for review. You will be notified when the wecareparents team completes its assessment.', processError: 'The registration could not be processed.', certificateImageOnly: 'The certificate must be uploaded as an image.', certificateMax: 'The certificate image must be no larger than 5 MB.',
+    required: (label: string) => `${label} is required.`, selectOne: (label: string) => `Select at least one option for ${label}.`, invalid: (label: string) => `${label} is not valid.`, outOfRange: (label: string) => `${label} is outside the permitted range.`, invalidReference: 'Enter a valid reference contact number for the selected calling code.',
+    courseIn: (type: string) => `Course name for ${type}`, entityIn: (type: string) => `Training provider for ${type}`, completionIn: (type: string) => `Completion date for ${type}`, certificateMustImage: (type: string) => `The certificate for ${type} must be an image file.`, certificateMaxFor: (type: string) => `The certificate image for ${type} must be no larger than 5 MB.`, certificateRequired: (type: string) => `The certificate image for ${type} is required.`,
+    approved: (date: string, editDate: string) => `The registration was approved on ${date}. Personal details can be changed again from ${editDate}, five days after approval.`, dateUnavailable: 'date unavailable', optimizeImage: 'The image could not be optimised.',
   },
 } as const;
+
+const CAREGIVER_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
+  'pt-PT': {},
+  'en-GB': {
+    'Companhia': 'Companionship', 'Higiene pessoal': 'Personal hygiene', 'Preparação de refeições': 'Meal preparation', 'Administração de medicação': 'Medication assistance', 'Acompanhamento a consultas': 'Accompaniment to appointments', 'Limpeza doméstica leve': 'Light housekeeping', 'Mobilidade reduzida': 'Reduced mobility', 'Acompanhamento noturno': 'Overnight support', 'Cuidados paliativos': 'Palliative care',
+    'Curso de cuidador': 'Caregiver course', 'Auxiliar de geriatria': 'Geriatric care assistant', 'Enfermagem': 'Nursing', 'Primeiros socorros': 'First aid', 'Fisioterapeuta': 'Physiotherapy', 'Massagista': 'Massage therapy',
+    'Segunda': 'Monday', 'Terça': 'Tuesday', 'Quarta': 'Wednesday', 'Quinta': 'Thursday', 'Sexta': 'Friday', 'Sábado': 'Saturday', 'Domingo': 'Sunday', 'Manhã': 'Morning', 'Tarde': 'Afternoon', 'Noite': 'Night',
+    'Serviços pontuais': 'One-off services', 'Part-time': 'Part-time', 'Full-time': 'Full-time', 'Pernoita': 'Overnight stays', 'Interno': 'Live-in care', 'Demência': 'Dementia', 'Transferência cama/cadeira': 'Bed/chair transfers', 'Condução de veículo': 'Driving', 'Utilização de equipamentos médicos': 'Use of medical equipment',
+    'Português': 'Portuguese', 'Inglês': 'English', 'Francês': 'French', 'Espanhol': 'Spanish', 'Outro': 'Other',
+    'Até 5 km': 'Up to 5 km', 'Até 10 km': 'Up to 10 km', 'Até 15 km': 'Up to 15 km', 'Até 20 km': 'Up to 20 km', 'Até 25 km': 'Up to 25 km', 'Até 30 km': 'Up to 30 km', 'Até 40 km': 'Up to 40 km', 'Até 50 km': 'Up to 50 km',
+  },
+};
 
 @Component({
   selector: 'app-become-caregiver',
@@ -73,14 +103,23 @@ const CAREGIVER_SIGNUP_COPY = {
   template: `
     <section class="page caregiver-signup-hero">
       <div>
-        <p class="eyebrow">{{ copy().eyebrow }}</p>
+        <div class="registration-step" [attr.aria-label]="copy().stepAria">
+          <span class="registration-step__number">3</span>
+          <div>
+            <strong>{{ copy().step }}</strong>
+            <span>{{ copy().stepName }}</span>
+          </div>
+          <div class="registration-step__progress" aria-hidden="true">
+            <span class="is-active"></span><span class="is-active"></span><span class="is-active"></span>
+          </div>
+        </div>
         <h1>{{ copy().title }}</h1>
         <p class="lead">
           {{ copy().lead }}
         </p>
       </div>
 
-      <aside class="signup-summary" aria-label="Resumo do registo">
+      <aside class="signup-summary" [attr.aria-label]="copy().summaryAria">
         <span class="badge">{{ copy().badge }}</span>
         <h3>{{ copy().summaryTitle }}</h3>
         <p>{{ copy().summaryText }}</p>
@@ -89,24 +128,22 @@ const CAREGIVER_SIGNUP_COPY = {
     </section>
 
     <section class="page signup-layout">
-      <aside class="signup-nav" aria-label="Secções do cadastro">
-        @for (section of sections; track section) {
-          <a [href]="'#' + section.id" (click)="scrollToSection($event, section.id)">{{ section.label }}</a>
-        }
-      </aside>
-
-      <form class="caregiver-form" novalidate (submit)="onSubmit($event)">
+      <form
+        class="caregiver-form"
+        [class.show-validation-errors]="hasSubmitted()"
+        novalidate
+        (input)="refreshValidationState($event)"
+        (change)="refreshValidationState($event)"
+        (submit)="onSubmit($event)"
+      >
         @if (showReviewNotice()) {
           <div class="caregiver-snackbar" role="status" aria-live="polite">
             <span class="material-symbols-rounded caregiver-snackbar__icon" aria-hidden="true">info</span>
             <div>
-              <strong>Validação pela wecareparents</strong>
-              <p>
-                Depois de guardar o cadastro de cuidador, o perfil será submetido para validação pela equipa wecareparents.
-                O perfil só ficará disponível após aprovação e será notificado quando a análise terminar.
-              </p>
+              <strong>{{ copy().reviewTitle }}</strong>
+              <p>{{ copy().reviewText }}</p>
             </div>
-            <button type="button" aria-label="Fechar aviso" (click)="showReviewNotice.set(false)">
+            <button type="button" [attr.aria-label]="copy().closeNotice" (click)="showReviewNotice.set(false)">
               <span class="material-symbols-rounded" aria-hidden="true">close</span>
             </button>
           </div>
@@ -116,19 +153,19 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>1</span>
             <div>
-              <h2>Perfil profissional</h2>
-              <p>Informação pública que ajuda a família a decidir.</p>
+              <h2>{{ copy().professional }}</h2>
+              <p>{{ copy().professionalHelp }}</p>
             </div>
           </div>
           <div class="form-grid">
-            <label><span class="label-line">Resumo profissional <strong>*</strong></span><textarea name="summary" required maxlength="650" placeholder="Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.">{{ fieldValue('publicProfile.summary') }}</textarea></label>
-            <label><span class="label-line">Anos de experiência <strong>*</strong></span><input type="number" name="experienceYears" required min="0" max="60" placeholder="Ex.: 5" [value]="fieldValue('publicProfile.experienceYears')" /></label>
+            <label><span class="label-line">{{ copy().professionalSummary }} <strong>*</strong></span><textarea name="summary" required maxlength="650" [placeholder]="copy().professionalPlaceholder">{{ fieldValue('publicProfile.summary') }}</textarea></label>
+            <label><span class="label-line">{{ copy().experienceYears }} <strong>*</strong></span><input type="number" name="experienceYears" required min="0" max="60" [placeholder]="copy().exampleFive" [value]="fieldValue('publicProfile.experienceYears')" /></label>
           </div>
-          <fieldset>
-            <legend class="label-line">Tipos de serviço prestados <strong>*</strong></legend>
+          <fieldset [class.field-group-invalid]="isRequiredGroupMissing('serviceTypes')">
+            <legend class="label-line">{{ copy().serviceTypes }} <strong>*</strong></legend>
             <div class="checkbox-grid">
               @for (service of serviceTypes; track service) {
-                <label><input type="checkbox" name="serviceTypes" [value]="service" [checked]="isChecked('publicProfile.serviceTypes', service)" /> {{ service }}</label>
+                <label><input type="checkbox" name="serviceTypes" [value]="service" [checked]="isChecked('publicProfile.serviceTypes', service)" /> {{ optionLabel(service) }}</label>
               }
             </div>
           </fieldset>
@@ -138,8 +175,8 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>2</span>
             <div>
-              <h2>Formação</h2>
-              <p>Opcional, mas recomendado para perfis profissionais.</p>
+              <h2>{{ copy().training }}</h2>
+              <p>{{ copy().trainingHelp }}</p>
             </div>
           </div>
 
@@ -148,16 +185,16 @@ const CAREGIVER_SIGNUP_COPY = {
               <div class="training-entry">
                 @if (trainingEntryIds().length > 1) {
                   <div class="training-entry-header">
-                    <button type="button" class="ghost-button compact-button" (click)="removeTrainingEntry(entryId)">Remover</button>
+                    <button type="button" class="ghost-button compact-button" (click)="removeTrainingEntry(entryId)">{{ copy().remove }}</button>
                   </div>
                 }
 
                 <label>
-                  Formação profissional
+                  {{ copy().professionalTraining }}
                   <select [name]="'trainingType-' + entryId" [value]="selectedTrainingType(entryId)" (change)="onTrainingTypeChange(entryId, $event)">
-                    <option value="">Selecionar formação</option>
+                    <option value="">{{ copy().selectTraining }}</option>
                     @for (course of availableTrainingTypes(entryId); track course) {
-                      <option [value]="course">{{ course }}</option>
+                      <option [value]="course">{{ optionLabel(course) }}</option>
                     }
                   </select>
                 </label>
@@ -165,23 +202,23 @@ const CAREGIVER_SIGNUP_COPY = {
                 @if (selectedTrainingType(entryId)) {
                   <div class="form-grid two-columns training-details">
                     <label>
-                      Nome do curso
-                      <input [name]="'courseName-' + entryId" placeholder="Ex.: Curso de cuidador sénior" [value]="trainingFieldValue(entryId, 'courseName')" />
+                      {{ copy().courseName }}
+                      <input [name]="'courseName-' + entryId" required [placeholder]="copy().coursePlaceholder" [value]="trainingFieldValue(entryId, 'courseName')" />
                     </label>
                     <label>
-                      Entidade formadora
-                      <input [name]="'trainingEntity-' + entryId" placeholder="Nome da instituição" [value]="trainingFieldValue(entryId, 'trainingEntity')" />
+                      {{ copy().trainingEntity }}
+                      <input [name]="'trainingEntity-' + entryId" required [placeholder]="copy().institutionPlaceholder" [value]="trainingFieldValue(entryId, 'trainingEntity')" />
                     </label>
                     <label>
-                      Data de conclusão
-                      <input type="date" [name]="'completionDate-' + entryId" [value]="trainingFieldValue(entryId, 'completionDate')" />
+                      {{ copy().completionDate }}
+                      <input type="date" [name]="'completionDate-' + entryId" required [value]="trainingFieldValue(entryId, 'completionDate')" />
                     </label>
                     <label>
-                      Imagem do certificado
-                      <input type="file" [name]="'certificateFile-' + entryId" accept="image/*" (change)="onCertificateFileChange($event)" />
-                      <small class="field-hint">Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.</small>
+                      {{ copy().certificateImage }}
+                      <input type="file" [name]="'certificateFile-' + entryId" accept="image/*" [required]="!trainingFieldValue(entryId, 'certificateFileName')" (change)="onCertificateFileChange($event)" />
+                      <small class="field-hint">{{ copy().certificateHint }}</small>
                       @if (trainingFieldValue(entryId, 'certificateFileName')) {
-                        <small class="field-hint">Ficheiro atual: {{ trainingFieldValue(entryId, 'certificateFileName') }}</small>
+                        <small class="field-hint">{{ copy().currentFile }}: {{ trainingFieldValue(entryId, 'certificateFileName') }}</small>
                       }
                     </label>
                   </div>
@@ -191,7 +228,7 @@ const CAREGIVER_SIGNUP_COPY = {
 
             <div class="training-actions">
               <button type="button" class="secondary-button" (click)="addTrainingEntry()" [disabled]="!canAddTrainingEntry()">
-                Informar outra formação profissional
+                {{ copy().addTraining }}
               </button>
             </div>
           </div>
@@ -201,31 +238,31 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>3</span>
             <div>
-              <h2>Disponibilidade</h2>
-              <p>Dias, períodos e formatos de trabalho aceites.</p>
+              <h2>{{ copy().availability }}</h2>
+              <p>{{ copy().availabilityHelp }}</p>
             </div>
           </div>
-          <fieldset>
-            <legend class="label-line">Dias da semana <strong>*</strong></legend>
+          <fieldset [class.field-group-invalid]="isRequiredGroupMissing('weekDays')">
+            <legend class="label-line">{{ copy().weekDays }} <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (day of weekDays; track day) {
-                <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('publicProfile.availability.weekDays', day)" /> {{ day }}</label>
+                <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('publicProfile.availability.weekDays', day)" /> {{ optionLabel(day) }}</label>
               }
             </div>
           </fieldset>
-          <fieldset>
-            <legend class="label-line">Períodos <strong>*</strong></legend>
+          <fieldset [class.field-group-invalid]="isRequiredGroupMissing('periods')">
+            <legend class="label-line">{{ copy().periods }} <strong>*</strong></legend>
             <div class="checkbox-grid compact">
               @for (period of periods; track period) {
-                <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('publicProfile.availability.periods', period)" /> {{ period }}</label>
+                <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('publicProfile.availability.periods', period)" /> {{ optionLabel(period) }}</label>
               }
             </div>
           </fieldset>
           <fieldset>
-            <legend>Disponível para</legend>
+            <legend>{{ copy().availableFor }}</legend>
             <div class="checkbox-grid compact">
               @for (type of availabilityTypes; track type) {
-                <label><input type="checkbox" name="availabilityTypes" [value]="type" [checked]="isChecked('publicProfile.availability.availabilityTypes', type)" /> {{ type }}</label>
+                <label><input type="checkbox" name="availabilityTypes" [value]="type" [checked]="isChecked('publicProfile.availability.availabilityTypes', type)" /> {{ optionLabel(type) }}</label>
               }
             </div>
           </fieldset>
@@ -235,15 +272,15 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>4</span>
             <div>
-              <h2>Valores</h2>
-              <p>Comece pelo valor por hora; outros valores podem ser adicionados depois.</p>
+              <h2>{{ copy().rates }}</h2>
+              <p>{{ copy().ratesHelp }}</p>
             </div>
           </div>
           <div class="form-grid four-columns">
-            <label><span class="label-line">Valor por hora (€) <strong>*</strong></span><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
-            <label>Valor por turno<input type="number" name="shiftRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.shiftRate')" /></label>
-            <label>Valor por dia<input type="number" name="dayRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.dayRate')" /></label>
-            <label>Valor mensal<input type="number" name="monthlyRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.monthlyRate')" /></label>
+            <label><span class="label-line">{{ copy().hourlyRate }} <strong>*</strong></span><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
+            <label>{{ copy().shiftRate }}<input type="number" name="shiftRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.shiftRate')" /></label>
+            <label>{{ copy().dayRate }}<input type="number" name="dayRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.dayRate')" /></label>
+            <label>{{ copy().monthlyRate }}<input type="number" name="monthlyRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.monthlyRate')" /></label>
           </div>
         </section>
 
@@ -251,13 +288,13 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>5</span>
             <div>
-              <h2>Competências</h2>
-              <p>Assinale competências que fazem parte da sua prática.</p>
+              <h2>{{ copy().skills }}</h2>
+              <p>{{ copy().skillsHelp }}</p>
             </div>
           </div>
           <div class="checkbox-grid">
             @for (skill of skills; track skill) {
-              <label><input type="checkbox" name="skills" [value]="skill" [checked]="isChecked('publicProfile.skills', skill)" /> {{ skill }}</label>
+              <label><input type="checkbox" name="skills" [value]="skill" [checked]="isChecked('publicProfile.skills', skill)" /> {{ optionLabel(skill) }}</label>
             }
           </div>
         </section>
@@ -266,38 +303,33 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>6</span>
             <div>
-              <h2>Idiomas e mobilidade</h2>
-              <p>Ajuda a família a entender comunicação e deslocação.</p>
+              <h2>{{ copy().languagesMobility }}</h2>
+              <p>{{ copy().languagesMobilityHelp }}</p>
             </div>
           </div>
           <fieldset>
-            <legend>Idiomas</legend>
+            <legend>{{ copy().languages }}</legend>
             <div class="checkbox-grid compact">
               @for (language of languages; track language) {
-                <label><input type="checkbox" name="languages" [value]="language" [checked]="isChecked('publicProfile.languages', language)" /> {{ language }}</label>
+                <label><input type="checkbox" name="languages" [value]="language" [checked]="isChecked('publicProfile.languages', language)" /> {{ optionLabel(language) }}</label>
               }
             </div>
           </fieldset>
           <fieldset>
-            <legend>Mobilidade</legend>
+            <legend>{{ copy().mobility }}</legend>
             <div class="checkbox-grid compact">
-              <label><input type="checkbox" name="drivingLicense" [checked]="isChecked('publicProfile.mobility.drivingLicense')" /> Possui carta de condução</label>
-              <label><input type="checkbox" name="ownVehicle" [checked]="isChecked('publicProfile.mobility.ownVehicle')" /> Possui viatura própria</label>
-              <label><input type="checkbox" name="acceptsTravel" [checked]="isChecked('publicProfile.mobility.acceptsTravel')" /> Aceita deslocações</label>
+              <label><input type="checkbox" name="drivingLicense" [checked]="isChecked('publicProfile.mobility.drivingLicense')" /> {{ copy().drivingLicense }}</label>
+              <label><input type="checkbox" name="ownVehicle" [checked]="isChecked('publicProfile.mobility.ownVehicle')" /> {{ copy().ownVehicle }}</label>
+              <label><input type="checkbox" name="acceptsTravel" [checked]="isChecked('publicProfile.mobility.acceptsTravel')" /> {{ copy().acceptsTravel }}</label>
             </div>
           </fieldset>
           <div class="form-grid two-columns mobility-radius">
-            <label><span class="label-line">Raio máximo de deslocação <strong>*</strong></span>
+            <label><span class="label-line">{{ copy().travelRadius }} <strong>*</strong></span>
               <select name="travelRadius" required [value]="fieldValue('publicProfile.travelRadius')">
-                <option value="">Selecionar</option>
-                <option>Até 5 km</option>
-                <option>Até 10 km</option>
-                <option>Até 15 km</option>
-                <option>Até 20 km</option>
-                <option>Até 25 km</option>
-                <option>Até 30 km</option>
-                <option>Até 40 km</option>
-                <option>Até 50 km</option>
+                <option value="">{{ copy().select }}</option>
+                @for (radius of travelRadiusOptions; track radius) {
+                  <option [value]="radius">{{ optionLabel(radius) }}</option>
+                }
               </select>
             </label>
           </div>
@@ -307,21 +339,21 @@ const CAREGIVER_SIGNUP_COPY = {
           <div class="section-title">
             <span>7</span>
             <div>
-              <h2>Referências</h2>
-              <p>Opcional, mas útil para validação posterior.</p>
+              <h2>{{ copy().references }}</h2>
+              <p>{{ copy().referencesHelp }}</p>
             </div>
           </div>
           <div class="form-grid two-columns">
-            <label>Nome da referência<input name="referenceName" placeholder="Nome completo" [value]="fieldValue('private.reference.name')" /></label>
-            <label>Relação profissional<input name="referenceRelation" placeholder="Ex.: antiga família, instituição" [value]="fieldValue('private.reference.relation')" /></label>
-            <label>Indicativo internacional (DDI)
+            <label>{{ copy().referenceName }}<input name="referenceName" [placeholder]="copy().fullName" [value]="fieldValue('private.reference.name')" /></label>
+            <label>{{ copy().professionalRelation }}<input name="referenceRelation" [placeholder]="copy().relationPlaceholder" [value]="fieldValue('private.reference.relation')" /></label>
+            <label>{{ copy().callingCode }}
               <select name="referencePhoneCountry" [value]="referencePhoneCountry()" (change)="onReferencePhoneCountryChange($event)">
-                @for (country of referencePhoneCountries; track country.code) {
+                @for (country of referencePhoneCountries(); track country.code) {
                   <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
                 }
               </select>
             </label>
-            <label>Telemóvel
+            <label>{{ copy().mobile }}
               <input
                 type="tel"
                 name="referenceContact"
@@ -346,12 +378,12 @@ const CAREGIVER_SIGNUP_COPY = {
             <p class="form-message success-message" role="status">{{ successMessage }}</p>
           }
           <button class="button" type="submit" [disabled]="isSubmitting || !canEditProfile()">
-            {{ isSubmitting ? 'A gravar...' : submitButtonLabel() }}
+            {{ isSubmitting ? copy().saving : (hasExistingCaregiverProfile() ? copy().update : copy().save) }}
           </button>
           @if (hasExistingCaregiverProfile()) {
-            <a class="button-secondary" routerLink="/dashboard/cuidador">Voltar ao Dashboard</a>
+            <a class="button-secondary" routerLink="/dashboard/cuidador">{{ copy().dashboard }}</a>
           } @else {
-            <a class="button-secondary" routerLink="/como-funciona/cuidadores">Ver como funciona</a>
+            <a class="button-secondary" routerLink="/como-funciona/cuidadores">{{ copy().howItWorks }}</a>
           }
         </div>
       </form>
@@ -362,6 +394,7 @@ const CAREGIVER_SIGNUP_COPY = {
 export class BecomeCaregiverComponent implements OnInit {
   private readonly authService = inject(Auth);
   private readonly router = inject(Router);
+  private readonly localeService = inject(LocaleService);
 
   protected isSubmitting = false;
   protected errorMessage = '';
@@ -369,23 +402,25 @@ export class BecomeCaregiverComponent implements OnInit {
   protected readonly hasExistingCaregiverProfile = signal(false);
   protected readonly canEditProfile = signal(true);
   protected readonly showReviewNotice = signal(true);
+  protected readonly hasSubmitted = signal(false);
+  protected readonly missingRequiredGroups = signal<string[]>([]);
   protected readonly approvalLockMessage = signal('');
-  protected readonly submitButtonLabel = signal('Guardar registo inicial');
-  protected readonly locale = signal<CaregiverSignupLocale>('pt-PT');
   private readonly existingCaregiverProfile = signal<CaregiverProfileDocument | null>(null);
 
-  protected copy(): (typeof CAREGIVER_SIGNUP_COPY)[CaregiverSignupLocale] {
-    return CAREGIVER_SIGNUP_COPY[this.locale()];
+  constructor() {
+    effect(() => {
+      this.localeService.locale();
+      this.applyApprovalLock(this.existingCaregiverProfile());
+    });
   }
 
-  protected readonly sections = [
-    { id: 'perfil-profissional', label: 'Perfil' },
-    { id: 'formacao', label: 'Formação' },
-    { id: 'disponibilidade', label: 'Disponibilidade' },
-    { id: 'valores', label: 'Valores' },
-    { id: 'competencias', label: 'Competências' },
-    { id: 'idiomas-mobilidade', label: 'Idiomas e mobilidade' },
-  ];
+  protected copy(): (typeof CAREGIVER_SIGNUP_COPY)[AppLocale] {
+    return CAREGIVER_SIGNUP_COPY[this.localeService.locale()];
+  }
+
+  protected optionLabel(value: string): string {
+    return CAREGIVER_OPTION_LABELS[this.localeService.locale()][value] ?? value;
+  }
 
   protected readonly serviceTypes = [
     'Companhia',
@@ -432,19 +467,22 @@ export class BecomeCaregiverComponent implements OnInit {
   ];
 
   protected readonly languages = ['Português', 'Inglês', 'Francês', 'Espanhol', 'Outro'];
+  protected readonly travelRadiusOptions = ['Até 5 km', 'Até 10 km', 'Até 15 km', 'Até 20 km', 'Até 25 km', 'Até 30 km', 'Até 40 km', 'Até 50 km'];
   protected readonly referencePhoneCountry = signal<CountryCode>('PT');
   protected readonly referencePhoneNational = signal('');
-  protected readonly referencePhoneCountries = getCountries()
-    .map((code) => ({
-      code,
-      name: this.countryDisplayName(code),
-      callingCode: getCountryCallingCode(code),
-    }))
-    .sort((first, second) => {
-      if (first.code === 'PT') return -1;
-      if (second.code === 'PT') return 1;
-      return first.name.localeCompare(second.name, 'pt-PT');
-    });
+  protected readonly referencePhoneCountries = computed(() =>
+    getCountries()
+      .map((code) => ({
+        code,
+        name: this.countryDisplayName(code),
+        callingCode: getCountryCallingCode(code),
+      }))
+      .sort((first, second) => {
+        if (first.code === 'PT') return -1;
+        if (second.code === 'PT') return 1;
+        return first.name.localeCompare(second.name, this.localeService.locale());
+      }),
+  );
 
   async ngOnInit(): Promise<void> {
     const user = await this.authService.getCurrentUser();
@@ -459,11 +497,11 @@ export class BecomeCaregiverComponent implements OnInit {
     this.loadTrainingEntries(caregiverProfile);
     this.loadReferencePhone();
     this.applyApprovalLock(caregiverProfile);
-    this.submitButtonLabel.set(caregiverProfile ? 'Atualizar dados do cuidador' : 'Guardar registo inicial');
   }
 
   protected async onSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
+    this.hasSubmitted.set(true);
     this.errorMessage = '';
     this.successMessage = '';
 
@@ -474,6 +512,7 @@ export class BecomeCaregiverComponent implements OnInit {
 
     const form = event.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
+    this.updateMissingRequiredGroups(formData);
     const validationMessage = this.getCaregiverValidationMessage(form, formData);
     if (validationMessage) {
       this.errorMessage = validationMessage;
@@ -484,13 +523,13 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       data = await this.buildCaregiverRegistration(formData);
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Não foi possível processar o cadastro.';
+      this.errorMessage = error instanceof Error ? error.message : this.copy().processError;
       return;
     }
 
     const missingGroup = this.getMissingRequiredGroup(data);
     if (missingGroup) {
-      this.errorMessage = `Selecione pelo menos uma opção em ${missingGroup}.`;
+      this.errorMessage = this.copy().selectOne(missingGroup);
       return;
     }
 
@@ -498,22 +537,13 @@ export class BecomeCaregiverComponent implements OnInit {
     try {
       await this.authService.registerCaregiver(data);
       form.reset();
-      this.successMessage = 'Cadastro submetido para validação. Será notificado quando a equipa wecareparents terminar a análise.';
+      this.successMessage = this.copy().submitted;
       await this.router.navigateByUrl('/dashboard/cuidador');
     } catch (error) {
       this.errorMessage = this.authService.getFirebaseErrorMessage(error);
     } finally {
       this.isSubmitting = false;
     }
-  }
-
-  protected scrollToSection(event: MouseEvent, sectionId: string): void {
-    event.preventDefault();
-    document.getElementById(sectionId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-    history.replaceState(null, '', `/seja-cuidador#${sectionId}`);
   }
 
   protected fieldValue(path: string): string {
@@ -604,19 +634,39 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     if (!file.type.startsWith('image/')) {
-      this.errorMessage = 'O certificado deve ser enviado como imagem.';
+      this.errorMessage = this.copy().certificateImageOnly;
       input.value = '';
       return;
     }
 
     if (file.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
-      this.errorMessage = 'A imagem do certificado deve ter no máximo 5 MB.';
+      this.errorMessage = this.copy().certificateMax;
       input.value = '';
     }
   }
 
   protected onReferencePhoneCountryChange(event: Event): void {
     this.referencePhoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
+  }
+
+  protected refreshValidationState(event: Event): void {
+    if (!this.hasSubmitted()) return;
+
+    const form = (event.currentTarget as HTMLFormElement | null);
+    if (form instanceof HTMLFormElement) {
+      this.updateMissingRequiredGroups(new FormData(form));
+    }
+  }
+
+  protected isRequiredGroupMissing(group: string): boolean {
+    return this.hasSubmitted() && this.missingRequiredGroups().includes(group);
+  }
+
+  private updateMissingRequiredGroups(formData: FormData): void {
+    const groups = ['serviceTypes', 'weekDays', 'periods'];
+    this.missingRequiredGroups.set(
+      groups.filter((group) => this.arrayValue(formData, group).length === 0),
+    );
   }
 
   private loadTrainingEntries(caregiverProfile: CaregiverProfileDocument | null): void {
@@ -773,9 +823,10 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     this.approvalLockMessage.set(
-      `O cadastro foi aprovado no dia ${this.formatDate(approvalSummary.approvalDate)}. ` +
-        `Os dados pessoais só poderão ser alterados novamente a partir de ${this.formatDate(approvalSummary.canEditFrom)}, ` +
-        '5 dias após a aprovação.',
+      this.copy().approved(
+        this.formatDate(approvalSummary.approvalDate),
+        this.formatDate(approvalSummary.canEditFrom),
+      ),
     );
   }
 
@@ -855,41 +906,42 @@ export class BecomeCaregiverComponent implements OnInit {
 
   private getMissingRequiredGroup(data: CaregiverRegistration): string {
     if (data.professional.serviceTypes.length === 0) {
-      return 'Tipos de serviço prestados';
+      return this.copy().serviceTypes;
     }
     if (data.availability.weekDays.length === 0) {
-      return 'Dias da semana';
+      return this.copy().weekDays;
     }
     if (data.availability.periods.length === 0) {
-      return 'Períodos';
+      return this.copy().periods;
     }
 
     return '';
   }
 
   private getCaregiverValidationMessage(form: HTMLFormElement, formData: FormData): string {
+    const copy = this.copy();
     const requiredFields = [
-      { key: 'summary', label: 'Resumo profissional' },
-      { key: 'experienceYears', label: 'Anos de experiência' },
-      { key: 'serviceTypes', label: 'Tipos de serviço prestados', type: 'array' },
-      { key: 'weekDays', label: 'Dias da semana', type: 'array' },
-      { key: 'periods', label: 'Períodos', type: 'array' },
-      { key: 'hourlyRate', label: 'Valor por hora' },
-      { key: 'travelRadius', label: 'Raio máximo de deslocação' },
+      { key: 'summary', label: copy.professionalSummary },
+      { key: 'experienceYears', label: copy.experienceYears },
+      { key: 'serviceTypes', label: copy.serviceTypes, type: 'array' },
+      { key: 'weekDays', label: copy.weekDays, type: 'array' },
+      { key: 'periods', label: copy.periods, type: 'array' },
+      { key: 'hourlyRate', label: copy.hourlyRate },
+      { key: 'travelRadius', label: copy.travelRadius },
     ];
 
     for (const field of requiredFields) {
       if (field.type === 'checkbox' && !formData.has(field.key)) {
-        return `${field.label} é obrigatório.`;
+        return copy.required(field.label);
       }
 
       if (field.type === 'array' && this.arrayValue(formData, field.key).length === 0) {
-        return `Selecione pelo menos uma opção em ${field.label}.`;
+        return copy.selectOne(field.label);
       }
 
       const value = this.textValue(formData, field.key);
       if (!field.type && !value) {
-        return `${field.label} é obrigatório.`;
+        return copy.required(field.label);
       }
 
       const control = form.elements.namedItem(field.key);
@@ -907,13 +959,14 @@ export class BecomeCaregiverComponent implements OnInit {
 
     const referenceContact = this.textValue(formData, 'referenceContact');
     if (referenceContact && !this.isValidReferencePhone(formData)) {
-      return 'Introduza um contacto de referência válido para o indicativo selecionado.';
+      return copy.invalidReference;
     }
 
     return this.getTrainingValidationMessage(formData);
   }
 
   private getTrainingValidationMessage(formData: FormData): string {
+    const copy = this.copy();
     for (const entryId of this.trainingEntryIds()) {
       const trainingType = this.textValue(formData, `trainingType-${entryId}`);
       if (!trainingType) {
@@ -921,31 +974,31 @@ export class BecomeCaregiverComponent implements OnInit {
       }
 
       const fields = [
-        { key: `courseName-${entryId}`, label: `Nome do curso em ${trainingType}` },
-        { key: `trainingEntity-${entryId}`, label: `Entidade formadora em ${trainingType}` },
-        { key: `completionDate-${entryId}`, label: `Data de conclusão em ${trainingType}` },
+        { key: `courseName-${entryId}`, label: copy.courseIn(this.optionLabel(trainingType)) },
+        { key: `trainingEntity-${entryId}`, label: copy.entityIn(this.optionLabel(trainingType)) },
+        { key: `completionDate-${entryId}`, label: copy.completionIn(this.optionLabel(trainingType)) },
       ];
 
       for (const field of fields) {
         if (!this.textValue(formData, field.key)) {
-          return `${field.label} é obrigatório.`;
+          return copy.required(field.label);
         }
       }
 
       const certificate = formData.get(`certificateFile-${entryId}`);
       if (certificate instanceof File && certificate.name && !certificate.type.startsWith('image/')) {
-        return `A imagem do certificado em ${trainingType} deve ser um ficheiro de imagem.`;
+        return copy.certificateMustImage(this.optionLabel(trainingType));
       }
 
       if (certificate instanceof File && certificate.name && certificate.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
-        return `A imagem do certificado em ${trainingType} deve ter no máximo 5 MB.`;
+        return copy.certificateMaxFor(this.optionLabel(trainingType));
       }
 
       if (
         (!(certificate instanceof File) || !certificate.name) &&
         !this.trainingFieldValue(entryId, 'certificateFileName')
       ) {
-        return `A imagem do certificado em ${trainingType} é obrigatória.`;
+        return copy.certificateRequired(this.optionLabel(trainingType));
       }
     }
 
@@ -957,16 +1010,16 @@ export class BecomeCaregiverComponent implements OnInit {
     label: string,
   ): string {
     if (control.validity.valueMissing) {
-      return `${label} é obrigatório.`;
+      return this.copy().required(label);
     }
     if (control.validity.typeMismatch || control.validity.badInput) {
-      return `${label} não está válido.`;
+      return this.copy().invalid(label);
     }
     if (control.validity.rangeUnderflow || control.validity.rangeOverflow) {
-      return `${label} está fora do intervalo permitido.`;
+      return this.copy().outOfRange(label);
     }
 
-    return `${label} não está válido.`;
+    return this.copy().invalid(label);
   }
 
   private isAdult(value: string): boolean {
@@ -987,10 +1040,10 @@ export class BecomeCaregiverComponent implements OnInit {
 
   private formatDate(date: Date | null): string {
     if (!date) {
-      return 'data não informada';
+      return this.copy().dateUnavailable;
     }
 
-    return new Intl.DateTimeFormat('pt-PT', {
+    return new Intl.DateTimeFormat(this.localeService.locale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -1030,7 +1083,7 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   private countryDisplayName(country: CountryCode): string {
-    return new Intl.DisplayNames(['pt-PT'], { type: 'region' }).of(country) ?? country;
+    return new Intl.DisplayNames([this.localeService.locale()], { type: 'region' }).of(country) ?? country;
   }
 
   private textValue(formData: FormData, key: string): string {
@@ -1061,11 +1114,11 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     if (!value.type.startsWith('image/')) {
-      throw new Error('O certificado deve ser enviado como imagem.');
+      throw new Error(this.copy().certificateImageOnly);
     }
 
     if (value.size > CERTIFICATE_IMAGE_MAX_FILE_BYTES) {
-      throw new Error('A imagem do certificado deve ter no máximo 5 MB.');
+      throw new Error(this.copy().certificateMax);
     }
 
     const blob = await this.compressCertificateImage(value);
@@ -1106,7 +1159,7 @@ export class BecomeCaregiverComponent implements OnInit {
 
       const context = canvas.getContext('2d');
       if (!context) {
-        throw new Error('Não foi possível otimizar a foto de perfil.');
+        throw new Error(this.copy().optimizeImage);
       }
 
       context.fillStyle = '#ffffff';
@@ -1145,7 +1198,7 @@ export class BecomeCaregiverComponent implements OnInit {
 
       const context = canvas.getContext('2d');
       if (!context) {
-        throw new Error('Não foi possível otimizar a imagem do certificado.');
+        throw new Error(this.copy().optimizeImage);
       }
 
       context.fillStyle = '#ffffff';
@@ -1168,7 +1221,7 @@ export class BecomeCaregiverComponent implements OnInit {
       return bestBlob;
     }
 
-    throw new Error('Não foi possível otimizar a imagem do certificado.');
+    throw new Error(this.copy().optimizeImage);
   }
 
   private canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
@@ -1180,7 +1233,7 @@ export class BecomeCaregiverComponent implements OnInit {
             return;
           }
 
-          reject(new Error('Não foi possível gerar a imagem otimizada do certificado.'));
+          reject(new Error(this.copy().optimizeImage));
         },
         'image/jpeg',
         quality,
@@ -1204,7 +1257,7 @@ export class BecomeCaregiverComponent implements OnInit {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('Não foi possível carregar a foto de perfil.'));
+      image.onerror = () => reject(new Error(this.copy().optimizeImage));
       image.src = src;
     });
   }
@@ -1218,9 +1271,9 @@ export class BecomeCaregiverComponent implements OnInit {
           return;
         }
 
-        reject(new Error('Não foi possível ler a foto de perfil.'));
+        reject(new Error(this.copy().optimizeImage));
       };
-      reader.onerror = () => reject(new Error('Não foi possível ler a foto de perfil.'));
+      reader.onerror = () => reject(new Error(this.copy().optimizeImage));
       reader.readAsDataURL(file);
     });
   }

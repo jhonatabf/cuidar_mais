@@ -6,6 +6,60 @@
   padding-bottom: 28px;
 }
 
+.registration-step {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px 12px;
+  width: min(100%, 320px);
+  margin-bottom: 24px;
+  color: var(--color-ink);
+}
+
+.registration-step__number {
+  display: grid;
+  grid-row: span 2;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 900;
+}
+
+.registration-step > div:not(.registration-step__progress) {
+  display: grid;
+  gap: 2px;
+
+  strong {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 750;
+  }
+}
+
+.registration-step__progress {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+
+  span {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-border);
+  }
+
+  .is-active {
+    background: var(--color-primary);
+  }
+}
+
 .signup-summary {
   padding: 28px;
   border: 1px solid rgba(11, 122, 59, 0.14);
@@ -33,41 +87,26 @@
 }
 
 .signup-layout {
-  display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
   padding-top: 8px;
-}
-
-.signup-nav {
-  position: sticky;
-  top: 24px;
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid rgba(220, 233, 216, 0.82);
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: var(--shadow-card);
-
-  a {
-    padding: 11px 12px;
-    border-radius: 12px;
-    color: var(--color-muted);
-    font-weight: 800;
-    text-decoration: none;
-  }
-
-  a:hover {
-    background: var(--color-primary-soft);
-    color: var(--color-primary-strong);
-  }
 }
 
 .caregiver-form {
   display: grid;
   gap: 18px;
+}
+
+.caregiver-form.show-validation-errors {
+  input:required:invalid,
+  select:required:invalid,
+  textarea:required:invalid {
+    border-color: #b83232;
+    box-shadow: 0 0 0 1px rgba(184, 50, 50, 0.18);
+  }
+
+  .field-group-invalid {
+    border-color: #b83232;
+    box-shadow: 0 0 0 1px rgba(184, 50, 50, 0.14);
+  }
 }
 
 .form-disabled-shell {
@@ -442,14 +481,8 @@ legend {
 }
 
 @media (max-width: 980px) {
-  .caregiver-signup-hero,
-  .signup-layout {
+  .caregiver-signup-hero {
     grid-template-columns: 1fr;
-  }
-
-  .signup-nav {
-    position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .three-columns,
@@ -479,8 +512,7 @@ legend {
   .three-columns,
   .four-columns,
   .checkbox-grid,
-  .checkbox-grid.compact,
-  .signup-nav {
+  .checkbox-grid.compact {
     grid-template-columns: 1fr;
   }
 

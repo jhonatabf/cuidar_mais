@@ -277,10 +277,10 @@ const CAREGIVER_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
             </div>
           </div>
           <div class="form-grid four-columns">
-            <label><span class="label-line">{{ copy().hourlyRate }} <strong>*</strong></span><input type="number" name="hourlyRate" required min="0" step="0.5" placeholder="15" [value]="fieldValue('publicProfile.rates.hourlyRate')" /></label>
-            <label>{{ copy().shiftRate }}<input type="number" name="shiftRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.shiftRate')" /></label>
-            <label>{{ copy().dayRate }}<input type="number" name="dayRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.dayRate')" /></label>
-            <label>{{ copy().monthlyRate }}<input type="number" name="monthlyRate" min="0" step="0.5" [value]="fieldValue('publicProfile.rates.monthlyRate')" /></label>
+            <label><span class="label-line">{{ copy().hourlyRate }} <strong>*</strong></span><span class="money-input"><input name="hourlyRate" required inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.hourlyRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
+            <label>{{ copy().shiftRate }}<span class="money-input"><input name="shiftRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.shiftRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
+            <label>{{ copy().dayRate }}<span class="money-input"><input name="dayRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.dayRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
+            <label>{{ copy().monthlyRate }}<span class="money-input"><input name="monthlyRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.monthlyRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
           </div>
         </section>
 
@@ -553,6 +553,33 @@ export class BecomeCaregiverComponent implements OnInit {
     }
 
     return typeof value === 'string' ? value : '';
+  }
+
+  protected moneyFieldValue(path: string): string {
+    const value = this.profileValue(path);
+    const amount = typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? this.parseMoney(value)
+        : null;
+    return amount !== null && Number.isFinite(amount) ? this.formatMoney(amount) : '';
+  }
+
+  protected formatMoneyInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.value.trim()) {
+      input.setCustomValidity('');
+      return;
+    }
+
+    const value = this.parseMoney(input.value);
+    if (value === null || value < 0) {
+      input.setCustomValidity(this.copy().invalid(input.labels?.[0]?.textContent?.trim() || this.copy().rates));
+      return;
+    }
+
+    input.setCustomValidity('');
+    input.value = this.formatMoney(value);
   }
 
   protected isChecked(path: string, option?: string): boolean {
@@ -849,10 +876,10 @@ export class BecomeCaregiverComponent implements OnInit {
         availabilityTypes: this.arrayValue(formData, 'availabilityTypes'),
       },
       rates: {
-        hourlyRate: this.numberValue(formData, 'hourlyRate') ?? 0,
-        shiftRate: this.numberValue(formData, 'shiftRate'),
-        dayRate: this.numberValue(formData, 'dayRate'),
-        monthlyRate: this.numberValue(formData, 'monthlyRate'),
+        hourlyRate: this.moneyValue(formData, 'hourlyRate') ?? 0,
+        shiftRate: this.moneyValue(formData, 'shiftRate'),
+        dayRate: this.moneyValue(formData, 'dayRate'),
+        monthlyRate: this.moneyValue(formData, 'monthlyRate'),
       },
       skills: this.arrayValue(formData, 'skills'),
       languages: this.arrayValue(formData, 'languages'),
@@ -955,6 +982,20 @@ export class BecomeCaregiverComponent implements OnInit {
         }
       }
 
+    }
+
+    const moneyFields = [
+      { key: 'hourlyRate', label: copy.hourlyRate },
+      { key: 'shiftRate', label: copy.shiftRate },
+      { key: 'dayRate', label: copy.dayRate },
+      { key: 'monthlyRate', label: copy.monthlyRate },
+    ];
+    for (const field of moneyFields) {
+      const rawValue = this.textValue(formData, field.key);
+      const value = this.parseMoney(rawValue);
+      if (rawValue && (value === null || value < 0)) {
+        return copy.invalid(field.label);
+      }
     }
 
     const referenceContact = this.textValue(formData, 'referenceContact');
@@ -1102,6 +1143,30 @@ export class BecomeCaregiverComponent implements OnInit {
   private numberValue(formData: FormData, key: string): number | null {
     const value = this.textValue(formData, key);
     return value ? Number(value) : null;
+  }
+
+  private moneyValue(formData: FormData, key: string): number | null {
+    return this.parseMoney(this.textValue(formData, key));
+  }
+
+  private parseMoney(rawValue: string): number | null {
+    const value = rawValue.replace(/\s|€/g, '').trim();
+    if (!value) return null;
+
+    const normalized = value.includes(',')
+      ? value.replace(/\./g, '').replace(',', '.')
+      : /^\d{1,3}(\.\d{3})+$/.test(value)
+        ? value.replace(/\./g, '')
+        : value;
+    const amount = Number(normalized);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  private formatMoney(value: number): string {
+    return new Intl.NumberFormat('pt-PT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
   }
 
   private async certificateUploadValue(

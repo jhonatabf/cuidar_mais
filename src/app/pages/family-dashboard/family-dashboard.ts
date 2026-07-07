@@ -20,7 +20,16 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
     } @else if (showFamilyForm()) {
       <section class="page family-signup-hero">
         <div>
-          <p class="eyebrow">Cadastro de família</p>
+          <div class="registration-step" aria-label="Etapa 3 de 3: cadastro de família">
+            <span class="registration-step__number">3</span>
+            <div>
+              <strong>Etapa 3 de 3</strong>
+              <span>Cadastro de família</span>
+            </div>
+            <div class="registration-step__progress" aria-hidden="true">
+              <span class="is-active"></span><span class="is-active"></span><span class="is-active"></span>
+            </div>
+          </div>
           <h1>Conte-nos quem precisa de cuidado e como podemos ajudar.</h1>
           <p class="lead">
             O cadastro de família ajuda a equipa da wecareparents a compreender a casa, os utentes, os cuidados necessários e o orçamento
@@ -376,6 +385,60 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
 
     .family-signup-page {
       padding-top: 0;
+    }
+
+    .registration-step {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 10px 12px;
+      width: min(100%, 320px);
+      margin-bottom: 20px;
+      color: var(--color-ink);
+    }
+
+    .registration-step__number {
+      display: grid;
+      grid-row: span 2;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--color-primary);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .registration-step > div:not(.registration-step__progress) {
+      display: grid;
+      gap: 2px;
+    }
+
+    .registration-step > div:not(.registration-step__progress) strong {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+    }
+
+    .registration-step > div:not(.registration-step__progress) span {
+      color: var(--color-muted);
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .registration-step__progress {
+      grid-column: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .registration-step__progress span {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--color-border);
+    }
+
+    .registration-step__progress .is-active {
+      background: var(--color-primary);
     }
 
     .signup-summary {

@@ -47,7 +47,7 @@ const CAREGIVER_SIGNUP_COPY = {
     professional: 'Perfil profissional', professionalHelp: 'Informação pública que ajuda a família a decidir.', professionalSummary: 'Resumo profissional', professionalPlaceholder: 'Descreva a sua experiência, estilo de cuidado e tipo de pessoa que costuma acompanhar.', experienceYears: 'Anos de experiência', exampleFive: 'Ex.: 5', serviceTypes: 'Tipos de serviço prestados',
     training: 'Formação', trainingHelp: 'Opcional, mas recomendado para perfis profissionais.', remove: 'Remover', professionalTraining: 'Formação profissional', selectTraining: 'Selecionar formação', courseName: 'Nome do curso', coursePlaceholder: 'Ex.: Curso de cuidador sénior', trainingEntity: 'Entidade formadora', institutionPlaceholder: 'Nome da instituição', completionDate: 'Data de conclusão', certificateImage: 'Imagem do certificado', certificateHint: 'Pode enviar uma foto até 5 MB. A imagem será otimizada automaticamente.', currentFile: 'Ficheiro atual', addTraining: 'Informar outra formação profissional',
     availability: 'Disponibilidade', availabilityHelp: 'Dias, períodos e formatos de trabalho aceites.', weekDays: 'Dias da semana', periods: 'Períodos', availableFor: 'Disponível para',
-    rates: 'Valores', ratesHelp: 'Comece pelo valor por hora; outros valores podem ser adicionados depois.', hourlyRate: 'Valor por hora (€)', shiftRate: 'Valor por turno', dayRate: 'Valor por dia', monthlyRate: 'Valor mensal',
+    rates: 'Valores', ratesHelp: 'Indique pelo menos uma modalidade de valor.', atLeastOneRate: 'Preencha pelo menos um dos valores', hourlyRate: 'Valor por hora (€)', shiftRate: 'Valor por turno', dayRate: 'Valor por dia', monthlyRate: 'Valor mensal',
     skills: 'Competências', skillsHelp: 'Assinale competências que fazem parte da sua prática.',
     languagesMobility: 'Idiomas e mobilidade', languagesMobilityHelp: 'Ajuda a família a entender comunicação e deslocação.', languages: 'Idiomas', mobility: 'Mobilidade', drivingLicense: 'Possui carta de condução', ownVehicle: 'Possui viatura própria', acceptsTravel: 'Aceita deslocações', travelRadius: 'Raio máximo de deslocação', select: 'Selecionar',
     references: 'Referências', referencesHelp: 'Opcional, mas útil para validação posterior.', referenceName: 'Nome da referência', fullName: 'Nome completo', professionalRelation: 'Relação profissional', relationPlaceholder: 'Ex.: antiga família, instituição', callingCode: 'Indicativo internacional (DDI)', mobile: 'Telemóvel',
@@ -73,7 +73,7 @@ const CAREGIVER_SIGNUP_COPY = {
     professional: 'Professional profile', professionalHelp: 'Public information that helps families decide.', professionalSummary: 'Professional summary', professionalPlaceholder: 'Describe your experience, care style and the type of person you usually support.', experienceYears: 'Years of experience', exampleFive: 'E.g. 5', serviceTypes: 'Services provided',
     training: 'Training', trainingHelp: 'Optional, but recommended for professional profiles.', remove: 'Remove', professionalTraining: 'Professional training', selectTraining: 'Select training', courseName: 'Course name', coursePlaceholder: 'E.g. Senior caregiver course', trainingEntity: 'Training provider', institutionPlaceholder: 'Institution name', completionDate: 'Completion date', certificateImage: 'Certificate image', certificateHint: 'You may upload an image up to 5 MB. It will be optimised automatically.', currentFile: 'Current file', addTraining: 'Add another professional qualification',
     availability: 'Availability', availabilityHelp: 'Accepted days, periods and working arrangements.', weekDays: 'Days of the week', periods: 'Periods', availableFor: 'Available for',
-    rates: 'Rates', ratesHelp: 'Start with the hourly rate; other rates can be added afterwards.', hourlyRate: 'Hourly rate (€)', shiftRate: 'Rate per shift', dayRate: 'Daily rate', monthlyRate: 'Monthly rate',
+    rates: 'Rates', ratesHelp: 'Provide at least one rate option.', atLeastOneRate: 'Complete at least one rate', hourlyRate: 'Hourly rate (€)', shiftRate: 'Rate per shift', dayRate: 'Daily rate', monthlyRate: 'Monthly rate',
     skills: 'Skills', skillsHelp: 'Select the skills that are part of your practice.',
     languagesMobility: 'Languages and mobility', languagesMobilityHelp: 'Helps families understand communication and travel arrangements.', languages: 'Languages', mobility: 'Mobility', drivingLicense: 'I have a driving licence', ownVehicle: 'I have my own vehicle', acceptsTravel: 'I am willing to travel', travelRadius: 'Maximum travel radius', select: 'Select',
     references: 'References', referencesHelp: 'Optional, but useful for subsequent checks.', referenceName: 'Reference name', fullName: 'Full name', professionalRelation: 'Professional relationship', relationPlaceholder: 'E.g. previous family, institution', callingCode: 'International calling code', mobile: 'Mobile number',
@@ -276,8 +276,9 @@ const CAREGIVER_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
               <p>{{ copy().ratesHelp }}</p>
             </div>
           </div>
-          <div class="form-grid four-columns">
-            <label><span class="label-line">{{ copy().hourlyRate }} <strong>*</strong></span><span class="money-input"><input name="hourlyRate" required inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.hourlyRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
+          <p class="group-label">{{ copy().atLeastOneRate }} <strong>*</strong></p>
+          <div class="form-grid four-columns rates-fields" [class.field-group-invalid]="isRequiredGroupMissing('rates')">
+            <label>{{ copy().hourlyRate }}<span class="money-input"><input name="hourlyRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.hourlyRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
             <label>{{ copy().shiftRate }}<span class="money-input"><input name="shiftRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.shiftRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
             <label>{{ copy().dayRate }}<span class="money-input"><input name="dayRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.dayRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
             <label>{{ copy().monthlyRate }}<span class="money-input"><input name="monthlyRate" inputmode="decimal" placeholder="0,00" [value]="moneyFieldValue('publicProfile.rates.monthlyRate')" (blur)="formatMoneyInput($event)" /><span aria-hidden="true">€</span></span></label>
@@ -690,10 +691,13 @@ export class BecomeCaregiverComponent implements OnInit {
   }
 
   private updateMissingRequiredGroups(formData: FormData): void {
-    const groups = ['serviceTypes', 'weekDays', 'periods'];
-    this.missingRequiredGroups.set(
-      groups.filter((group) => this.arrayValue(formData, group).length === 0),
+    const missingGroups = ['serviceTypes', 'weekDays', 'periods'].filter(
+      (group) => this.arrayValue(formData, group).length === 0,
     );
+    const hasRate = ['hourlyRate', 'shiftRate', 'dayRate', 'monthlyRate'].some(
+      (key) => !!this.textValue(formData, key),
+    );
+    this.missingRequiredGroups.set(hasRate ? missingGroups : [...missingGroups, 'rates']);
   }
 
   private loadTrainingEntries(caregiverProfile: CaregiverProfileDocument | null): void {
@@ -953,7 +957,6 @@ export class BecomeCaregiverComponent implements OnInit {
       { key: 'serviceTypes', label: copy.serviceTypes, type: 'array' },
       { key: 'weekDays', label: copy.weekDays, type: 'array' },
       { key: 'periods', label: copy.periods, type: 'array' },
-      { key: 'hourlyRate', label: copy.hourlyRate },
       { key: 'travelRadius', label: copy.travelRadius },
     ];
 
@@ -982,6 +985,13 @@ export class BecomeCaregiverComponent implements OnInit {
         }
       }
 
+    }
+
+    const hasRate = ['hourlyRate', 'shiftRate', 'dayRate', 'monthlyRate'].some(
+      (key) => !!this.textValue(formData, key),
+    );
+    if (!hasRate) {
+      return copy.required(copy.atLeastOneRate);
     }
 
     const moneyFields = [

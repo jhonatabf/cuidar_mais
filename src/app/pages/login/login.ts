@@ -8,7 +8,7 @@ const LOGIN_COPY = {
   'pt-PT': {
     eyebrow: 'Iniciar sessão',
     title: 'Entre para acompanhar os seus cuidados.',
-    lead: 'Acesso para famílias, cuidadores e equipa operacional.',
+    lead: 'Acesso para famílias e cuidadores.',
     email: 'Email',
     password: 'Palavra-passe',
     passwordPlaceholder: 'A sua palavra-passe',
@@ -19,7 +19,7 @@ const LOGIN_COPY = {
   'en-GB': {
     eyebrow: 'Sign in',
     title: 'Sign in to manage your care journey.',
-    lead: 'Access for families, caregivers and the operations team.',
+    lead: 'Access for families and caregivers.',
     email: 'Email',
     password: 'Password',
     passwordPlaceholder: 'Your password',

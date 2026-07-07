@@ -60,37 +60,37 @@
               @if (emailVerified()) {
                 <label class="account-upload" role="menuitem">
                   <input type="file" accept="image/*" (change)="onProfilePhotoChange($event)" />
-                  <span>{{ isUpdatingPhoto() ? 'A atualizar foto...' : 'Alterar foto de perfil' }}</span>
+                  <span>{{ isUpdatingPhoto() ? shellCopy().updatingPhoto : shellCopy().changeProfilePhoto }}</span>
                 </label>
                 @if (photoMessage()) {
                   <small class="account-feedback">{{ photoMessage() }}</small>
                 }
-                <button type="button" role="menuitem" (click)="goToPersonalData()">Meus dados pessoais</button>
+                <button type="button" role="menuitem" (click)="goToPersonalData()">{{ shellCopy().personalData }}</button>
                 <hr />
-                <p>Escolher perfil</p>
+                <p>{{ shellCopy().chooseProfile }}</p>
                 @if (hasCaregiverProfile()) {
                   <button type="button" role="menuitem" (click)="goToCaregiverDashboard()">
-                    Dashboard cuidador
+                    {{ shellCopy().caregiverDashboard }}
                     @if (caregiverStatus() === 'draft') {
-                      <small>editar cadastro</small>
+                      <small>{{ shellCopy().editRegistration }}</small>
                     }
                   </button>
                 }
                 @if (hasFamilyProfile()) {
-                  <button type="button" role="menuitem" (click)="goToFamilyDashboard()">Dashboard família</button>
+                  <button type="button" role="menuitem" (click)="goToFamilyDashboard()">{{ shellCopy().familyDashboard }}</button>
                 }
 
                 @if (!hasCaregiverProfile()) {
-                  <button type="button" role="menuitem" (click)="createCaregiverProfile()">Criar perfil de cuidador</button>
+                  <button type="button" role="menuitem" (click)="createCaregiverProfile()">{{ shellCopy().createCaregiverProfile }}</button>
                 }
                 @if (!hasFamilyProfile()) {
-                  <button type="button" role="menuitem" (click)="createFamilyProfile()">Criar perfil de família</button>
+                  <button type="button" role="menuitem" (click)="createFamilyProfile()">{{ shellCopy().createFamilyProfile }}</button>
                 }
 
                 <hr />
               }
 
-              <button type="button" role="menuitem" (click)="logout()">Sair</button>
+              <button type="button" role="menuitem" (click)="logout()">{{ shellCopy().logout }}</button>
             </div>
           }
         </div>

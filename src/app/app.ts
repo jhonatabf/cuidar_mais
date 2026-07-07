@@ -27,6 +27,21 @@ const SHELL_COPY = {
     footerText: 'Plataforma que liga famílias a cuidadores com segurança, respeito e carinho.',
     footerLinks: ['Sobre nós', 'Como funciona', 'Segurança', 'Blog', 'Contacto'],
     helpLinks: ['Perguntas frequentes', 'Termos', 'Política de privacidade'],
+    updatingPhoto: 'A atualizar foto...',
+    changeProfilePhoto: 'Alterar foto de perfil',
+    personalData: 'Meus dados pessoais',
+    chooseProfile: 'Escolher perfil',
+    caregiverDashboard: 'Dashboard cuidador',
+    familyDashboard: 'Dashboard família',
+    editRegistration: 'editar cadastro',
+    createCaregiverProfile: 'Criar perfil de cuidador',
+    createFamilyProfile: 'Criar perfil de família',
+    logout: 'Sair',
+    photoMustBeImage: 'A foto deve ser um ficheiro de imagem.',
+    photoMaxSize: 'A foto de perfil deve ter no máximo 5 MB.',
+    photoUpdated: 'Foto de perfil atualizada.',
+    photoUpdateFailed: 'Não foi possível atualizar a foto de perfil.',
+    userFallback: 'Utilizador',
     rights: 'Todos os direitos reservados.',
   },
   'en-GB': {
@@ -44,6 +59,21 @@ const SHELL_COPY = {
     footerText: 'A platform connecting families and caregivers with safety, respect and kindness.',
     footerLinks: ['About us', 'How it works', 'Safety', 'Blog', 'Contact'],
     helpLinks: ['Frequently asked questions', 'Terms', 'Privacy policy'],
+    updatingPhoto: 'Updating photo...',
+    changeProfilePhoto: 'Change profile photo',
+    personalData: 'My personal data',
+    chooseProfile: 'Choose profile',
+    caregiverDashboard: 'Caregiver dashboard',
+    familyDashboard: 'Family dashboard',
+    editRegistration: 'edit registration',
+    createCaregiverProfile: 'Create caregiver profile',
+    createFamilyProfile: 'Create family profile',
+    logout: 'Sign out',
+    photoMustBeImage: 'The photo must be an image file.',
+    photoMaxSize: 'The profile photo must be no larger than 5 MB.',
+    photoUpdated: 'Profile photo updated.',
+    photoUpdateFailed: 'The profile photo could not be updated.',
+    userFallback: 'User',
     rights: 'All rights reserved.',
   },
 } as const;
@@ -194,13 +224,13 @@ export class App implements OnInit, OnDestroy {
     }
 
     if (!file.type.startsWith('image/')) {
-      this.photoMessage.set('A foto deve ser um ficheiro de imagem.');
+      this.photoMessage.set(this.shellCopy().photoMustBeImage);
       input.value = '';
       return;
     }
 
     if (file.size > USER_PROFILE_PHOTO_MAX_FILE_BYTES) {
-      this.photoMessage.set('A foto de perfil deve ter no máximo 5 MB.');
+      this.photoMessage.set(this.shellCopy().photoMaxSize);
       input.value = '';
       return;
     }
@@ -210,9 +240,9 @@ export class App implements OnInit, OnDestroy {
       const upload = await this.buildUserProfilePhotoUpload(file);
       const profilePhoto = await this.auth.updateUserProfilePhoto(upload);
       this.avatarUrl.set(profilePhoto.downloadUrl);
-      this.photoMessage.set('Foto de perfil atualizada.');
+      this.photoMessage.set(this.shellCopy().photoUpdated);
     } catch (error) {
-      this.photoMessage.set(error instanceof Error ? error.message : 'Não foi possível atualizar a foto de perfil.');
+      this.photoMessage.set(error instanceof Error ? error.message : this.shellCopy().photoUpdateFailed);
     } finally {
       this.isUpdatingPhoto.set(false);
       input.value = '';
@@ -236,7 +266,7 @@ export class App implements OnInit, OnDestroy {
     const summary = await this.auth.getProfileSummary(user.uid);
     const userAvatarUrl = summary.account?.profilePhoto?.downloadUrl ?? '';
 
-    this.displayName.set(summary.account?.fullName || user.displayName || user.email || 'Utilizador');
+    this.displayName.set(summary.account?.fullName || user.displayName || user.email || this.shellCopy().userFallback);
     this.avatarUrl.set(userAvatarUrl || user.photoURL || '');
     this.hasCaregiverProfile.set(summary.hasCaregiver);
     this.hasFamilyProfile.set(summary.hasFamily);

@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   getCountries,
   getCountryCallingCode,
@@ -15,6 +15,7 @@ import {
   UserPrivateDocumentUpload,
 } from '../../core/services/auth';
 import { AppLocale, LocaleService } from '../../core/services/locale';
+import { TermsService, TermsType } from '../../core/services/terms';
 import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
 const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -27,6 +28,8 @@ const PERSONAL_DATA_COPY = {
     lead: 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
     account: 'Dados da conta', accountHelp: 'Informação base da sua conta na plataforma.', email: 'Email',
     acceptTerms: 'Aceito os', terms: 'Termos e Condições', acceptPrivacy: 'Aceito a', privacy: 'Política de Privacidade',
+    readAndAccept: 'Ler e aceitar', termsModalHelp: 'Leia o conteúdo até ao final para activar a aceitação.', acceptAfterReading: 'Aceitar após ler', loadingTerms: 'A carregar documento...', termsUnavailable: 'Não foi possível carregar o documento activo. Tente novamente.',
+    termsNotRead: 'É necessário abrir e ler os Termos e Condições até ao fim antes de aceitar.', privacyNotRead: 'É necessário abrir e ler a Política de Privacidade até ao fim antes de aceitar.',
     personal: 'Dados pessoais', personalHelp: 'Dados essenciais para identificação e contacto.',
     fullName: 'Nome completo', fullNamePlaceholder: 'Nome e apelido', birthDate: 'Data de nascimento', gender: 'Sexo', select: 'Selecionar',
     female: 'Feminino', male: 'Masculino', other: 'Outro', preferNot: 'Prefiro não indicar', nationality: 'Nacionalidade', nationalityPlaceholder: 'Portuguesa',
@@ -56,6 +59,8 @@ const PERSONAL_DATA_COPY = {
     lead: 'These details belong to the user and may be used for family and caregiver profiles.',
     account: 'Account details', accountHelp: 'Basic information about your account on the platform.', email: 'Email',
     acceptTerms: 'I accept the', terms: 'Terms and Conditions', acceptPrivacy: 'I accept the', privacy: 'Privacy Policy',
+    readAndAccept: 'Read and accept', termsModalHelp: 'Read the content to the end to enable acceptance.', acceptAfterReading: 'Accept after reading', loadingTerms: 'Loading document...', termsUnavailable: 'The active document could not be loaded. Please try again.',
+    termsNotRead: 'You must open and read the Terms and Conditions to the end before accepting.', privacyNotRead: 'You must open and read the Privacy Policy to the end before accepting.',
     personal: 'Personal details', personalHelp: 'Essential identification and contact details.',
     fullName: 'Full name', fullNamePlaceholder: 'First and last name', birthDate: 'Date of birth', gender: 'Gender', select: 'Select',
     female: 'Female', male: 'Male', other: 'Other', preferNot: 'Prefer not to say', nationality: 'Nationality', nationalityPlaceholder: 'Portuguese',
@@ -82,7 +87,6 @@ const PERSONAL_DATA_COPY = {
 
 @Component({
   selector: 'app-personal-data',
-  imports: [RouterLink],
   template: `
     <section class="page hero hero-compact personal-data-hero" [class.required-step]="isRequiredStep()">
       <div>
@@ -120,8 +124,14 @@ const PERSONAL_DATA_COPY = {
             <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
           </div>
           <div class="check-stack">
-            <label><input type="checkbox" name="acceptedTerms" required [checked]="account()?.acceptedTerms === true" /> {{ copy().acceptTerms }} <a routerLink="/termos">{{ copy().terms }}</a> <strong>*</strong></label>
-            <label><input type="checkbox" name="acceptedPrivacy" required [checked]="account()?.acceptedPrivacy === true" /> {{ copy().acceptPrivacy }} <a routerLink="/privacidade">{{ copy().privacy }}</a> <strong>*</strong></label>
+            <label>
+              <input type="checkbox" name="acceptedTerms" required [checked]="termsAccepted()" (click)="openTermsModal('termsAndConditions', $event)" />
+              <span>{{ copy().acceptTerms }} <button class="inline-link" type="button" (click)="openTermsModal('termsAndConditions', $event)">{{ copy().terms }}</button> <strong>*</strong></span>
+            </label>
+            <label>
+              <input type="checkbox" name="acceptedPrivacy" required [checked]="privacyAccepted()" (click)="openTermsModal('privacy', $event)" />
+              <span>{{ copy().acceptPrivacy }} <button class="inline-link" type="button" (click)="openTermsModal('privacy', $event)">{{ copy().privacy }}</button> <strong>*</strong></span>
+            </label>
           </div>
         </section>
 
@@ -273,6 +283,46 @@ const PERSONAL_DATA_COPY = {
         </button>
       </div>
     }
+
+    @if (termsModalOpen()) {
+      <div class="terms-modal-backdrop" role="presentation" (click)="closeTermsModal()">
+        <section
+          class="terms-modal"
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-label]="termsModalTitle()"
+          (click)="$event.stopPropagation()"
+        >
+          <header class="terms-modal__header">
+            <div>
+              <p class="eyebrow">{{ copy().readAndAccept }}</p>
+              <h2>{{ termsModalTitle() }}</h2>
+              <span>{{ copy().termsModalHelp }}</span>
+            </div>
+            <button type="button" [attr.aria-label]="copy().close" (click)="closeTermsModal()">
+              <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+          </header>
+
+          <div class="terms-modal__content" (scroll)="onTermsScroll($event)">
+            @if (isLoadingTerms()) {
+              <p class="terms-modal__state">{{ copy().loadingTerms }}</p>
+            } @else if (termsModalError()) {
+              <p class="terms-modal__state terms-modal__state--error">{{ termsModalError() }}</p>
+            } @else {
+              <div class="terms-markdown" [innerHTML]="termsModalHtml()"></div>
+            }
+          </div>
+
+          <footer class="terms-modal__footer">
+            <button class="button-secondary" type="button" (click)="closeTermsModal()">{{ copy().close }}</button>
+            <button class="button" type="button" [disabled]="!hasReadTermsToEnd() || !!termsModalError()" (click)="acceptCurrentTerms()">
+              {{ copy().acceptAfterReading }}
+            </button>
+          </footer>
+        </section>
+      </div>
+    }
   `,
   styleUrl: './personal-data.scss',
 })
@@ -281,6 +331,7 @@ export class PersonalDataComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly localeService = inject(LocaleService);
+  private readonly termsService = inject(TermsService);
 
   protected readonly account = signal<UserAccount | null>(null);
   protected readonly email = signal('');
@@ -293,6 +344,14 @@ export class PersonalDataComponent implements OnInit {
   protected readonly phoneCountry = signal<CountryCode>('PT');
   protected readonly nationalPhone = signal('');
   protected readonly documentType = signal('');
+  protected readonly termsAccepted = signal(false);
+  protected readonly privacyAccepted = signal(false);
+  protected readonly termsModalOpen = signal(false);
+  protected readonly activeTermsType = signal<TermsType | null>(null);
+  protected readonly termsModalHtml = signal('');
+  protected readonly termsModalError = signal('');
+  protected readonly isLoadingTerms = signal(false);
+  protected readonly hasReadTermsToEnd = signal(false);
   protected readonly phoneCountries = computed(() =>
     getCountries()
       .map((code) => ({
@@ -335,6 +394,12 @@ export class PersonalDataComponent implements OnInit {
       ? this.copy().leadRequired
       : this.copy().lead,
   );
+  protected readonly termsModalTitle = computed(() => {
+    const type = this.activeTermsType();
+    if (type === 'privacy') return this.copy().privacy;
+    if (type === 'termsAndConditions') return this.copy().terms;
+    return '';
+  });
 
   protected copy(): (typeof PERSONAL_DATA_COPY)[AppLocale] {
     return PERSONAL_DATA_COPY[this.localeService.locale()];
@@ -349,6 +414,8 @@ export class PersonalDataComponent implements OnInit {
 
     const account = await this.auth.getUserAccount(user.uid);
     this.account.set(account);
+    this.termsAccepted.set(account?.acceptedTerms === true);
+    this.privacyAccepted.set(account?.acceptedPrivacy === true);
     this.documentType.set(account?.private?.documentType ?? '');
     this.loadPhone(account);
   }
@@ -485,6 +552,57 @@ export class PersonalDataComponent implements OnInit {
     }
   }
 
+  protected async openTermsModal(type: TermsType, event?: Event): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.activeTermsType.set(type);
+    this.termsModalOpen.set(true);
+    this.termsModalHtml.set('');
+    this.termsModalError.set('');
+    this.hasReadTermsToEnd.set(false);
+    this.isLoadingTerms.set(true);
+
+    try {
+      const document = await this.termsService.getLatestActiveTerms(type);
+      if (!document) {
+        this.termsModalError.set(this.copy().termsUnavailable);
+        return;
+      }
+
+      const markdown = this.termsService.decodeContent(document.content);
+      this.termsModalHtml.set(this.termsService.markdownToHtml(markdown));
+      window.setTimeout(() => this.updateTermsReadState(), 0);
+    } catch {
+      this.termsModalError.set(this.copy().termsUnavailable);
+    } finally {
+      this.isLoadingTerms.set(false);
+    }
+  }
+
+  protected closeTermsModal(): void {
+    this.termsModalOpen.set(false);
+  }
+
+  protected onTermsScroll(event: Event): void {
+    this.updateTermsReadState(event.currentTarget as HTMLElement);
+  }
+
+  protected acceptCurrentTerms(): void {
+    if (!this.hasReadTermsToEnd()) {
+      return;
+    }
+
+    if (this.activeTermsType() === 'privacy') {
+      this.privacyAccepted.set(true);
+    }
+
+    if (this.activeTermsType() === 'termsAndConditions') {
+      this.termsAccepted.set(true);
+    }
+
+    this.closeTermsModal();
+  }
+
   private async buildPersonalData(formData: FormData): Promise<UserPersonalData> {
     const phoneCountry = this.textValue(formData, 'phoneCountry') as CountryCode;
     const phoneNational = this.textValue(formData, 'phone');
@@ -499,8 +617,8 @@ export class PersonalDataComponent implements OnInit {
       phoneCountry,
       phoneCallingCode: `+${getCountryCallingCode(phoneCountry)}`,
       phoneNational,
-      acceptedTerms: formData.has('acceptedTerms'),
-      acceptedPrivacy: formData.has('acceptedPrivacy'),
+      acceptedTerms: this.termsAccepted(),
+      acceptedPrivacy: this.privacyAccepted(),
       private: {
         nif: normalizePortugueseNif(this.textValue(formData, 'nif')),
         documentType: this.textValue(formData, 'documentType'),
@@ -538,6 +656,14 @@ export class PersonalDataComponent implements OnInit {
     ];
 
     for (const field of requiredFields) {
+      if (field.key === 'acceptedTerms' && !this.termsAccepted()) {
+        return copy.termsNotRead;
+      }
+
+      if (field.key === 'acceptedPrivacy' && !this.privacyAccepted()) {
+        return copy.privacyNotRead;
+      }
+
       if (field.type === 'checkbox' && !formData.has(field.key)) {
         return copy.required(field.label);
       }
@@ -789,5 +915,13 @@ export class PersonalDataComponent implements OnInit {
   private textValue(formData: FormData, key: string): string {
     const value = formData.get(key);
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private updateTermsReadState(element?: HTMLElement): void {
+    const container = element ?? document.querySelector<HTMLElement>('.terms-modal__content');
+    if (!container) return;
+
+    const reachedEnd = container.scrollTop + container.clientHeight >= container.scrollHeight - 8;
+    this.hasReadTermsToEnd.set(reachedEnd || container.scrollHeight <= container.clientHeight + 8);
   }
 }

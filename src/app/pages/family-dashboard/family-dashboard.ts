@@ -93,7 +93,10 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
                 <span>2</span>
                 <div>
                   <h2>Membros da família</h2>
-                  <p>Pode convidar outras pessoas por email para acompanhar o cadastro.</p>
+                  <p>
+                    Convide por email familiares que também poderão gerir os cuidados do idoso cadastrado.
+                    Ao aceitar o convite, essa pessoa ficará associada a esta família e terá esta etapa preenchida automaticamente.
+                  </p>
                 </div>
               </div>
               <div class="member-list">
@@ -170,10 +173,33 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
                 </div>
               </fieldset>
 
+              <label>
+                <span class="label-line">Outro cuidado necessário</span>
+                <textarea name="customCareService" maxlength="500" placeholder="Descreva algum cuidado necessário que não esteja na lista.">{{ fieldValue('careNeeds.customService') }}</textarea>
+              </label>
+
+              <fieldset>
+                <legend>Dias necessários <strong>*</strong></legend>
+                <div class="checkbox-grid compact">
+                  @for (day of weekDays; track day) {
+                    <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('careNeeds.weekDays', day)" /> {{ day }}</label>
+                  }
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Horários necessários <strong>*</strong></legend>
+                <div class="checkbox-grid compact">
+                  @for (period of periods; track period) {
+                    <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('careNeeds.periods', period)" /> {{ period }}</label>
+                  }
+                </div>
+              </fieldset>
+
               <div class="form-grid two-columns">
                 <label>
-                  <span class="label-line">Rotina ou frequência desejada <strong>*</strong></span>
-                  <textarea name="schedule" required maxlength="600" placeholder="Ex.: manhãs de segunda a sexta, apoio ao banho e refeições.">{{ fieldValue('careNeeds.schedule') }}</textarea>
+                  <span class="label-line">Rotina</span>
+                  <textarea name="schedule" maxlength="600" placeholder="Ex.: apoio ao banho, refeições, companhia ou medicação.">{{ fieldValue('careNeeds.schedule') }}</textarea>
                 </label>
                 <label>
                   <span class="label-line">Observações sobre saúde, autonomia ou preferências</span>
@@ -186,11 +212,11 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
               <div class="section-title">
                 <span>4</span>
                 <div>
-                  <h2>Orçamento e localização</h2>
+                  <h2>Orçamento</h2>
                   <p>O orçamento será usado apenas para o match automático.</p>
                 </div>
               </div>
-              <div class="form-grid three-columns">
+              <div class="form-grid two-columns">
                 <label>
                   <span class="label-line">Valor disponível (€) <strong>*</strong></span>
                   <input type="number" name="budgetAmount" required min="1" step="0.5" placeholder="Ex.: 15" [value]="fieldValue('budget.amount')" />
@@ -204,28 +230,6 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
                     }
                   </select>
                 </label>
-                <label>
-                  <span class="label-line">Código postal / CEP <strong>*</strong></span>
-                  <input name="postalCode" required placeholder="Ex.: 4000-000" [value]="fieldValue('location.postalCode') || account()?.private?.postalCode || ''" />
-                </label>
-              </div>
-              <div class="form-grid two-columns">
-                <label>
-                  <span class="label-line">Morada de referência</span>
-                  <input name="address" placeholder="Rua, número, complemento" [value]="fieldValue('location.address') || account()?.private?.address || ''" />
-                </label>
-                <label>
-                  <span class="label-line">Distrito</span>
-                  <input name="district" placeholder="Distrito" [value]="fieldValue('location.district') || account()?.location?.district || ''" />
-                </label>
-                <label>
-                  <span class="label-line">Concelho</span>
-                  <input name="county" placeholder="Concelho" [value]="fieldValue('location.county') || account()?.location?.county || ''" />
-                </label>
-                <label>
-                  <span class="label-line">Referência de localização</span>
-                  <input name="locationNotes" placeholder="Ex.: perto do metro, zona com estacionamento" [value]="fieldValue('location.notes')" />
-                </label>
               </div>
             </section>
 
@@ -233,8 +237,8 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
               <div class="section-title">
                 <span>5</span>
                 <div>
-                  <h2>Casa e contacto de emergência</h2>
-                  <p>Campos adicionais para tornar o match mais realista.</p>
+                  <h2>Casa e localização</h2>
+                  <p>Dados da casa onde os cuidados serão prestados, separados dos dados pessoais.</p>
                 </div>
               </div>
               <div class="form-grid two-columns">
@@ -247,30 +251,33 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
                     }
                   </select>
                 </label>
+              </div>
+
+              <label class="check-option">
+                <input type="checkbox" name="usePersonalLocation" [checked]="usePersonalLocation()" (change)="onUsePersonalLocationChange($event)" />
+                A localização da casa da família é a mesma localização do cadastro pessoal.
+              </label>
+
+              <div class="form-grid two-columns">
                 <label>
-                  <span class="label-line">Nome do contacto de emergência</span>
-                  <input name="emergencyName" placeholder="Nome completo" [value]="fieldValue('emergencyContact.name')" />
+                  <span class="label-line">Código postal / CEP <strong>*</strong></span>
+                  <input name="postalCode" required placeholder="Ex.: 4000-000" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('postalCode')" />
                 </label>
-                <fieldset class="emergency-phone-fieldset">
-                  <legend>Telefone do contacto de emergência</legend>
-                  <div class="emergency-phone-fields">
-                    <label>
-                      <span class="label-line">Indicativo</span>
-                      <select name="emergencyPhoneCountry" [value]="emergencyPhoneCountry()" (change)="onEmergencyPhoneCountryChange($event)">
-                        @for (country of countries; track country.code) {
-                          <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
-                        }
-                      </select>
-                    </label>
-                    <label>
-                      <span class="label-line">Telefone</span>
-                      <input name="emergencyPhone" inputmode="tel" placeholder="912 345 678" [value]="emergencyPhoneNational()" />
-                    </label>
-                  </div>
-                </fieldset>
                 <label>
-                  <span class="label-line">Relação do contacto de emergência</span>
-                  <input name="emergencyRelation" placeholder="Ex.: filha, irmão" [value]="fieldValue('emergencyContact.relation')" />
+                  <span class="label-line">Morada de referência</span>
+                  <input name="address" placeholder="Rua, número, complemento" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('address')" />
+                </label>
+                <label>
+                  <span class="label-line">Distrito</span>
+                  <input name="district" placeholder="Distrito" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('district')" />
+                </label>
+                <label>
+                  <span class="label-line">Concelho</span>
+                  <input name="county" placeholder="Concelho" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('county')" />
+                </label>
+                <label class="span-2">
+                  <span class="label-line">Referência de localização</span>
+                  <input name="locationNotes" placeholder="Ex.: perto do metro, zona com estacionamento" [value]="fieldValue('location.notes')" />
                 </label>
               </div>
 
@@ -297,6 +304,43 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
             <section class="form-section">
               <div class="section-title">
                 <span>6</span>
+                <div>
+                  <h2>Contacto de emergência</h2>
+                  <p>Contacto alternativo para situações relevantes sobre os cuidados.</p>
+                </div>
+              </div>
+              <div class="form-grid two-columns">
+                <label>
+                  <span class="label-line">Nome do contacto de emergência</span>
+                  <input name="emergencyName" placeholder="Nome completo" [value]="fieldValue('emergencyContact.name')" />
+                </label>
+                <label>
+                  <span class="label-line">Relação do contacto de emergência</span>
+                  <input name="emergencyRelation" placeholder="Ex.: filha, irmão" [value]="fieldValue('emergencyContact.relation')" />
+                </label>
+                <fieldset class="emergency-phone-fieldset span-2">
+                  <legend>Telefone do contacto de emergência</legend>
+                  <div class="emergency-phone-fields">
+                    <label>
+                      <span class="label-line">Indicativo</span>
+                      <select name="emergencyPhoneCountry" [value]="emergencyPhoneCountry()" (change)="onEmergencyPhoneCountryChange($event)">
+                        @for (country of countries; track country.code) {
+                          <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      <span class="label-line">Telefone</span>
+                      <input name="emergencyPhone" inputmode="tel" placeholder="912 345 678" [value]="emergencyPhoneNational()" />
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <div class="section-title">
+                <span>7</span>
                 <div>
                   <h2>Confirmação</h2>
                   <p>Após guardar, o cadastro fica disponível para análise administrativa.</p>
@@ -506,11 +550,22 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .span-2 {
+      grid-column: span 2;
+    }
+
     .label-line {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       align-items: center;
+    }
+
+    input[readonly] {
+      border-color: rgba(203, 213, 225, 0.9);
+      background: #f8fafc;
+      color: var(--color-disabled-text);
+      cursor: not-allowed;
     }
 
     textarea {
@@ -622,6 +677,10 @@ import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth'
         grid-template-columns: 1fr;
       }
 
+      .span-2 {
+        grid-column: auto;
+      }
+
       .checkbox-grid,
       .checkbox-grid.compact {
         grid-template-columns: 1fr;
@@ -641,6 +700,7 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly memberEntryIds = signal<string[]>(['member-1']);
   protected readonly emergencyPhoneCountry = signal<CountryCode>('PT');
   protected readonly emergencyPhoneNational = signal('');
+  protected readonly usePersonalLocation = signal(false);
 
   protected readonly countries = getCountries().map((code) => ({
     code,
@@ -651,18 +711,21 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly relationOptions = ['Filho/a', 'Cônjuge', 'Irmão/ã', 'Neto/a', 'Responsável legal', 'Outro'];
   protected readonly ageGroups = ['Menos de 18', '18 a 59', '60 a 74', '75 a 84', '85+'];
   protected readonly preferredCareTypes = ['Pontual', 'Recorrente semanal', 'Diário', 'Noite', '24 horas', 'Interno'];
+  protected readonly weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+  protected readonly periods = ['Manhã', 'Tarde', 'Noite'];
   protected readonly budgetPeriods = ['Por hora', 'Por turno', 'Por dia', 'Por semana', 'Por mês'];
   protected readonly careNeedOptions = [
     'Companhia',
     'Higiene pessoal',
     'Preparação de refeições',
-    'Medicação',
-    'Mobilidade',
-    'Acompanhamento médico',
-    'Cuidados pós-operatórios',
-    'Demência ou Alzheimer',
-    'Limpeza leve',
-    'Dormir na casa',
+    'Administração de medicação',
+    'Acompanhamento a consultas',
+    'Limpeza doméstica leve',
+    'Mobilidade reduzida',
+    'Acompanhamento noturno',
+    'Cuidados paliativos',
+    'Alzheimer',
+    'Demência',
   ];
   protected readonly homeTypes = ['Apartamento', 'Moradia', 'Quarto em residência', 'Lar familiar', 'Outro'];
   protected readonly accessibilityOptions = ['Elevador', 'Sem escadas', 'Cama articulada', 'Casa de banho adaptada', 'Cadeira de rodas', 'Acesso por transporte público'];
@@ -687,6 +750,10 @@ export class FamilyDashboardComponent implements OnInit {
 
   protected onEmergencyPhoneCountryChange(event: Event): void {
     this.emergencyPhoneCountry.set((event.target as HTMLSelectElement).value as CountryCode);
+  }
+
+  protected onUsePersonalLocationChange(event: Event): void {
+    this.usePersonalLocation.set((event.target as HTMLInputElement).checked);
   }
 
   protected editFamilyProfile(): void {
@@ -753,6 +820,18 @@ export class FamilyDashboardComponent implements OnInit {
     return typeof value === 'string' ? value : '';
   }
 
+  protected familyLocationValue(key: 'postalCode' | 'address' | 'district' | 'county'): string {
+    if (this.usePersonalLocation()) {
+      if (key === 'postalCode' || key === 'address') {
+        return this.account()?.private?.[key] ?? '';
+      }
+
+      return this.account()?.location?.[key] ?? '';
+    }
+
+    return this.fieldValue(`location.${key}`);
+  }
+
   protected booleanFieldValue(path: string): boolean {
     return this.rawFamilyValue(path) === true;
   }
@@ -812,6 +891,7 @@ export class FamilyDashboardComponent implements OnInit {
     this.account.set(account);
     this.syncMemberEntries(account);
     this.loadEmergencyPhone(account);
+    this.syncUsePersonalLocation(account);
     this.showFamilyForm.set(!account?.familyProfile?.completed || account.familyProfileStatus === 'draft');
     this.isLoading.set(false);
   }
@@ -819,6 +899,21 @@ export class FamilyDashboardComponent implements OnInit {
   private syncMemberEntries(account: UserAccount | null): void {
     const memberCount = Math.max(account?.familyProfile?.members?.length ?? 0, 1);
     this.memberEntryIds.set(Array.from({ length: memberCount }, (_, index) => `member-${index + 1}`));
+  }
+
+  private syncUsePersonalLocation(account: UserAccount | null): void {
+    const familyLocation = account?.familyProfile?.location;
+    if (!familyLocation) {
+      this.usePersonalLocation.set(false);
+      return;
+    }
+
+    this.usePersonalLocation.set(
+      (familyLocation.postalCode || '') === (account?.private?.postalCode || '') &&
+      (familyLocation.address || '') === (account?.private?.address || '') &&
+      (familyLocation.district || '') === (account?.location?.district || '') &&
+      (familyLocation.county || '') === (account?.location?.county || ''),
+    );
   }
 
   private buildFamilyRegistration(formData: FormData): FamilyRegistration {
@@ -844,6 +939,9 @@ export class FamilyDashboardComponent implements OnInit {
       },
       careNeeds: {
         services: this.formValues(formData, 'careServices'),
+        customService: this.formValue(formData, 'customCareService'),
+        weekDays: this.formValues(formData, 'weekDays'),
+        periods: this.formValues(formData, 'periods'),
         description: this.formValue(formData, 'careDescription'),
         schedule: this.formValue(formData, 'schedule'),
         preferredCareType: this.formValue(formData, 'preferredCareType'),
@@ -902,8 +1000,12 @@ export class FamilyDashboardComponent implements OnInit {
       return 'Selecione pelo menos um cuidado necessário.';
     }
 
-    if (!registration.careNeeds.schedule) {
-      return 'Informe a rotina ou frequência desejada.';
+    if (registration.careNeeds.weekDays.length === 0) {
+      return 'Selecione os dias em que os cuidados serão necessários.';
+    }
+
+    if (registration.careNeeds.periods.length === 0) {
+      return 'Selecione os horários em que os cuidados serão necessários.';
     }
 
     if (!registration.careNeeds.preferredCareType) {

@@ -140,6 +140,9 @@ export interface FamilyRegistration {
   };
   careNeeds: {
     services: string[];
+    customService: string;
+    weekDays: string[];
+    periods: string[];
     description: string;
     schedule: string;
     preferredCareType: string;

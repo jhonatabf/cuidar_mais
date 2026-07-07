@@ -447,6 +447,23 @@ select:focus {
   }
 }
 
+.terms-modal__decisions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.terms-modal__reject {
+  border-color: rgba(217, 119, 87, 0.46);
+  color: #873a28;
+}
+
+.terms-modal__reject:hover,
+.terms-modal__reject:focus-visible {
+  background: #fff4ef;
+}
+
 .terms-modal__state {
   margin: 0;
   color: var(--color-muted);
@@ -535,6 +552,11 @@ select:focus {
   .terms-modal__footer {
     align-items: stretch;
     flex-direction: column-reverse;
+  }
+
+  .terms-modal__decisions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .terms-modal__content {

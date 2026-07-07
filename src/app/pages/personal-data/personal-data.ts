@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   getCountries,
@@ -28,7 +28,7 @@ const PERSONAL_DATA_COPY = {
     lead: 'Estes dados pertencem ao utilizador e podem ser usados nos perfis de família e cuidador.',
     account: 'Dados da conta', accountHelp: 'Informação base da sua conta na plataforma.', email: 'Email',
     acceptTerms: 'Aceito os', terms: 'Termos e Condições', acceptPrivacy: 'Aceito a', privacy: 'Política de Privacidade',
-    readAndAccept: 'Ler e aceitar', termsModalHelp: 'Leia o conteúdo até ao final para activar a aceitação.', acceptAfterReading: 'Aceitar após ler', loadingTerms: 'A carregar documento...', termsUnavailable: 'Não foi possível carregar o documento activo. Tente novamente.',
+    readAndAccept: 'Ler e aceitar', termsModalHelp: 'Leia o conteúdo até ao final para activar a aceitação.', acceptAfterReading: 'Aceitar após ler', rejectTerms: 'Recusar', loadingTerms: 'A carregar documento...', termsUnavailable: 'Não foi possível carregar o documento activo. Tente novamente.',
     termsNotRead: 'É necessário abrir e ler os Termos e Condições até ao fim antes de aceitar.', privacyNotRead: 'É necessário abrir e ler a Política de Privacidade até ao fim antes de aceitar.',
     personal: 'Dados pessoais', personalHelp: 'Dados essenciais para identificação e contacto.',
     fullName: 'Nome completo', fullNamePlaceholder: 'Nome e apelido', birthDate: 'Data de nascimento', gender: 'Sexo', select: 'Selecionar',
@@ -59,7 +59,7 @@ const PERSONAL_DATA_COPY = {
     lead: 'These details belong to the user and may be used for family and caregiver profiles.',
     account: 'Account details', accountHelp: 'Basic information about your account on the platform.', email: 'Email',
     acceptTerms: 'I accept the', terms: 'Terms and Conditions', acceptPrivacy: 'I accept the', privacy: 'Privacy Policy',
-    readAndAccept: 'Read and accept', termsModalHelp: 'Read the content to the end to enable acceptance.', acceptAfterReading: 'Accept after reading', loadingTerms: 'Loading document...', termsUnavailable: 'The active document could not be loaded. Please try again.',
+    readAndAccept: 'Read and accept', termsModalHelp: 'Read the content to the end to enable acceptance.', acceptAfterReading: 'Accept after reading', rejectTerms: 'Reject', loadingTerms: 'Loading document...', termsUnavailable: 'The active document could not be loaded. Please try again.',
     termsNotRead: 'You must open and read the Terms and Conditions to the end before accepting.', privacyNotRead: 'You must open and read the Privacy Policy to the end before accepting.',
     personal: 'Personal details', personalHelp: 'Essential identification and contact details.',
     fullName: 'Full name', fullNamePlaceholder: 'First and last name', birthDate: 'Date of birth', gender: 'Gender', select: 'Select',
@@ -316,9 +316,12 @@ const PERSONAL_DATA_COPY = {
 
           <footer class="terms-modal__footer">
             <button class="button-secondary" type="button" (click)="closeTermsModal()">{{ copy().close }}</button>
-            <button class="button" type="button" [disabled]="!hasReadTermsToEnd() || !!termsModalError()" (click)="acceptCurrentTerms()">
-              {{ copy().acceptAfterReading }}
-            </button>
+            <div class="terms-modal__decisions">
+              <button class="button-secondary terms-modal__reject" type="button" (click)="rejectCurrentTerms()">{{ copy().rejectTerms }}</button>
+              <button class="button" type="button" [disabled]="!hasReadTermsToEnd() || !!termsModalError()" (click)="acceptCurrentTerms()">
+                {{ copy().acceptAfterReading }}
+              </button>
+            </div>
           </footer>
         </section>
       </div>
@@ -326,7 +329,7 @@ const PERSONAL_DATA_COPY = {
   `,
   styleUrl: './personal-data.scss',
 })
-export class PersonalDataComponent implements OnInit {
+export class PersonalDataComponent implements OnInit, OnDestroy {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -352,6 +355,13 @@ export class PersonalDataComponent implements OnInit {
   protected readonly termsModalError = signal('');
   protected readonly isLoadingTerms = signal(false);
   protected readonly hasReadTermsToEnd = signal(false);
+  private lockedScrollY = 0;
+  private readonly previousBodyStyle = {
+    position: '',
+    top: '',
+    width: '',
+    overflow: '',
+  };
   protected readonly phoneCountries = computed(() =>
     getCountries()
       .map((code) => ({
@@ -418,6 +428,10 @@ export class PersonalDataComponent implements OnInit {
     this.privacyAccepted.set(account?.acceptedPrivacy === true);
     this.documentType.set(account?.private?.documentType ?? '');
     this.loadPhone(account);
+  }
+
+  ngOnDestroy(): void {
+    this.unlockPageScroll();
   }
 
   protected closeSnackbar(): void {
@@ -555,6 +569,9 @@ export class PersonalDataComponent implements OnInit {
   protected async openTermsModal(type: TermsType, event?: Event): Promise<void> {
     event?.preventDefault();
     event?.stopPropagation();
+    if (!this.termsModalOpen()) {
+      this.lockPageScroll();
+    }
     this.activeTermsType.set(type);
     this.termsModalOpen.set(true);
     this.termsModalHtml.set('');
@@ -569,7 +586,12 @@ export class PersonalDataComponent implements OnInit {
         return;
       }
 
-      const markdown = this.termsService.decodeContent(document.content);
+      const locale = this.localeService.locale();
+      const markdown = this.termsService.applyDatePlaceholder(
+        this.termsService.contentForLocale(document.content, locale),
+        document.dateUpdate,
+        locale,
+      );
       this.termsModalHtml.set(this.termsService.markdownToHtml(markdown));
       window.setTimeout(() => this.updateTermsReadState(), 0);
     } catch {
@@ -581,6 +603,7 @@ export class PersonalDataComponent implements OnInit {
 
   protected closeTermsModal(): void {
     this.termsModalOpen.set(false);
+    this.unlockPageScroll();
   }
 
   protected onTermsScroll(event: Event): void {
@@ -598,6 +621,18 @@ export class PersonalDataComponent implements OnInit {
 
     if (this.activeTermsType() === 'termsAndConditions') {
       this.termsAccepted.set(true);
+    }
+
+    this.closeTermsModal();
+  }
+
+  protected rejectCurrentTerms(): void {
+    if (this.activeTermsType() === 'privacy') {
+      this.privacyAccepted.set(false);
+    }
+
+    if (this.activeTermsType() === 'termsAndConditions') {
+      this.termsAccepted.set(false);
     }
 
     this.closeTermsModal();
@@ -923,5 +958,29 @@ export class PersonalDataComponent implements OnInit {
 
     const reachedEnd = container.scrollTop + container.clientHeight >= container.scrollHeight - 8;
     this.hasReadTermsToEnd.set(reachedEnd || container.scrollHeight <= container.clientHeight + 8);
+  }
+
+  private lockPageScroll(): void {
+    this.lockedScrollY = window.scrollY;
+    this.previousBodyStyle.position = document.body.style.position;
+    this.previousBodyStyle.top = document.body.style.top;
+    this.previousBodyStyle.width = document.body.style.width;
+    this.previousBodyStyle.overflow = document.body.style.overflow;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${this.lockedScrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockPageScroll(): void {
+    if (document.body.style.position !== 'fixed') {
+      return;
+    }
+
+    document.body.style.position = this.previousBodyStyle.position;
+    document.body.style.top = this.previousBodyStyle.top;
+    document.body.style.width = this.previousBodyStyle.width;
+    document.body.style.overflow = this.previousBodyStyle.overflow;
+    window.scrollTo(0, this.lockedScrollY);
   }
 }

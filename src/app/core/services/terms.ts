@@ -2,14 +2,17 @@ import { Injectable } from '@angular/core';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
 import { firestoreDb } from '../firebase/firebase.config';
+import { AppLocale } from './locale';
 
 export type TermsType = 'privacy' | 'termsAndConditions';
+export type TermsContent = string | Partial<Record<'pt-pt' | 'en-gb' | AppLocale, string>>;
 
 export interface TermsDocument {
   id: string;
   type: TermsType;
-  content: string;
+  content: TermsContent;
   date: Date | null;
+  dateUpdate: Date | null;
   active: boolean;
 }
 
@@ -27,7 +30,32 @@ export class TermsService {
     return terms[0] ?? null;
   }
 
-  decodeContent(content: string): string {
+  contentForLocale(content: TermsContent, locale: AppLocale): string {
+    if (typeof content === 'string') {
+      return this.decodeContent(content);
+    }
+
+    const localeKey = locale.toLowerCase() as 'pt-pt' | 'en-gb';
+    const fallbackKey = locale === 'en-GB' ? 'pt-pt' : 'en-gb';
+    const encodedContent =
+      content[localeKey] ??
+      content[locale] ??
+      content[fallbackKey] ??
+      content[locale === 'en-GB' ? 'pt-PT' : 'en-GB'] ??
+      '';
+
+    return this.decodeContent(encodedContent);
+  }
+
+  applyDatePlaceholder(markdown: string, dateUpdate: Date | null, locale: AppLocale): string {
+    if (!dateUpdate) {
+      return markdown.replace(/\[Date\]/g, '');
+    }
+
+    return markdown.replace(/\[Date\]/g, this.formatDate(dateUpdate, locale));
+  }
+
+  private decodeContent(content: string): string {
     try {
       const binary = window.atob(content);
       const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -97,7 +125,7 @@ export class TermsService {
     if (
       !this.isTermsType(data['type']) ||
       (data['active'] !== true && data['ativo'] !== true) ||
-      typeof data['content'] !== 'string'
+      !this.isTermsContent(data['content'])
     ) {
       return null;
     }
@@ -108,11 +136,24 @@ export class TermsService {
       content: data['content'],
       active: true,
       date: this.toDate(data['date'] ?? data['data'] ?? data['effectiveDate'] ?? data['publishedAt'] ?? data['updatedAt']),
+      dateUpdate: this.toDate(data['dateUpdate']),
     };
   }
 
   private isTermsType(value: unknown): value is TermsType {
     return value === 'privacy' || value === 'termsAndConditions';
+  }
+
+  private isTermsContent(value: unknown): value is TermsContent {
+    if (typeof value === 'string') {
+      return true;
+    }
+
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      ['pt-pt', 'en-gb', 'pt-PT', 'en-GB'].some((key) => typeof (value as Record<string, unknown>)[key] === 'string')
+    );
   }
 
   private toDate(value: unknown): Date | null {
@@ -129,5 +170,13 @@ export class TermsService {
 
   private dateTime(date: Date | null): number {
     return date?.getTime() ?? 0;
+  }
+
+  private formatDate(date: Date, locale: AppLocale): string {
+    return new Intl.DateTimeFormat(locale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
   }
 }

@@ -91,7 +91,7 @@ export class LoginComponent {
 
       await this.router.navigateByUrl(redirectTo);
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'login'));
     } finally {
       this.isSubmitting.set(false);
     }

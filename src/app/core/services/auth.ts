@@ -248,6 +248,7 @@ export interface UserAccount {
 export type CaregiverProfileDocument = Record<string, unknown>;
 
 export type CaregiverApprovalStatus = 'pending' | 'analysing' | 'approved' | 'rejected';
+export type FirebaseErrorContext = 'login' | 'register' | 'read' | 'save' | 'upload' | 'admin' | 'email';
 
 export interface CaregiverApprovalSummary {
   approval: boolean;
@@ -996,30 +997,91 @@ export class Auth {
     }).format(date);
   }
 
-  getFirebaseErrorMessage(error: unknown): string {
+  getFirebaseErrorMessage(error: unknown, context?: FirebaseErrorContext): string {
     if (error instanceof FirebaseError) {
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          return 'Este email já está associado a uma conta.';
-        case 'auth/invalid-email':
-          return 'O email informado não é válido.';
-        case 'auth/weak-password':
-          return 'A palavra-passe deve ter pelo menos 6 caracteres.';
-        case 'auth/requires-recent-login':
-          return 'É necessário iniciar sessão para continuar.';
-        case 'auth/too-many-requests':
-          return 'Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.';
-        case 'deadline-exceeded':
-          return error.message || 'A operação demorou demasiado tempo. Verifique a ligação e tente novamente.';
-        case 'failed-precondition':
-          return error.message || 'Complete os seus dados pessoais antes de continuar.';
-        case 'permission-denied':
-          return error.message || 'Não foi possível gravar no Firestore. Verifique as regras de segurança.';
-        default:
-          return error.message;
-      }
+      return this.firebaseErrorMessages(context)[error.code] ?? this.fallbackFirebaseErrorMessage(error, context);
     }
 
-    return 'Não foi possível concluir o cadastro. Tente novamente.';
+    return this.fallbackContextMessage(context);
+  }
+
+  private firebaseErrorMessages(context?: FirebaseErrorContext): Record<string, string> {
+    return {
+      'auth/email-already-in-use': 'Este email já está associado a uma conta. Inicie sessão ou use outro email.',
+      'auth/invalid-email': 'O email informado não é válido. Verifique e tente novamente.',
+      'auth/weak-password': 'A palavra-passe deve ter pelo menos 6 caracteres.',
+      'auth/user-not-found': 'Não encontrámos uma conta com este email.',
+      'auth/wrong-password': 'A palavra-passe está incorreta.',
+      'auth/invalid-credential': 'Email ou palavra-passe incorretos. Verifique os dados e tente novamente.',
+      'auth/user-disabled': 'Esta conta está desativada. Contacte o suporte.',
+      'auth/too-many-requests': 'Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.',
+      'auth/requires-recent-login': 'Por segurança, inicie sessão novamente para continuar.',
+      'auth/network-request-failed': 'Não foi possível ligar ao serviço. Verifique a internet e tente novamente.',
+      'auth/unauthorized-domain': 'Este domínio não está autorizado para autenticação. Contacte o suporte.',
+      unauthenticated: 'A sua sessão expirou. Inicie sessão novamente.',
+      'permission-denied': this.permissionDeniedMessage(context),
+      'not-found': 'Não encontrámos a informação solicitada.',
+      'already-exists': 'Esta informação já existe. Verifique os dados e tente novamente.',
+      'failed-precondition': 'Ainda falta concluir uma etapa obrigatória antes de continuar.',
+      'invalid-argument': 'Alguns dados enviados não estão válidos. Reveja o formulário.',
+      'deadline-exceeded': 'A operação demorou demasiado tempo. Tente novamente.',
+      unavailable: 'O serviço está temporariamente indisponível. Tente novamente em instantes.',
+      'resource-exhausted': 'O serviço atingiu um limite temporário. Tente novamente mais tarde.',
+      cancelled: 'A operação foi cancelada. Tente novamente.',
+      aborted: 'Não foi possível concluir a operação. Tente novamente.',
+      'storage/unauthorized': 'Não tem permissão para enviar ou ver este ficheiro.',
+      'storage/unauthenticated': 'Inicie sessão novamente para enviar ficheiros.',
+      'storage/canceled': 'O envio do ficheiro foi cancelado.',
+      'storage/object-not-found': 'O ficheiro solicitado não foi encontrado.',
+      'storage/quota-exceeded': 'O limite de armazenamento foi atingido. Tente novamente mais tarde.',
+      'storage/retry-limit-exceeded': 'Não foi possível enviar o ficheiro após várias tentativas. Verifique a ligação.',
+      'storage/invalid-format': 'O formato do ficheiro não é aceite.',
+      'storage/unknown': 'Não foi possível processar o ficheiro. Tente novamente.',
+    };
+  }
+
+  private permissionDeniedMessage(context?: FirebaseErrorContext): string {
+    if (context === 'admin') {
+      return 'Não tem permissão para aceder a esta área.';
+    }
+    if (context === 'read') {
+      return 'Não foi possível carregar esta informação. Verifique se tem permissão e tente novamente.';
+    }
+    if (context === 'save') {
+      return 'Não foi possível guardar os dados. Verifique se tem permissão e tente novamente.';
+    }
+    if (context === 'upload') {
+      return 'Não tem permissão para enviar este ficheiro.';
+    }
+    return 'Não tem permissão para aceder ou alterar esta informação.';
+  }
+
+  private fallbackFirebaseErrorMessage(error: FirebaseError, context?: FirebaseErrorContext): string {
+    if (error.message && !error.message.includes('Firebase')) {
+      return error.message;
+    }
+
+    return this.fallbackContextMessage(context);
+  }
+
+  private fallbackContextMessage(context?: FirebaseErrorContext): string {
+    switch (context) {
+      case 'login':
+        return 'Não foi possível iniciar sessão. Verifique os dados e tente novamente.';
+      case 'register':
+        return 'Não foi possível criar a conta. Tente novamente.';
+      case 'read':
+        return 'Não foi possível carregar a informação. Tente novamente.';
+      case 'save':
+        return 'Não foi possível guardar os dados. Tente novamente.';
+      case 'upload':
+        return 'Não foi possível enviar o ficheiro. Tente novamente.';
+      case 'admin':
+        return 'Não foi possível concluir a operação administrativa. Tente novamente.';
+      case 'email':
+        return 'Não foi possível validar o email. Tente novamente.';
+      default:
+        return 'Não foi possível concluir a operação. Tente novamente.';
+    }
   }
 }

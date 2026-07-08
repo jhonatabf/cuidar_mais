@@ -490,7 +490,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
 
       this.successMessage.set(this.copy().saved);
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'save'));
     } finally {
       this.isSubmitting.set(false);
     }

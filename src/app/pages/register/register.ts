@@ -163,7 +163,7 @@ export class RegisterComponent {
         queryParams: { redirectTo: this.redirectTo() || fallback },
       });
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'register'));
     } finally {
       this.isSubmitting.set(false);
     }

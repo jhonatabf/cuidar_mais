@@ -135,7 +135,7 @@ export class EmailVerificationComponent implements OnInit {
 
       await this.router.navigateByUrl(await this.nextRouteAfterVerification());
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'email'));
     } finally {
       this.isChecking.set(false);
     }
@@ -150,7 +150,7 @@ export class EmailVerificationComponent implements OnInit {
       await this.auth.sendCurrentUserEmailVerification();
       this.message.set(`${this.copy().resent} ${this.email() || this.copy().fallbackAccountEmail}.`);
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'email'));
     } finally {
       this.isSending.set(false);
     }

@@ -21,10 +21,17 @@ export interface TermsDocument {
 })
 export class TermsService {
   async getLatestActiveTerms(type: TermsType): Promise<TermsDocument | null> {
-    const snapshot = await getDocs(query(collection(firestoreDb, 'terms'), where('type', '==', type)));
-    const terms = snapshot.docs
+    const [activeSnapshot, ativoSnapshot] = await Promise.all([
+      getDocs(query(collection(firestoreDb, 'terms'), where('type', '==', type), where('active', '==', true))),
+      getDocs(query(collection(firestoreDb, 'terms'), where('type', '==', type), where('ativo', '==', true))),
+    ]);
+    const termsById = new Map(
+      [...activeSnapshot.docs, ...ativoSnapshot.docs]
       .map((document) => this.toTermsDocument(document.id, document.data()))
       .filter((document): document is TermsDocument => !!document)
+      .map((document) => [document.id, document]),
+    );
+    const terms = [...termsById.values()]
       .sort((first, second) => this.dateTime(second.date) - this.dateTime(first.date));
 
     return terms[0] ?? null;

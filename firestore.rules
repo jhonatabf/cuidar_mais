@@ -62,6 +62,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /terms/{termId} {
+      allow read: if resource.data.active == true || resource.data.ativo == true;
+      allow create, update, delete: if canManageAdmins();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

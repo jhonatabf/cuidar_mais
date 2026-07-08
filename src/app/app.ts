@@ -242,7 +242,7 @@ export class App implements OnInit, OnDestroy {
       this.avatarUrl.set(profilePhoto.downloadUrl);
       this.photoMessage.set(this.shellCopy().photoUpdated);
     } catch (error) {
-      this.photoMessage.set(error instanceof Error ? error.message : this.shellCopy().photoUpdateFailed);
+      this.photoMessage.set(this.auth.getFirebaseErrorMessage(error, 'upload'));
     } finally {
       this.isUpdatingPhoto.set(false);
       input.value = '';

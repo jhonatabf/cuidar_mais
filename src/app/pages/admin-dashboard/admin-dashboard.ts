@@ -211,7 +211,7 @@ export class AdminDashboardComponent implements OnInit {
         this.adminProfiles.set(await this.admin.listAdminProfiles());
       }
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'admin'));
     }
   }
 
@@ -243,7 +243,7 @@ export class AdminDashboardComponent implements OnInit {
       this.message.set('Perfil administrativo guardado.');
       await this.loadData();
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'admin'));
     }
   }
 

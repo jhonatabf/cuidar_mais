@@ -533,7 +533,7 @@ export class AdminReviewDetailComponent implements OnInit {
     try {
       this.item.set(await this.admin.getReviewItem(this.reviewType(), this.reviewId()));
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'admin'));
     }
   }
 
@@ -544,7 +544,7 @@ export class AdminReviewDetailComponent implements OnInit {
       await action();
       await this.loadItem();
     } catch (error) {
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'admin'));
     }
   }
 

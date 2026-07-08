@@ -541,7 +541,7 @@ export class BecomeCaregiverComponent implements OnInit {
       this.successMessage = this.copy().submitted;
       await this.router.navigateByUrl('/dashboard/cuidador');
     } catch (error) {
-      this.errorMessage = this.authService.getFirebaseErrorMessage(error);
+      this.errorMessage = this.authService.getFirebaseErrorMessage(error, 'save');
     } finally {
       this.isSubmitting = false;
     }

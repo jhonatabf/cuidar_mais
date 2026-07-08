@@ -120,7 +120,7 @@ export class AdminLoginComponent implements OnInit {
       await this.router.navigateByUrl(this.redirectTo());
     } catch (error) {
       await this.auth.signOut().catch(() => undefined);
-      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error));
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'admin'));
     } finally {
       this.isSubmitting.set(false);
     }

@@ -563,6 +563,45 @@ export class Auth {
     return uid;
   }
 
+  async inviteFamilyMember(member: FamilyRegistration['members'][number]): Promise<void> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão para convidar familiares.');
+    }
+
+    const account = await this.getUserAccount(user.uid);
+    if (!account?.familyProfile) {
+      throw new FirebaseError(
+        'failed-precondition',
+        'Complete o cadastro da família antes de convidar familiares.',
+      );
+    }
+
+    const members = account.familyProfile.members ?? [];
+    const alreadyInvited = members.some(
+      (existingMember) => existingMember.email.toLowerCase() === member.email.toLowerCase(),
+    );
+
+    if (alreadyInvited) {
+      throw new FirebaseError('already-exists', 'Este email já está associado a esta família.');
+    }
+
+    await this.withTimeout(
+      setDoc(
+        doc(firestoreDb, 'users', user.uid),
+        {
+          familyProfile: {
+            ...account.familyProfile,
+            members: [...members, member],
+          },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+      'Não foi possível enviar o convite. Verifique a ligação e tente novamente.',
+    );
+  }
+
   async getPostLoginRedirect(uid: string): Promise<string> {
     const [account, caregiverStatus] = await Promise.all([
       this.getUserAccount(uid),
@@ -815,6 +854,7 @@ export class Auth {
 
   getMissingPersonalDataFields(account: UserAccount | null): string[] {
     const documents = account?.private?.documents ?? {};
+    const isFamilyAccount = account?.roles?.family === true || account?.role === 'family';
     const fields = [
       { value: account?.fullName, label: 'Nome completo' },
       { value: account?.birthDate, label: 'Data de nascimento' },
@@ -827,17 +867,26 @@ export class Auth {
       { value: account?.private?.documentType, label: 'Tipo de documento' },
       { value: account?.private?.idDocument, label: 'Documento de identificação' },
       { value: account?.private?.postalCode, label: 'Código Postal' },
-      { value: account?.private?.criminalRecordNoPending, label: 'Declaração de inexistência de pendência criminal' },
       { value: documents.identityFront?.storagePath, label: 'Foto da frente do documento' },
       {
         value: account?.private?.documentType === 'Passaporte' ? true : documents.identityBack?.storagePath,
         label: 'Foto do verso do documento',
       },
-      { value: documents.addressProof?.storagePath, label: 'Foto do comprovativo de morada' },
-      { value: documents.criminalRecordCertificate?.storagePath, label: 'Foto do atestado de criminalidade' },
       { value: account?.location?.district, label: 'Distrito' },
       { value: account?.location?.county, label: 'Concelho' },
     ];
+
+    if (!isFamilyAccount) {
+      fields.splice(
+        11,
+        0,
+        { value: account?.private?.criminalRecordNoPending, label: 'Declaração de inexistência de pendência criminal' },
+      );
+      fields.push(
+        { value: documents.addressProof?.storagePath, label: 'Foto do comprovativo de morada' },
+        { value: documents.criminalRecordCertificate?.storagePath, label: 'Foto do atestado de criminalidade' },
+      );
+    }
 
     return fields
       .filter((field) => field.value !== true && (typeof field.value !== 'string' || !field.value.trim()))

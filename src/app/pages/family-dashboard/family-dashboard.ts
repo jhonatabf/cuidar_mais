@@ -101,6 +101,18 @@ const FAMILY_COPY = {
     caregiverMessages: 'Mensagens de cuidadores',
     interestedCaregivers: 'Cuidadores interessados',
     inviteFamilyMember: 'Convidar familiar',
+    inviteFamilyTitle: 'Convidar familiar',
+    inviteFamilyText: 'Envie um convite para associar este email à família. Depois de aceitar, esta pessoa poderá gerir os cuidados do utente cadastrado.',
+    inviteFamilySuccess: 'Convite registado para o familiar.',
+    inviteFamilyEmail: 'Email do familiar',
+    inviteFamilyEmailPlaceholder: 'nome@email.com',
+    inviteFamilyHint: 'Use o email que o familiar irá utilizar para iniciar sessão.',
+    inviteFamilyEmailError: 'Informe um email válido para enviar o convite.',
+    inviteFamilyName: 'Nome do familiar',
+    inviteFamilyNamePlaceholder: 'Nome completo',
+    inviteFamilyRelation: 'Relação com o utente',
+    inviteFamilyRelationPlaceholder: 'Ex.: filha, irmão',
+    sendInvite: 'Enviar convite',
     updatePersonalData: 'Atualizar dados pessoais',
     messages: 'Mensagens',
     payments: 'Pagamentos',
@@ -230,6 +242,18 @@ const FAMILY_COPY = {
     caregiverMessages: 'Caregiver messages',
     interestedCaregivers: 'Interested caregivers',
     inviteFamilyMember: 'Invite family member',
+    inviteFamilyTitle: 'Invite family member',
+    inviteFamilyText: 'Send an invitation to associate this email with the family. After accepting, this person will be able to manage care for the registered care recipient.',
+    inviteFamilySuccess: 'Family invitation registered.',
+    inviteFamilyEmail: 'Family member email',
+    inviteFamilyEmailPlaceholder: 'name@email.com',
+    inviteFamilyHint: 'Use the email address the family member will use to sign in.',
+    inviteFamilyEmailError: 'Enter a valid email address to send the invitation.',
+    inviteFamilyName: 'Family member name',
+    inviteFamilyNamePlaceholder: 'Full name',
+    inviteFamilyRelation: 'Relationship to the care recipient',
+    inviteFamilyRelationPlaceholder: 'E.g. daughter, brother',
+    sendInvite: 'Send invitation',
     updatePersonalData: 'Update personal details',
     messages: 'Messages',
     payments: 'Payments',
@@ -387,7 +411,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
                   <select name="relationToCareRecipient" required [value]="fieldValue('relationToCareRecipient')">
                     <option value="">{{ copy().select }}</option>
                     @for (relation of relationOptions; track relation) {
-                      <option [value]="relation">{{ optionLabel(relation) }}</option>
+                      <option [value]="relation" [selected]="fieldValue('relationToCareRecipient') === relation">{{ optionLabel(relation) }}</option>
                     }
                   </select>
                 </label>
@@ -452,7 +476,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
                   <select name="preferredCareType" required [value]="fieldValue('careNeeds.preferredCareType')">
                     <option value="">{{ copy().select }}</option>
                     @for (careType of preferredCareTypes; track careType) {
-                      <option [value]="careType">{{ optionLabel(careType) }}</option>
+                      <option [value]="careType" [selected]="fieldValue('careNeeds.preferredCareType') === careType">{{ optionLabel(careType) }}</option>
                     }
                   </select>
                 </label>
@@ -529,7 +553,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
                   <select name="budgetPeriod" required [value]="fieldValue('budget.period')">
                     <option value="">{{ copy().select }}</option>
                     @for (period of budgetPeriods; track period) {
-                      <option [value]="period">{{ optionLabel(period) }}</option>
+                      <option [value]="period" [selected]="fieldValue('budget.period') === period">{{ optionLabel(period) }}</option>
                     }
                   </select>
                 </label>
@@ -681,7 +705,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       <section class="page family-dashboard-page">
         <div class="dashboard-shell">
           <aside class="card dashboard-nav" [attr.aria-label]="copy().dashboardEyebrow">
-            <button class="is-active" type="button" aria-current="page">
+            <button [class.is-active]="!isDashboardEditMode()" type="button" [attr.aria-current]="!isDashboardEditMode() ? 'page' : null" (click)="showOverview()">
               <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
               <span>{{ copy().overview }}</span>
             </button>
@@ -693,11 +717,11 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
               <span class="material-symbols-rounded" aria-hidden="true">volunteer_activism</span>
               <span>{{ copy().interestedCaregivers }}</span>
             </button>
-            <button type="button" (click)="editFamilyProfile()">
+            <button type="button" (click)="openFamilyInvite()">
               <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
               <span>{{ copy().inviteFamilyMember }}</span>
             </button>
-            <button type="button" (click)="editFamilyProfile()">
+            <button type="button" [class.is-active]="isDashboardEditMode()" [attr.aria-current]="isDashboardEditMode() ? 'page' : null" (click)="editFamilyProfile()">
               <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
               <span>{{ copy().updateRegistration }}</span>
             </button>
@@ -707,23 +731,338 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
             </a>
           </aside>
           <div class="grid">
-            <div class="grid grid-3">
-              <article class="card card-body"><span class="badge">{{ copy().active }}</span><h3>{{ copy().weeklyPlan }}</h3><p class="muted">{{ copy().scheduledVisits }}</p></article>
-              <article class="card card-body"><span class="badge">{{ copy().today }}</span><h3>{{ copy().nextVisit }}</h3><p class="muted">Ana Silva, 15:00</p></article>
-              <article class="card card-body"><span class="badge">{{ copy().pending }}</span><h3>{{ copy().messages }}</h3><p class="muted">{{ copy().unansweredMessages }}</p></article>
-            </div>
-            <div class="table-like">
-              @for (visit of visits; track visit.time) {
-                <article>
-                  <strong>{{ visit.person }}</strong>
-                  <span class="muted">{{ visit.task }}</span>
-                  <span class="badge">{{ visit.time }}</span>
+            @if (isDashboardEditMode()) {
+              @if (!isResponsibleAdult()) {
+                <article class="card card-body blocked-card">
+                  <span class="badge">{{ copy().blocked }}</span>
+                  <h2>{{ copy().adultRequiredTitle }}</h2>
+                  <p class="muted">{{ copy().adultRequiredText }}</p>
                 </article>
+              } @else {
+                <form class="family-form form-grid dashboard-edit-form" [class.show-validation-errors]="hasSubmitted()" novalidate (submit)="onSubmit($event)">
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>1</span>
+                      <div>
+                        <h2>{{ copy().familyIdentification }}</h2>
+                        <p>{{ copy().familyIdentificationHelp }}</p>
+                      </div>
+                    </div>
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().householdName }} <strong>*</strong></span>
+                        <input name="householdName" required [placeholder]="copy().householdPlaceholder" [value]="fieldValue('householdName')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().relationToRecipient }} <strong>*</strong></span>
+                        <select name="relationToCareRecipient" required [value]="fieldValue('relationToCareRecipient')">
+                          <option value="">{{ copy().select }}</option>
+                          @for (relation of relationOptions; track relation) {
+                            <option [value]="relation" [selected]="fieldValue('relationToCareRecipient') === relation">{{ optionLabel(relation) }}</option>
+                          }
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>2</span>
+                      <div>
+                        <h2>{{ copy().recipientsAndCare }}</h2>
+                        <p>{{ copy().recipientsAndCareHelp }}</p>
+                      </div>
+                    </div>
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().recipientCount }} <strong>*</strong></span>
+                        <input type="number" name="careRecipientsCount" required min="1" max="10" [value]="fieldValue('careRecipients.count')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().preferredCareType }} <strong>*</strong></span>
+                        <select name="preferredCareType" required [value]="fieldValue('careNeeds.preferredCareType')">
+                          <option value="">{{ copy().select }}</option>
+                          @for (careType of preferredCareTypes; track careType) {
+                            <option [value]="careType" [selected]="fieldValue('careNeeds.preferredCareType') === careType">{{ optionLabel(careType) }}</option>
+                          }
+                        </select>
+                      </label>
+                    </div>
+
+                    <fieldset>
+                      <legend>{{ copy().ageGroups }} <strong>*</strong></legend>
+                      <div class="checkbox-grid compact">
+                        @for (ageGroup of ageGroups; track ageGroup) {
+                          <label><input type="checkbox" name="ageGroups" [value]="ageGroup" [checked]="isChecked('careRecipients.ageGroups', ageGroup)" /> {{ optionLabel(ageGroup) }}</label>
+                        }
+                      </div>
+                    </fieldset>
+
+                    <fieldset>
+                      <legend>{{ copy().careServices }} <strong>*</strong></legend>
+                      <div class="checkbox-grid">
+                        @for (service of careNeedOptions; track service) {
+                          <label><input type="checkbox" name="careServices" [value]="service" [checked]="isChecked('careNeeds.services', service)" /> {{ optionLabel(service) }}</label>
+                        }
+                      </div>
+                    </fieldset>
+
+                    <label>
+                      <span class="label-line">{{ copy().customCare }}</span>
+                      <textarea name="customCareService" maxlength="500" [placeholder]="copy().customCarePlaceholder">{{ fieldValue('careNeeds.customService') }}</textarea>
+                    </label>
+
+                    <fieldset>
+                      <legend>{{ copy().requiredDays }} <strong>*</strong></legend>
+                      <div class="checkbox-grid compact">
+                        @for (day of weekDays; track day) {
+                          <label><input type="checkbox" name="weekDays" [value]="day" [checked]="isChecked('careNeeds.weekDays', day)" /> {{ optionLabel(day) }}</label>
+                        }
+                      </div>
+                    </fieldset>
+
+                    <fieldset>
+                      <legend>{{ copy().requiredPeriods }} <strong>*</strong></legend>
+                      <div class="checkbox-grid compact">
+                        @for (period of periods; track period) {
+                          <label><input type="checkbox" name="periods" [value]="period" [checked]="isChecked('careNeeds.periods', period)" /> {{ optionLabel(period) }}</label>
+                        }
+                      </div>
+                    </fieldset>
+
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().routine }}</span>
+                        <textarea name="schedule" maxlength="600" [placeholder]="copy().routinePlaceholder">{{ fieldValue('careNeeds.schedule') }}</textarea>
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().careNotes }}</span>
+                        <textarea name="careDescription" maxlength="800" [placeholder]="copy().careNotesPlaceholder">{{ fieldValue('careNeeds.description') }}</textarea>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>3</span>
+                      <div>
+                        <h2>{{ copy().budget }}</h2>
+                        <p>{{ copy().budgetHelp }}</p>
+                      </div>
+                    </div>
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().availableValue }} <strong>*</strong></span>
+                        <input type="number" name="budgetAmount" required min="1" step="0.5" [placeholder]="copy().valuePlaceholder" [value]="fieldValue('budget.amount')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().budgetPeriod }} <strong>*</strong></span>
+                        <select name="budgetPeriod" required [value]="fieldValue('budget.period')">
+                          <option value="">{{ copy().select }}</option>
+                          @for (period of budgetPeriods; track period) {
+                            <option [value]="period" [selected]="fieldValue('budget.period') === period">{{ optionLabel(period) }}</option>
+                          }
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>4</span>
+                      <div>
+                        <h2>{{ copy().homeLocation }}</h2>
+                        <p>{{ copy().homeLocationHelp }}</p>
+                      </div>
+                    </div>
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().homeType }}</span>
+                        <select name="homeType" [value]="fieldValue('home.type')">
+                          <option value="">{{ copy().select }}</option>
+                          @for (homeType of homeTypes; track homeType) {
+                            <option [value]="homeType">{{ optionLabel(homeType) }}</option>
+                          }
+                        </select>
+                      </label>
+                    </div>
+
+                    <label class="check-option">
+                      <input type="checkbox" name="usePersonalLocation" [checked]="usePersonalLocation()" (change)="onUsePersonalLocationChange($event)" />
+                      {{ copy().samePersonalLocation }}
+                    </label>
+
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().postalCode }} <strong>*</strong></span>
+                        <input name="postalCode" required [placeholder]="copy().postalCodePlaceholder" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('postalCode')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().address }}</span>
+                        <input name="address" [placeholder]="copy().addressPlaceholder" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('address')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().district }}</span>
+                        <input name="district" [placeholder]="copy().district" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('district')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().county }}</span>
+                        <input name="county" [placeholder]="copy().county" [readOnly]="usePersonalLocation()" [attr.aria-readonly]="usePersonalLocation()" [value]="familyLocationValue('county')" />
+                      </label>
+                      <label class="span-2">
+                        <span class="label-line">{{ copy().locationReference }}</span>
+                        <input name="locationNotes" [placeholder]="copy().locationReferencePlaceholder" [value]="fieldValue('location.notes')" />
+                      </label>
+                    </div>
+
+                    <fieldset>
+                      <legend>{{ copy().homeAccessibility }}</legend>
+                      <div class="checkbox-grid compact">
+                        @for (item of accessibilityOptions; track item) {
+                          <label><input type="checkbox" name="accessibility" [value]="item" [checked]="isChecked('home.accessibility', item)" /> {{ optionLabel(item) }}</label>
+                        }
+                      </div>
+                    </fieldset>
+
+                    <label class="check-option">
+                      <input type="checkbox" name="pets" [checked]="booleanFieldValue('home.pets')" />
+                      {{ copy().pets }}
+                    </label>
+
+                    <label>
+                      <span class="label-line">{{ copy().homeNotes }}</span>
+                      <textarea name="homeNotes" maxlength="600" [placeholder]="copy().homeNotesPlaceholder">{{ fieldValue('home.notes') }}</textarea>
+                    </label>
+                  </section>
+
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>5</span>
+                      <div>
+                        <h2>{{ copy().emergencyContact }}</h2>
+                        <p>{{ copy().emergencyContactHelp }}</p>
+                      </div>
+                    </div>
+                    <div class="form-grid two-columns">
+                      <label>
+                        <span class="label-line">{{ copy().emergencyName }}</span>
+                        <input name="emergencyName" [placeholder]="copy().fullNamePlaceholder" [value]="fieldValue('emergencyContact.name')" />
+                      </label>
+                      <label>
+                        <span class="label-line">{{ copy().emergencyRelation }}</span>
+                        <input name="emergencyRelation" [placeholder]="copy().emergencyRelationPlaceholder" [value]="fieldValue('emergencyContact.relation')" />
+                      </label>
+                      <fieldset class="emergency-phone-fieldset span-2">
+                        <legend>{{ copy().emergencyPhone }}</legend>
+                        <div class="emergency-phone-fields">
+                          <label>
+                            <span class="label-line">{{ copy().callingCode }}</span>
+                            <select name="emergencyPhoneCountry" [value]="emergencyPhoneCountry()" (change)="onEmergencyPhoneCountryChange($event)">
+                              @for (country of countries(); track country.code) {
+                                <option [value]="country.code">{{ country.name }} (+{{ country.callingCode }})</option>
+                              }
+                            </select>
+                          </label>
+                          <label>
+                            <span class="label-line">{{ copy().phone }}</span>
+                            <input name="emergencyPhone" inputmode="tel" placeholder="912 345 678" [value]="emergencyPhoneNational()" />
+                          </label>
+                        </div>
+                      </fieldset>
+                    </div>
+                  </section>
+
+                  <section class="form-section">
+                    <div class="section-title">
+                      <span>6</span>
+                      <div>
+                        <h2>{{ copy().confirmation }}</h2>
+                        <p>{{ copy().confirmationHelp }}</p>
+                      </div>
+                    </div>
+                    <label class="check-option">
+                      <input type="checkbox" name="automaticMatchConsent" required [checked]="booleanFieldValue('automaticMatchConsent')" />
+                      {{ copy().automaticMatchConsent }}
+                    </label>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-danger" (click)="cancelEdit()">{{ copy().cancel }}</button>
+                      <button class="button" type="submit" [disabled]="isSubmitting()">
+                        {{ isSubmitting() ? copy().saving : copy().save }}
+                      </button>
+                    </div>
+                  </section>
+                </form>
               }
-            </div>
+            } @else {
+              <div class="grid grid-3">
+                <article class="card card-body"><span class="badge">{{ copy().active }}</span><h3>{{ copy().weeklyPlan }}</h3><p class="muted">{{ copy().scheduledVisits }}</p></article>
+                <article class="card card-body"><span class="badge">{{ copy().today }}</span><h3>{{ copy().nextVisit }}</h3><p class="muted">Ana Silva, 15:00</p></article>
+                <article class="card card-body"><span class="badge">{{ copy().pending }}</span><h3>{{ copy().messages }}</h3><p class="muted">{{ copy().unansweredMessages }}</p></article>
+              </div>
+              <div class="table-like">
+                @for (visit of visits; track visit.time) {
+                  <article>
+                    <strong>{{ visit.person }}</strong>
+                    <span class="muted">{{ visit.task }}</span>
+                    <span class="badge">{{ visit.time }}</span>
+                  </article>
+                }
+              </div>
+            }
           </div>
         </div>
       </section>
+    }
+
+    @if (isInviteModalOpen()) {
+      <div class="modal-backdrop" (click)="closeFamilyInvite()">
+        <section class="invite-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'family-invite-title'" (click)="$event.stopPropagation()">
+          <div class="invite-modal__header">
+            <div>
+              <p class="eyebrow">{{ copy().inviteFamilyMember }}</p>
+              <h2 id="family-invite-title">{{ copy().inviteFamilyTitle }}</h2>
+            </div>
+            <button class="icon-button" type="button" [attr.aria-label]="copy().close" (click)="closeFamilyInvite()">
+              <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+          </div>
+          <p class="muted">{{ copy().inviteFamilyText }}</p>
+          <form class="form-grid invite-form" [class.show-validation-errors]="inviteSubmitted()" novalidate (submit)="onInviteFamilySubmit($event)">
+            <label>
+              <span class="label-line">{{ copy().inviteFamilyEmail }} <strong>*</strong></span>
+              <input
+                name="inviteEmail"
+                type="email"
+                required
+                [class.field-invalid]="inviteEmailError()"
+                [attr.aria-invalid]="inviteEmailError() ? 'true' : null"
+                [attr.aria-describedby]="inviteEmailError() ? 'invite-email-error' : 'invite-email-hint'"
+                [placeholder]="copy().inviteFamilyEmailPlaceholder"
+                (input)="clearInviteEmailError()"
+              />
+              @if (inviteEmailError()) {
+                <span id="invite-email-error" class="field-error">{{ inviteEmailError() }}</span>
+              } @else {
+                <small id="invite-email-hint">{{ copy().inviteFamilyHint }}</small>
+              }
+            </label>
+            <label>
+              <span class="label-line">{{ copy().inviteFamilyName }}</span>
+              <input name="inviteName" [placeholder]="copy().inviteFamilyNamePlaceholder" />
+            </label>
+            <label>
+              <span class="label-line">{{ copy().inviteFamilyRelation }}</span>
+              <input name="inviteRelation" [placeholder]="copy().inviteFamilyRelationPlaceholder" />
+            </label>
+            <div class="modal-actions">
+              <button class="button-secondary" type="button" (click)="closeFamilyInvite()">{{ copy().cancel }}</button>
+              <button class="button" type="submit" [disabled]="isSubmittingInvite()">
+                {{ isSubmittingInvite() ? copy().saving : copy().sendInvite }}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
     }
 
     @if (snackbarMessage()) {
@@ -835,6 +1174,81 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
     .dashboard-nav .material-symbols-rounded {
       flex: 0 0 22px;
       font-size: 22px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(16, 42, 34, 0.42);
+    }
+
+    .invite-modal {
+      display: grid;
+      gap: 16px;
+      width: min(520px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 24px;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(16, 42, 34, 0.28);
+    }
+
+    .invite-modal__header {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .invite-modal__header h2,
+    .invite-modal p {
+      margin: 0;
+    }
+
+    .invite-modal__header h2 {
+      color: var(--color-ink);
+      font-size: 1.45rem;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      flex: 0 0 40px;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
+      cursor: pointer;
+    }
+
+    .invite-form.show-validation-errors input:required:invalid,
+    .invite-form.show-validation-errors input[type='email']:invalid,
+    .invite-form input.field-invalid {
+      border-color: #b83232;
+      box-shadow: 0 0 0 1px rgba(184, 50, 50, 0.18);
+    }
+
+    .field-error {
+      color: #b83232;
+      font-size: 0.82rem;
+      font-weight: 850;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 4px;
     }
 
     .snackbar {
@@ -1204,12 +1618,17 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly isSubmitting = signal(false);
   protected readonly hasSubmitted = signal(false);
   protected readonly showFamilyForm = signal(false);
+  protected readonly isDashboardEditMode = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly message = signal('');
   protected readonly memberEntryIds = signal<string[]>(['member-1']);
   protected readonly emergencyPhoneCountry = signal<CountryCode>('PT');
   protected readonly emergencyPhoneNational = signal('');
   protected readonly usePersonalLocation = signal(false);
+  protected readonly isInviteModalOpen = signal(false);
+  protected readonly isSubmittingInvite = signal(false);
+  protected readonly inviteSubmitted = signal(false);
+  protected readonly inviteEmailError = signal('');
 
   protected readonly countries = computed(() =>
     getCountries()
@@ -1287,12 +1706,46 @@ export class FamilyDashboardComponent implements OnInit {
   protected editFamilyProfile(): void {
     this.errorMessage.set('');
     this.message.set('');
-    this.showFamilyForm.set(true);
+    this.hasSubmitted.set(false);
+    this.isDashboardEditMode.set(true);
+    this.showFamilyForm.set(false);
+  }
+
+  protected showOverview(): void {
+    this.errorMessage.set('');
+    this.message.set('');
+    this.hasSubmitted.set(false);
+    this.isDashboardEditMode.set(false);
+  }
+
+  protected openFamilyInvite(): void {
+    this.errorMessage.set('');
+    this.message.set('');
+    this.inviteSubmitted.set(false);
+    this.inviteEmailError.set('');
+    this.isInviteModalOpen.set(true);
+  }
+
+  protected closeFamilyInvite(): void {
+    if (this.isSubmittingInvite()) {
+      return;
+    }
+
+    this.isInviteModalOpen.set(false);
+    this.inviteSubmitted.set(false);
+    this.inviteEmailError.set('');
+  }
+
+  protected clearInviteEmailError(): void {
+    if (this.inviteEmailError()) {
+      this.inviteEmailError.set('');
+    }
   }
 
   protected cancelEdit(): void {
     this.errorMessage.set('');
     this.message.set('');
+    this.isDashboardEditMode.set(false);
     this.showFamilyForm.set(false);
   }
 
@@ -1321,11 +1774,49 @@ export class FamilyDashboardComponent implements OnInit {
       await this.auth.registerFamily(registration);
       await this.loadAccount(false);
       this.showFamilyForm.set(false);
+      this.isDashboardEditMode.set(false);
       this.message.set(this.copy().saved);
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'save'));
     } finally {
       this.isSubmitting.set(false);
+    }
+  }
+
+  protected async onInviteFamilySubmit(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    this.inviteSubmitted.set(true);
+    this.errorMessage.set('');
+    this.message.set('');
+
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const email = this.formValue(formData, 'inviteEmail');
+    if (!this.isValidEmail(email)) {
+      const message = this.copy().inviteFamilyEmailError;
+      this.inviteEmailError.set(message);
+      this.errorMessage.set(message);
+      return;
+    }
+
+    this.isSubmittingInvite.set(true);
+    try {
+      await this.auth.inviteFamilyMember({
+        name: this.formValue(formData, 'inviteName'),
+        email,
+        relation: this.formValue(formData, 'inviteRelation'),
+        invite: true,
+      });
+      await this.loadAccount(false);
+      this.isInviteModalOpen.set(false);
+      this.inviteSubmitted.set(false);
+      this.inviteEmailError.set('');
+      this.message.set(this.copy().inviteFamilySuccess);
+      form.reset();
+    } catch (error) {
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'save'));
+    } finally {
+      this.isSubmittingInvite.set(false);
     }
   }
 
@@ -1453,14 +1944,16 @@ export class FamilyDashboardComponent implements OnInit {
   private buildFamilyRegistration(formData: FormData): FamilyRegistration {
     const emergencyPhoneCountry = this.formValue(formData, 'emergencyPhoneCountry') as CountryCode;
     const emergencyPhoneNational = this.formValue(formData, 'emergencyPhone');
-    const members = this.memberEntryIds()
-      .map((entryId) => ({
-        name: this.formValue(formData, `memberName-${entryId}`),
-        email: this.formValue(formData, `memberEmail-${entryId}`),
-        relation: this.formValue(formData, `memberRelation-${entryId}`),
-        invite: formData.has(`memberInvite-${entryId}`),
-      }))
-      .filter((member) => member.name || member.email || member.relation);
+    const members = this.isDashboardEditMode()
+      ? [...(this.account()?.familyProfile?.members ?? [])]
+      : this.memberEntryIds()
+        .map((entryId) => ({
+          name: this.formValue(formData, `memberName-${entryId}`),
+          email: this.formValue(formData, `memberEmail-${entryId}`),
+          relation: this.formValue(formData, `memberRelation-${entryId}`),
+          invite: formData.has(`memberInvite-${entryId}`),
+        }))
+        .filter((member) => member.name || member.email || member.relation);
 
     return {
       householdName: this.formValue(formData, 'householdName'),

@@ -230,35 +230,39 @@ const PERSONAL_DATA_COPY = {
             <label><span class="label-line">{{ copy().county }} <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
             <label><span class="label-line">{{ copy().postalCode }} <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
             <label class="span-2"><span class="label-line">{{ copy().address }} <small>{{ copy().private }}</small></span><input name="address" [placeholder]="copy().addressPlaceholder" [value]="privateValue('address')" /></label>
-            <label class="span-2"><span class="label-line">{{ copy().addressProof }} <strong>*</strong> <small>{{ copy().private }}</small></span>
-              <input type="file" name="addressProof" accept="image/*" [required]="!documentFileName('addressProof')" (change)="onPrivateDocumentFileChange($event)" />
-              @if (documentFileName('addressProof')) {
-                <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('addressProof') }}</small>
-              }
-            </label>
+            @if (!isFamilyAccount()) {
+              <label class="span-2"><span class="label-line">{{ copy().addressProof }} <strong>*</strong> <small>{{ copy().private }}</small></span>
+                <input type="file" name="addressProof" accept="image/*" [required]="!documentFileName('addressProof')" (change)="onPrivateDocumentFileChange($event)" />
+                @if (documentFileName('addressProof')) {
+                  <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('addressProof') }}</small>
+                }
+              </label>
+            }
           </div>
         </section>
 
-        <section class="form-section">
-          <div class="section-title">
-            <span>4</span>
-            <div>
-              <h2>{{ copy().criminal }}</h2>
-              <p>{{ copy().criminalHelp }}</p>
+        @if (!isFamilyAccount()) {
+          <section class="form-section">
+            <div class="section-title">
+              <span>4</span>
+              <div>
+                <h2>{{ copy().criminal }}</h2>
+                <p>{{ copy().criminalHelp }}</p>
+              </div>
             </div>
-          </div>
-          <div class="check-stack">
-            <label><input type="checkbox" name="criminalRecordNoPending" required [checked]="account()?.private?.criminalRecordNoPending === true" /> {{ copy().criminalDeclaration }} <strong>*</strong></label>
-          </div>
-          <div class="form-grid two-columns">
-            <label class="span-2"><span class="label-line">{{ copy().criminalCertificate }} <strong>*</strong> <small>{{ copy().private }}</small></span>
-              <input type="file" name="criminalRecordCertificate" accept="image/*" [required]="!documentFileName('criminalRecordCertificate')" (change)="onPrivateDocumentFileChange($event)" />
-              @if (documentFileName('criminalRecordCertificate')) {
-                <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('criminalRecordCertificate') }}</small>
-              }
-            </label>
-          </div>
-        </section>
+            <div class="check-stack">
+              <label><input type="checkbox" name="criminalRecordNoPending" required [checked]="account()?.private?.criminalRecordNoPending === true" /> {{ copy().criminalDeclaration }} <strong>*</strong></label>
+            </div>
+            <div class="form-grid two-columns">
+              <label class="span-2"><span class="label-line">{{ copy().criminalCertificate }} <strong>*</strong> <small>{{ copy().private }}</small></span>
+                <input type="file" name="criminalRecordCertificate" accept="image/*" [required]="!documentFileName('criminalRecordCertificate')" (change)="onPrivateDocumentFileChange($event)" />
+                @if (documentFileName('criminalRecordCertificate')) {
+                  <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('criminalRecordCertificate') }}</small>
+                }
+              </label>
+            </div>
+          </section>
+        }
 
         <div class="form-actions">
           <button class="button" type="submit" [disabled]="isSubmitting()">
@@ -541,6 +545,11 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     return this.documentType() === 'Passaporte';
   }
 
+  protected isFamilyAccount(): boolean {
+    const account = this.account();
+    return account?.roles?.family === true || account?.role === 'family';
+  }
+
   protected documentFileName(kind: UserPrivateDocumentKind): string {
     return this.account()?.private?.documents?.[kind]?.fileName ?? '';
   }
@@ -660,7 +669,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
         idDocument: this.textValue(formData, 'idDocument'),
         address: this.textValue(formData, 'address'),
         postalCode: this.textValue(formData, 'postalCode'),
-        criminalRecordNoPending: formData.has('criminalRecordNoPending'),
+        criminalRecordNoPending: this.isFamilyAccount() ? true : formData.has('criminalRecordNoPending'),
         documents: this.account()?.private?.documents ?? {},
         documentUploads: await this.privateDocumentUploads(formData),
       },
@@ -673,10 +682,9 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
 
   private getValidationMessage(form: HTMLFormElement, formData: FormData): string {
     const copy = this.copy();
-    const requiredFields = [
+    const requiredFields: Array<{ key: string; label: string; type?: string }> = [
       { key: 'acceptedTerms', label: copy.termsAcceptance, type: 'checkbox' },
       { key: 'acceptedPrivacy', label: copy.privacyAcceptance, type: 'checkbox' },
-      { key: 'criminalRecordNoPending', label: copy.criminalAcceptance, type: 'checkbox' },
       { key: 'fullName', label: copy.fullName },
       { key: 'birthDate', label: copy.birthDate, type: 'birthDate' },
       { key: 'gender', label: copy.gender },
@@ -689,6 +697,10 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
       { key: 'county', label: copy.county },
       { key: 'postalCode', label: copy.postalCode },
     ];
+
+    if (!this.isFamilyAccount()) {
+      requiredFields.splice(2, 0, { key: 'criminalRecordNoPending', label: copy.criminalAcceptance, type: 'checkbox' });
+    }
 
     for (const field of requiredFields) {
       if (field.key === 'acceptedTerms' && !this.termsAccepted()) {
@@ -764,12 +776,17 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     const copy = this.copy();
     const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [
       { key: 'identityFront', label: copy.frontDocument },
-      { key: 'addressProof', label: copy.addressProof },
-      { key: 'criminalRecordCertificate', label: copy.criminalCertificate },
     ];
 
     if (this.textValue(formData, 'documentType') !== 'Passaporte') {
       requiredDocuments.splice(1, 0, { key: 'identityBack', label: copy.backDocument });
+    }
+
+    if (!this.isFamilyAccount()) {
+      requiredDocuments.push(
+        { key: 'addressProof', label: copy.addressProof },
+        { key: 'criminalRecordCertificate', label: copy.criminalCertificate },
+      );
     }
 
     for (const document of requiredDocuments) {
@@ -864,9 +881,11 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     const kinds: UserPrivateDocumentKind[] = [
       'identityFront',
       'identityBack',
-      'addressProof',
-      'criminalRecordCertificate',
     ];
+
+    if (!this.isFamilyAccount()) {
+      kinds.push('addressProof', 'criminalRecordCertificate');
+    }
 
     for (const kind of kinds) {
       const file = formData.get(kind);

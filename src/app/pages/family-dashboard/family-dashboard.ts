@@ -97,6 +97,11 @@ const FAMILY_COPY = {
     dashboardLead: 'Resumo do plano, próximas visitas e pedidos em aberto.',
     summary: 'Resumo',
     caregivers: 'Cuidadores',
+    overview: 'Visão geral',
+    caregiverMessages: 'Mensagens de cuidadores',
+    interestedCaregivers: 'Cuidadores interessados',
+    inviteFamilyMember: 'Convidar familiar',
+    updatePersonalData: 'Atualizar dados pessoais',
     messages: 'Mensagens',
     payments: 'Pagamentos',
     familyRegistration: 'Cadastro da família',
@@ -221,6 +226,11 @@ const FAMILY_COPY = {
     dashboardLead: 'Summary of the plan, upcoming visits and open requests.',
     summary: 'Summary',
     caregivers: 'Caregivers',
+    overview: 'Overview',
+    caregiverMessages: 'Caregiver messages',
+    interestedCaregivers: 'Interested caregivers',
+    inviteFamilyMember: 'Invite family member',
+    updatePersonalData: 'Update personal details',
     messages: 'Messages',
     payments: 'Payments',
     familyRegistration: 'Family registration',
@@ -656,40 +666,47 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
         }
       </section>
     } @else {
-      <section class="page">
-        <div class="section-header">
+      <section class="page family-dashboard-hero">
+        <div>
           <p class="eyebrow">{{ copy().dashboardEyebrow }}</p>
           <h1>{{ copy().dashboardTitle }}</h1>
           <p class="lead">{{ copy().dashboardLead }}</p>
         </div>
+        <aside class="dashboard-hero-panel" [attr.aria-label]="copy().familyRegistration">
+          <span class="badge">{{ familyStatusLabel() }}</span>
+          <h2>{{ copy().familyRegistration }}</h2>
+          <p>{{ familyStatusMessage() }}</p>
+        </aside>
+      </section>
+      <section class="page family-dashboard-page">
         <div class="dashboard-shell">
-          <aside class="card sidebar">
-            <a href="#">{{ copy().summary }}</a>
-            <a href="#">{{ copy().caregivers }}</a>
-            <a href="#">{{ copy().messages }}</a>
-            <a href="#">{{ copy().payments }}</a>
+          <aside class="card dashboard-nav" [attr.aria-label]="copy().dashboardEyebrow">
+            <button class="is-active" type="button" aria-current="page">
+              <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
+              <span>{{ copy().overview }}</span>
+            </button>
+            <button type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">forum</span>
+              <span>{{ copy().caregiverMessages }}</span>
+            </button>
+            <button type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">volunteer_activism</span>
+              <span>{{ copy().interestedCaregivers }}</span>
+            </button>
+            <button type="button" (click)="editFamilyProfile()">
+              <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+              <span>{{ copy().inviteFamilyMember }}</span>
+            </button>
+            <button type="button" (click)="editFamilyProfile()">
+              <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
+              <span>{{ copy().updateRegistration }}</span>
+            </button>
+            <a routerLink="/meus-dados-pessoais">
+              <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
+              <span>{{ copy().updatePersonalData }}</span>
+            </a>
           </aside>
           <div class="grid">
-            <article class="card card-body dashboard-alert">
-              <div>
-                <span class="badge">{{ familyStatusLabel() }}</span>
-                <h3>{{ copy().familyRegistration }}</h3>
-                <p class="muted">
-                  {{ familyStatusMessage() }}
-                </p>
-              </div>
-              <button class="button-secondary" type="button" (click)="editFamilyProfile()">{{ copy().updateRegistration }}</button>
-            </article>
-
-            <article class="card card-body dashboard-alert">
-              <div>
-                <span class="badge">{{ copy().additionalProfile }}</span>
-                <h3>{{ copy().createCaregiverTitle }}</h3>
-                <p class="muted">{{ copy().createCaregiverText }}</p>
-              </div>
-              <a class="button" routerLink="/seja-cuidador">{{ copy().createCaregiverTitle }}</a>
-            </article>
-
             <div class="grid grid-3">
               <article class="card card-body"><span class="badge">{{ copy().active }}</span><h3>{{ copy().weeklyPlan }}</h3><p class="muted">{{ copy().scheduledVisits }}</p></article>
               <article class="card card-body"><span class="badge">{{ copy().today }}</span><h3>{{ copy().nextVisit }}</h3><p class="muted">Ana Silva, 15:00</p></article>
@@ -736,6 +753,88 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
 
     .family-signup-page {
       padding-top: 0;
+    }
+
+    .family-dashboard-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+      gap: 28px;
+      align-items: start;
+      padding-bottom: 18px;
+    }
+
+    .family-dashboard-hero h1 {
+      max-width: 760px;
+    }
+
+    .family-dashboard-page {
+      padding-top: 0;
+    }
+
+    .dashboard-hero-panel {
+      display: grid;
+      gap: 10px;
+      padding: 22px;
+      border: 1px solid rgba(220, 233, 216, 0.82);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: var(--shadow-card);
+    }
+
+    .dashboard-hero-panel h2,
+    .dashboard-hero-panel p {
+      margin: 0;
+    }
+
+    .dashboard-hero-panel h2 {
+      color: var(--color-ink);
+      font-size: 1.2rem;
+    }
+
+    .dashboard-hero-panel p {
+      color: var(--color-muted);
+      line-height: 1.55;
+    }
+
+    .dashboard-nav {
+      position: sticky;
+      top: 116px;
+      display: grid;
+      gap: 6px;
+      padding: 16px;
+    }
+
+    .dashboard-nav a,
+    .dashboard-nav button {
+      display: flex;
+      gap: 11px;
+      align-items: center;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--color-muted);
+      font: inherit;
+      font-weight: 850;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .dashboard-nav a:hover,
+    .dashboard-nav button:hover,
+    .dashboard-nav a:focus-visible,
+    .dashboard-nav button:focus-visible,
+    .dashboard-nav .is-active {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
+      outline: none;
+    }
+
+    .dashboard-nav .material-symbols-rounded {
+      flex: 0 0 22px;
+      font-size: 22px;
     }
 
     .snackbar {
@@ -1073,11 +1172,16 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       }
 
       .family-signup-hero,
+      .family-dashboard-hero,
       .two-columns,
       .three-columns,
       .emergency-phone-fields,
       .dashboard-alert {
         grid-template-columns: 1fr;
+      }
+
+      .dashboard-nav {
+        position: static;
       }
 
       .span-2 {

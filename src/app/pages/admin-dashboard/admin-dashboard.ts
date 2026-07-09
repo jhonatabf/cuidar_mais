@@ -127,7 +127,7 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
               <div class="section-line">
                 <div>
                   <span class="badge">Acessos</span>
-                  <h2>Gestão de administradores</h2>
+                  <h2>Gestão de usuários admin</h2>
                 </div>
               </div>
 
@@ -151,18 +151,30 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
                 }
               </form>
 
+              <div class="admin-filter-group">
+                <span>Estado do usuário</span>
+                <div class="admin-filter-line">
+                  <button type="button" [class.is-active]="adminStatusFilter() === 'all'" (click)="adminStatusFilter.set('all')">Todos</button>
+                  <button type="button" [class.is-active]="adminStatusFilter() === 'active'" (click)="adminStatusFilter.set('active')">Ativos</button>
+                  <button type="button" [class.is-active]="adminStatusFilter() === 'inactive'" (click)="adminStatusFilter.set('inactive')">Inativos</button>
+                </div>
+              </div>
+
               <div class="table-like admin-table">
-                @for (adminProfile of adminProfiles(); track adminProfile.uid) {
+                @for (adminProfile of filteredAdminProfiles(); track adminProfile.uid) {
                   <article>
                     <strong>{{ adminProfile.displayName || adminProfile.email || adminProfile.uid }}</strong>
-                    <span class="muted">{{ roleLabel(adminProfile.role) }} · {{ adminProfile.enabled ? 'ativo' : 'inativo' }}</span>
-                    <button class="badge admin-inline-action" type="button" (click)="editAdminProfile(adminProfile)">Editar</button>
+                    <span class="admin-row-meta">
+                      <span class="muted">{{ roleLabel(adminProfile.role) }}</span>
+                      <span class="status-chip" [class.status-chip--approved]="adminProfile.enabled" [class.status-chip--rejected]="!adminProfile.enabled">
+                        {{ adminProfile.enabled ? 'ativo' : 'inativo' }}
+                      </span>
+                    </span>
+                    <button class="btn btn-secondary button-small admin-inline-action" type="button" (click)="editAdminProfile(adminProfile)">Editar</button>
                   </article>
                 } @empty {
                   <article>
-                    <strong>Sem perfis listados</strong>
-                    <span class="muted">Crie perfis por UID para conceder acesso ao admin.</span>
-                    <span class="badge">Admin</span>
+                    <strong>Sem usuários admin para este filtro</strong>
                   </article>
                 }
               </div>
@@ -404,7 +416,6 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
     }
 
     .admin-inline-action {
-      border: 0;
       font: inherit;
       cursor: pointer;
     }
@@ -456,6 +467,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly activeSection = signal<AdminSection>('overview');
   protected readonly reviewFilter = signal<'all' | ReviewQueueItem['status']>('all');
   protected readonly profileTypeFilter = signal<'all' | ReviewQueueItem['type']>('all');
+  protected readonly adminStatusFilter = signal<'all' | 'active' | 'inactive'>('all');
   protected readonly menuItems = computed(() => [
     {
       id: 'overview' as const,
@@ -494,6 +506,14 @@ export class AdminDashboardComponent implements OnInit {
       (statusFilter === 'all' || item.status === statusFilter) &&
       (profileTypeFilter === 'all' || item.type === profileTypeFilter),
     );
+  });
+  protected readonly filteredAdminProfiles = computed(() => {
+    const filter = this.adminStatusFilter();
+    if (filter === 'all') {
+      return this.adminProfiles();
+    }
+
+    return this.adminProfiles().filter((profile) => filter === 'active' ? profile.enabled : !profile.enabled);
   });
 
   async ngOnInit(): Promise<void> {

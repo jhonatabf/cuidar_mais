@@ -1,20 +1,13 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
-  LucideCalendarDays,
   LucideCircleCheckBig,
   LucideCircleX,
-  LucideClipboardList,
   LucideClock3,
   LucideFilePenLine,
   LucideInbox,
-  LucideLockKeyhole,
   LucideMessageCircle,
   LucideSearch,
-  LucideSquarePen,
-  LucideUserRound,
-  LucideUserRoundPlus,
-  LucideWalletCards,
 } from '@lucide/angular';
 
 import { Auth } from '../../core/services/auth';
@@ -23,30 +16,22 @@ import { Auth } from '../../core/services/auth';
   selector: 'app-caregiver-dashboard',
   imports: [
     RouterLink,
-    LucideCalendarDays,
     LucideCircleCheckBig,
     LucideCircleX,
-    LucideClipboardList,
     LucideClock3,
     LucideFilePenLine,
     LucideInbox,
-    LucideLockKeyhole,
     LucideMessageCircle,
     LucideSearch,
-    LucideSquarePen,
-    LucideUserRound,
-    LucideUserRoundPlus,
-    LucideWalletCards,
   ],
   template: `
-    <section class="page">
-      <div class="section-header">
+    <section class="page caregiver-dashboard-hero">
+      <div>
         <p class="eyebrow">Dashboard cuidador</p>
         <h1>Agenda, pedidos e perfil profissional.</h1>
         <p class="lead">Um painel simples para gerir disponibilidade e trabalho aceito.</p>
       </div>
-
-      <article
+      <aside
         class="registration-status"
         [class.status-incomplete]="statusTone() === 'incomplete'"
         [class.status-pending]="statusTone() === 'pending'"
@@ -70,47 +55,41 @@ import { Auth } from '../../core/services/auth';
           </div>
         </div>
         <p class="status-description">{{ approvalMessage() }}</p>
-      </article>
+      </aside>
+    </section>
 
+    <section class="page caregiver-dashboard-page">
       <div class="dashboard-shell">
-        <aside class="card sidebar">
-          <a href="#"><svg lucideCalendarDays size="20"></svg><span>Agenda</span></a>
-          <a href="#"><svg lucideClipboardList size="20"></svg><span>Pedidos</span></a>
-          <a href="#"><svg lucideUserRound size="20"></svg><span>Perfil</span></a>
-          <a href="#"><svg lucideWalletCards size="20"></svg><span>Pagamentos</span></a>
+        <aside class="card dashboard-nav" aria-label="Menu do cuidador">
+          <button class="is-active" type="button" aria-current="page">
+            <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
+            <span>Visão geral</span>
+          </button>
+          <button type="button">
+            <span class="material-symbols-rounded" aria-hidden="true">forum</span>
+            <span>Mensagens de famílias</span>
+          </button>
+          <button type="button">
+            <span class="material-symbols-rounded" aria-hidden="true">assignment_turned_in</span>
+            <span>Pedidos recebidos</span>
+          </button>
+          @if (showCompleteCaregiverProfile() || canEditProfile()) {
+            <a routerLink="/seja-cuidador">
+              <span class="material-symbols-rounded" aria-hidden="true">badge</span>
+              <span>{{ showCompleteCaregiverProfile() ? 'Concluir perfil' : 'Atualizar perfil' }}</span>
+            </a>
+          } @else {
+            <button class="is-disabled" type="button" disabled>
+              <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+              <span>Perfil bloqueado</span>
+            </button>
+          }
+          <a routerLink="/meus-dados-pessoais">
+            <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
+            <span>Atualizar dados pessoais</span>
+          </a>
         </aside>
         <div class="grid">
-          @if (showCompleteCaregiverProfile()) {
-            <article class="card card-body dashboard-alert">
-              <span class="feature-icon"><svg lucideUserRoundPlus size="26"></svg></span>
-              <div>
-                <span class="badge">Cadastro pendente</span>
-                <h3>Conclua o seu perfil de cuidador</h3>
-                <p class="muted">
-                  Ainda não encontramos um cadastro de cuidador vinculado a esta conta.
-                  Complete os dados para criar o perfil profissional.
-                </p>
-              </div>
-              <a class="button action-link" routerLink="/seja-cuidador"><svg lucideFilePenLine size="18"></svg>Concluir cadastro</a>
-            </article>
-          } @else {
-            <article class="card card-body dashboard-alert">
-              <span class="feature-icon"><svg lucideUserRound size="26"></svg></span>
-              <div>
-                <span class="badge">Perfil de cuidador</span>
-                <h3>Dados do cuidador cadastrados</h3>
-                <p class="muted">
-                  Consulte ou atualize os dados profissionais apresentados às famílias.
-                </p>
-              </div>
-              @if (canEditProfile()) {
-                <a class="button action-link" routerLink="/seja-cuidador"><svg lucideSquarePen size="18"></svg>Editar dados</a>
-              } @else {
-                <button class="btn btn-disabled action-link" type="button" disabled><svg lucideLockKeyhole size="18"></svg>Alteração bloqueada</button>
-              }
-            </article>
-          }
-
           <div class="grid dashboard-summary">
             <article
               class="card card-body summary-card request-card"
@@ -159,16 +138,31 @@ import { Auth } from '../../core/services/auth';
     </section>
   `,
   styles: `
+    .caregiver-dashboard-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
+      gap: 28px;
+      align-items: start;
+      padding-bottom: 18px;
+    }
+
+    .caregiver-dashboard-hero h1 {
+      max-width: 760px;
+    }
+
+    .caregiver-dashboard-page {
+      padding-top: 0;
+    }
+
     .registration-status {
       display: grid;
-      grid-template-columns: minmax(0, 0.72fr) minmax(280px, 1.28fr);
-      gap: 28px;
-      align-items: center;
-      margin: 24px 0 32px;
-      padding: 26px 28px;
+      gap: 16px;
+      margin: 0;
+      padding: 22px;
       border: 1px solid;
       border-left-width: 6px;
-      border-radius: 8px;
+      border-radius: 18px;
+      box-shadow: var(--shadow-card);
     }
 
     .status-heading {
@@ -200,7 +194,6 @@ import { Auth } from '../../core/services/auth';
     }
 
     .status-icon,
-    .feature-icon,
     .summary-icon {
       display: grid;
       flex: 0 0 auto;
@@ -212,16 +205,6 @@ import { Auth } from '../../core/services/auth';
       width: 52px;
       height: 52px;
       background: rgba(255, 255, 255, 0.72);
-    }
-
-    .sidebar a {
-      display: flex;
-      gap: 11px;
-      align-items: center;
-    }
-
-    .sidebar svg {
-      flex: 0 0 20px;
     }
 
     .status-incomplete,
@@ -249,14 +232,6 @@ import { Auth } from '../../core/services/auth';
       color: #176b38;
     }
 
-    .dashboard-alert {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .feature-icon,
     .summary-icon {
       width: 48px;
       height: 48px;
@@ -264,16 +239,62 @@ import { Auth } from '../../core/services/auth';
       color: var(--color-primary-strong);
     }
 
-    .action-link,
     .task-time {
       display: inline-flex;
       gap: 8px;
       align-items: center;
     }
 
-    .action-link svg,
     .task-time svg {
       flex: 0 0 auto;
+    }
+
+    .dashboard-nav {
+      position: sticky;
+      top: 116px;
+      display: grid;
+      gap: 6px;
+      padding: 16px;
+    }
+
+    .dashboard-nav a,
+    .dashboard-nav button {
+      display: flex;
+      gap: 11px;
+      align-items: center;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--color-muted);
+      font: inherit;
+      font-weight: 850;
+      text-align: left;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .dashboard-nav a:hover,
+    .dashboard-nav button:hover,
+    .dashboard-nav a:focus-visible,
+    .dashboard-nav button:focus-visible,
+    .dashboard-nav .is-active {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
+      outline: none;
+    }
+
+    .dashboard-nav .material-symbols-rounded {
+      flex: 0 0 22px;
+      font-size: 22px;
+    }
+
+    .dashboard-nav .is-disabled,
+    .dashboard-nav .is-disabled:hover {
+      background: #f1f5f9;
+      color: var(--color-disabled-text);
+      cursor: not-allowed;
     }
 
     .dashboard-summary {
@@ -399,19 +420,17 @@ import { Auth } from '../../core/services/auth';
     }
 
     @media (max-width: 700px) {
-      .registration-status {
+      .caregiver-dashboard-hero {
         grid-template-columns: 1fr;
+      }
+
+      .registration-status {
         gap: 16px;
         padding: 22px 20px;
       }
 
-      .dashboard-alert {
-        grid-template-columns: 1fr;
-      }
-
-      .feature-icon {
-        width: 44px;
-        height: 44px;
+      .dashboard-nav {
+        position: static;
       }
 
       .dashboard-summary {

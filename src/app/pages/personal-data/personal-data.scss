@@ -18,6 +18,14 @@
   }
 }
 
+.personal-data-page--embedded {
+  padding: 0;
+}
+
+.personal-data-form--embedded {
+  width: 100%;
+}
+
 .registration-step {
   display: grid;
   grid-template-columns: 42px 1fr;

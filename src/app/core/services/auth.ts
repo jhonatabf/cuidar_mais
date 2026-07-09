@@ -198,6 +198,8 @@ export interface UserPersonalData {
     documentUploads?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>;
   };
   location: {
+    countryCode: string;
+    country: string;
     district: string;
     county: string;
   };
@@ -226,6 +228,8 @@ export interface UserAccount {
     documents?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>;
   };
   location?: {
+    countryCode?: string;
+    country?: string;
     district?: string;
     county?: string;
   };
@@ -867,11 +871,7 @@ export class Auth {
       { value: account?.private?.documentType, label: 'Tipo de documento' },
       { value: account?.private?.idDocument, label: 'Documento de identificação' },
       { value: account?.private?.postalCode, label: 'Código Postal' },
-      { value: documents.identityFront?.storagePath, label: 'Foto da frente do documento' },
-      {
-        value: account?.private?.documentType === 'Passaporte' ? true : documents.identityBack?.storagePath,
-        label: 'Foto do verso do documento',
-      },
+      { value: account?.location?.countryCode ?? (account?.location ? 'PT' : ''), label: 'País' },
       { value: account?.location?.district, label: 'Distrito' },
       { value: account?.location?.county, label: 'Concelho' },
     ];
@@ -881,6 +881,11 @@ export class Auth {
         11,
         0,
         { value: account?.private?.criminalRecordNoPending, label: 'Declaração de inexistência de pendência criminal' },
+        { value: documents.identityFront?.storagePath, label: 'Foto da frente do documento' },
+        {
+          value: account?.private?.documentType === 'Passaporte' ? true : documents.identityBack?.storagePath,
+          label: 'Foto do verso do documento',
+        },
       );
       fields.push(
         { value: documents.addressProof?.storagePath, label: 'Foto do comprovativo de morada' },

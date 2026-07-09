@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   getCountries,
@@ -20,6 +20,16 @@ import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validat
 
 const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+const OPERATING_COUNTRIES = [
+  {
+    code: 'PT',
+    labels: {
+      'pt-PT': 'Portugal',
+      'en-GB': 'Portugal',
+    },
+  },
+] as const;
+
 const PERSONAL_DATA_COPY = {
   'pt-PT': {
     step: 'Etapa 2 de 3', stepName: 'Dados pessoais', stepAria: 'Etapa 2 de 3: dados pessoais',
@@ -38,7 +48,7 @@ const PERSONAL_DATA_COPY = {
     citizenCard: 'Cartão de Cidadão português', passport: 'Passaporte', residencePermit: 'Título de residência emitido em Portugal', otherPortugueseId: 'Outro documento emitido em Portugal',
     frontPhoto: 'Foto da frente', backPhoto: 'Foto do verso', currentFile: 'Ficheiro atual',
     location: 'Localização', locationHelp: 'Esta localização será usada pelos seus perfis na plataforma.',
-    district: 'Distrito', county: 'Concelho', postalCode: 'Código postal', address: 'Morada completa', addressPlaceholder: 'Rua, número, localidade', addressProof: 'Foto do comprovativo de morada',
+    country: 'País', district: 'Distrito', county: 'Concelho', postalCode: 'Código postal', address: 'Morada completa', addressPlaceholder: 'Rua, número, localidade', addressProof: 'Foto do comprovativo de morada',
     criminal: 'Registo criminal', criminalHelp: 'Declaração e comprovativo necessários para validação de segurança.',
     criminalDeclaration: 'Declaro que não possuo qualquer pendência criminal', criminalCertificate: 'Foto do certificado de registo criminal',
     saving: 'A guardar...', save: 'Guardar dados pessoais', close: 'Fechar mensagem',
@@ -69,7 +79,7 @@ const PERSONAL_DATA_COPY = {
     citizenCard: 'Portuguese Citizen Card', passport: 'Passport', residencePermit: 'Residence permit issued in Portugal', otherPortugueseId: 'Other document issued in Portugal',
     frontPhoto: 'Front image', backPhoto: 'Back image', currentFile: 'Current file',
     location: 'Location', locationHelp: 'This location will be used by your profiles on the platform.',
-    district: 'District', county: 'Municipality', postalCode: 'Postcode', address: 'Full address', addressPlaceholder: 'Street, number, town or city', addressProof: 'Address proof image',
+    country: 'Country', district: 'District', county: 'Municipality', postalCode: 'Postcode', address: 'Full address', addressPlaceholder: 'Street, number, town or city', addressProof: 'Address proof image',
     criminal: 'Criminal record', criminalHelp: 'A declaration and supporting document are required for security checks.',
     criminalDeclaration: 'I declare that I have no pending criminal matters', criminalCertificate: 'Criminal record certificate image',
     saving: 'Saving...', save: 'Save personal details', close: 'Close message',
@@ -88,56 +98,61 @@ const PERSONAL_DATA_COPY = {
 @Component({
   selector: 'app-personal-data',
   template: `
-    <section class="page hero hero-compact personal-data-hero" [class.required-step]="isRequiredStep()">
-      <div>
-        <div class="registration-step" [attr.aria-label]="copy().stepAria">
-          <span class="registration-step__number">2</span>
-          <div>
-            <strong>{{ copy().step }}</strong>
-            <span>{{ copy().stepName }}</span>
+    @if (!embedded()) {
+      <section class="page hero hero-compact personal-data-hero" [class.required-step]="isRequiredStep()">
+        <div>
+          <div class="registration-step" [attr.aria-label]="copy().stepAria">
+            <span class="registration-step__number">2</span>
+            <div>
+              <strong>{{ copy().step }}</strong>
+              <span>{{ copy().stepName }}</span>
+            </div>
+            <div class="registration-step__progress" aria-hidden="true">
+              <span class="is-active"></span><span class="is-active"></span><span></span>
+            </div>
           </div>
-          <div class="registration-step__progress" aria-hidden="true">
-            <span class="is-active"></span><span class="is-active"></span><span></span>
-          </div>
+          <h1>{{ pageTitle() }}</h1>
+          <p class="lead">{{ pageLead() }}</p>
         </div>
-        <h1>{{ pageTitle() }}</h1>
-        <p class="lead">{{ pageLead() }}</p>
-      </div>
-    </section>
+      </section>
+    }
 
-    <section class="page personal-data-page">
+    <section class="page personal-data-page" [class.personal-data-page--embedded]="embedded()">
       <form
         class="card card-body personal-data-form"
+        [class.personal-data-form--embedded]="embedded()"
         [class.show-validation-errors]="hasSubmitted()"
         novalidate
         (submit)="onSubmit($event)"
       >
-        <section class="form-section">
-          <div class="section-title">
-            <span>1</span>
-            <div>
-              <h2>{{ copy().account }}</h2>
-              <p>{{ copy().accountHelp }}</p>
+        @if (!embedded()) {
+          <section class="form-section">
+            <div class="section-title">
+              <span>1</span>
+              <div>
+                <h2>{{ copy().account }}</h2>
+                <p>{{ copy().accountHelp }}</p>
+              </div>
             </div>
-          </div>
-          <div class="form-grid two-columns">
-            <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
-          </div>
-          <div class="check-stack">
-            <label>
-              <input type="checkbox" name="acceptedTerms" required [checked]="termsAccepted()" (click)="openTermsModal('termsAndConditions', $event)" />
-              <span>{{ copy().acceptTerms }} <button class="inline-link" type="button" (click)="openTermsModal('termsAndConditions', $event)">{{ copy().terms }}</button> <strong>*</strong></span>
-            </label>
-            <label>
-              <input type="checkbox" name="acceptedPrivacy" required [checked]="privacyAccepted()" (click)="openTermsModal('privacy', $event)" />
-              <span>{{ copy().acceptPrivacy }} <button class="inline-link" type="button" (click)="openTermsModal('privacy', $event)">{{ copy().privacy }}</button> <strong>*</strong></span>
-            </label>
-          </div>
-        </section>
+            <div class="form-grid two-columns">
+              <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
+            </div>
+            <div class="check-stack">
+              <label>
+                <input type="checkbox" name="acceptedTerms" required [checked]="termsAccepted()" (click)="openTermsModal('termsAndConditions', $event)" />
+                <span>{{ copy().acceptTerms }} <button class="inline-link" type="button" (click)="openTermsModal('termsAndConditions', $event)">{{ copy().terms }}</button> <strong>*</strong></span>
+              </label>
+              <label>
+                <input type="checkbox" name="acceptedPrivacy" required [checked]="privacyAccepted()" (click)="openTermsModal('privacy', $event)" />
+                <span>{{ copy().acceptPrivacy }} <button class="inline-link" type="button" (click)="openTermsModal('privacy', $event)">{{ copy().privacy }}</button> <strong>*</strong></span>
+              </label>
+            </div>
+          </section>
+        }
 
         <section class="form-section">
           <div class="section-title">
-            <span>2</span>
+            <span>{{ embedded() ? '1' : '2' }}</span>
             <div>
               <h2>{{ copy().personal }}</h2>
               <p>{{ copy().personalHelp }}</p>
@@ -197,35 +212,44 @@ const PERSONAL_DATA_COPY = {
                   <input name="idDocument" required [placeholder]="copy().documentNumber" [value]="privateValue('idDocument')" />
                 </label>
               </div>
-              <div class="document-upload-grid">
-                <label><span class="label-line">{{ copy().frontPhoto }} <strong>*</strong></span>
-                  <input type="file" name="identityFront" accept="image/*" [required]="!documentFileName('identityFront')" (change)="onPrivateDocumentFileChange($event)" />
-                  @if (documentFileName('identityFront')) {
-                    <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityFront') }}</small>
-                  }
-                </label>
-                @if (!isPassportDocument()) {
-                  <label><span class="label-line">{{ copy().backPhoto }} <strong>*</strong></span>
-                    <input type="file" name="identityBack" accept="image/*" [required]="!documentFileName('identityBack')" (change)="onPrivateDocumentFileChange($event)" />
-                    @if (documentFileName('identityBack')) {
-                      <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityBack') }}</small>
+              @if (!isFamilyAccount()) {
+                <div class="document-upload-grid">
+                  <label><span class="label-line">{{ copy().frontPhoto }} <strong>*</strong></span>
+                    <input type="file" name="identityFront" accept="image/*" [required]="!documentFileName('identityFront')" (change)="onPrivateDocumentFileChange($event)" />
+                    @if (documentFileName('identityFront')) {
+                      <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityFront') }}</small>
                     }
                   </label>
-                }
-              </div>
+                  @if (!isPassportDocument()) {
+                    <label><span class="label-line">{{ copy().backPhoto }} <strong>*</strong></span>
+                      <input type="file" name="identityBack" accept="image/*" [required]="!documentFileName('identityBack')" (change)="onPrivateDocumentFileChange($event)" />
+                      @if (documentFileName('identityBack')) {
+                        <small class="field-hint">{{ copy().currentFile }}: {{ documentFileName('identityBack') }}</small>
+                      }
+                    </label>
+                  }
+                </div>
+              }
             </fieldset>
           </div>
         </section>
 
         <section class="form-section">
           <div class="section-title">
-            <span>3</span>
+            <span>{{ embedded() ? '2' : '3' }}</span>
             <div>
               <h2>{{ copy().location }}</h2>
               <p>{{ copy().locationHelp }}</p>
             </div>
           </div>
           <div class="form-grid two-columns">
+            <label><span class="label-line">{{ copy().country }} <strong>*</strong></span>
+              <select name="countryCode" required [value]="locationCountryCode()">
+                @for (country of operatingCountries(); track country.code) {
+                  <option [value]="country.code" [selected]="locationCountryCode() === country.code">{{ country.name }}</option>
+                }
+              </select>
+            </label>
             <label><span class="label-line">{{ copy().district }} <strong>*</strong></span><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
             <label><span class="label-line">{{ copy().county }} <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
             <label><span class="label-line">{{ copy().postalCode }} <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
@@ -244,7 +268,7 @@ const PERSONAL_DATA_COPY = {
         @if (!isFamilyAccount()) {
           <section class="form-section">
             <div class="section-title">
-              <span>4</span>
+              <span>{{ embedded() ? '3' : '4' }}</span>
               <div>
                 <h2>{{ copy().criminal }}</h2>
                 <p>{{ copy().criminalHelp }}</p>
@@ -334,6 +358,8 @@ const PERSONAL_DATA_COPY = {
   styleUrl: './personal-data.scss',
 })
 export class PersonalDataComponent implements OnInit, OnDestroy {
+  readonly embedded = input(false);
+
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -378,6 +404,12 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
         if (second.code === 'PT') return 1;
         return first.name.localeCompare(second.name, this.localeService.locale());
       }),
+  );
+  protected readonly operatingCountries = computed(() =>
+    OPERATING_COUNTRIES.map((country) => ({
+      code: country.code,
+      name: country.labels[this.localeService.locale()],
+    })),
   );
   protected readonly isRequiredStep = computed(() => !!this.redirectTo());
   protected readonly snackbarKind = computed<'error' | 'success' | 'info'>(() => {
@@ -468,7 +500,8 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     }
 
     const shouldContinueRegistration =
-      this.isRequiredStep() || !this.auth.hasCompletePersonalData(this.account());
+      !this.embedded() &&
+      (this.isRequiredStep() || !this.auth.hasCompletePersonalData(this.account()));
     this.isSubmitting.set(true);
     try {
       await this.auth.updateUserPersonalData(await this.buildPersonalData(formData));
@@ -515,6 +548,10 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
 
   protected locationValue(key: 'district' | 'county'): string {
     return this.account()?.location?.[key] ?? '';
+  }
+
+  protected locationCountryCode(): string {
+    return this.account()?.location?.countryCode ?? OPERATING_COUNTRIES[0].code;
   }
 
   protected onPhoneCountryChange(event: Event): void {
@@ -652,7 +689,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     const phoneNational = this.textValue(formData, 'phone');
 
     return {
-      email: this.textValue(formData, 'email'),
+      email: this.embedded() ? this.email() : this.textValue(formData, 'email'),
       fullName: this.textValue(formData, 'fullName'),
       birthDate: this.textValue(formData, 'birthDate'),
       gender: this.textValue(formData, 'gender'),
@@ -674,6 +711,8 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
         documentUploads: await this.privateDocumentUploads(formData),
       },
       location: {
+        countryCode: this.textValue(formData, 'countryCode'),
+        country: this.operatingCountryName(this.textValue(formData, 'countryCode')),
         district: this.textValue(formData, 'district'),
         county: this.textValue(formData, 'county'),
       },
@@ -683,8 +722,6 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
   private getValidationMessage(form: HTMLFormElement, formData: FormData): string {
     const copy = this.copy();
     const requiredFields: Array<{ key: string; label: string; type?: string }> = [
-      { key: 'acceptedTerms', label: copy.termsAcceptance, type: 'checkbox' },
-      { key: 'acceptedPrivacy', label: copy.privacyAcceptance, type: 'checkbox' },
       { key: 'fullName', label: copy.fullName },
       { key: 'birthDate', label: copy.birthDate, type: 'birthDate' },
       { key: 'gender', label: copy.gender },
@@ -693,10 +730,20 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
       { key: 'nif', label: 'NIF' },
       { key: 'documentType', label: copy.documentType },
       { key: 'idDocument', label: copy.idDocument },
+      { key: 'countryCode', label: copy.country },
       { key: 'district', label: copy.district },
       { key: 'county', label: copy.county },
       { key: 'postalCode', label: copy.postalCode },
     ];
+
+    if (!this.embedded()) {
+      requiredFields.unshift(
+        { key: 'acceptedPrivacy', label: copy.privacyAcceptance, type: 'checkbox' },
+      );
+      requiredFields.unshift(
+        { key: 'acceptedTerms', label: copy.termsAcceptance, type: 'checkbox' },
+      );
+    }
 
     if (!this.isFamilyAccount()) {
       requiredFields.splice(2, 0, { key: 'criminalRecordNoPending', label: copy.criminalAcceptance, type: 'checkbox' });
@@ -774,12 +821,13 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
 
   private getPrivateDocumentsValidationMessage(formData: FormData): string {
     const copy = this.copy();
-    const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [
-      { key: 'identityFront', label: copy.frontDocument },
-    ];
+    const requiredDocuments: Array<{ key: UserPrivateDocumentKind; label: string }> = [];
 
-    if (this.textValue(formData, 'documentType') !== 'Passaporte') {
-      requiredDocuments.splice(1, 0, { key: 'identityBack', label: copy.backDocument });
+    if (!this.isFamilyAccount()) {
+      requiredDocuments.push({ key: 'identityFront', label: copy.frontDocument });
+      if (this.textValue(formData, 'documentType') !== 'Passaporte') {
+        requiredDocuments.push({ key: 'identityBack', label: copy.backDocument });
+      }
     }
 
     if (!this.isFamilyAccount()) {
@@ -874,17 +922,18 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     return new Intl.DisplayNames([this.localeService.locale()], { type: 'region' }).of(country) ?? country;
   }
 
+  private operatingCountryName(countryCode: string): string {
+    return OPERATING_COUNTRIES.find((country) => country.code === countryCode)?.labels[this.localeService.locale()] ?? '';
+  }
+
   private async privateDocumentUploads(
     formData: FormData,
   ): Promise<Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>> {
     const uploads: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>> = {};
-    const kinds: UserPrivateDocumentKind[] = [
-      'identityFront',
-      'identityBack',
-    ];
+    const kinds: UserPrivateDocumentKind[] = [];
 
     if (!this.isFamilyAccount()) {
-      kinds.push('addressProof', 'criminalRecordCertificate');
+      kinds.push('identityFront', 'identityBack', 'addressProof', 'criminalRecordCertificate');
     }
 
     for (const kind of kinds) {

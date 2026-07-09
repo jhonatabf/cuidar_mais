@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import {
   getCountries,
   getCountryCallingCode,
@@ -9,6 +8,7 @@ import {
 
 import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth';
 import { AppLocale, LocaleService } from '../../core/services/locale';
+import { PersonalDataComponent } from '../personal-data/personal-data';
 
 const FAMILY_COPY = {
   'pt-PT': {
@@ -128,6 +128,15 @@ const FAMILY_COPY = {
     nextVisit: 'Próxima visita',
     scheduledVisits: '5 visitas agendadas',
     unansweredMessages: '2 por responder',
+    caregiverSuggestionBoard: 'Sugestão de cuidador',
+    caregiverSuggestionText: 'Perfis recomendados serão exibidos aqui de acordo com os critérios de match.',
+    serviceHistoryBoard: 'Histórico de serviço',
+    serviceHistoryText: 'Cuidadores vistos, contactados ou contratados pela família ficarão disponíveis neste histórico.',
+    favoritesBoard: 'Favoritos',
+    favoritesText: 'Guarde cuidadores preferidos para comparar perfis e retomar conversas com facilidade.',
+    caregiverMessagesBoard: 'Mensagens dos cuidadores',
+    caregiverMessagesText: 'As conversas trocadas com cuidadores aparecerão aqui.',
+    comingSoon: 'Em preparação',
     close: 'Fechar mensagem',
     validationAdult: 'É necessário ser maior de idade para cadastrar uma família.',
     validationHousehold: 'Informe o nome da família ou casa.',
@@ -269,6 +278,15 @@ const FAMILY_COPY = {
     nextVisit: 'Next visit',
     scheduledVisits: '5 scheduled visits',
     unansweredMessages: '2 unanswered',
+    caregiverSuggestionBoard: 'Caregiver suggestion',
+    caregiverSuggestionText: 'Recommended profiles will appear here according to matching criteria.',
+    serviceHistoryBoard: 'Service history',
+    serviceHistoryText: 'Caregivers viewed, contacted or hired by the family will be listed in this history.',
+    favoritesBoard: 'Favourites',
+    favoritesText: 'Save preferred caregivers to compare profiles and resume conversations easily.',
+    caregiverMessagesBoard: 'Caregiver messages',
+    caregiverMessagesText: 'Messages exchanged with caregivers will appear here.',
+    comingSoon: 'In preparation',
     close: 'Close message',
     validationAdult: 'You must be an adult to register a family.',
     validationHousehold: 'Enter the family or household name.',
@@ -354,7 +372,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
 
 @Component({
   selector: 'app-family-dashboard',
-  imports: [RouterLink],
+  imports: [PersonalDataComponent],
   template: `
     @if (isLoading()) {
       <section class="page">
@@ -705,7 +723,7 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       <section class="page family-dashboard-page">
         <div class="dashboard-shell">
           <aside class="card dashboard-nav" [attr.aria-label]="copy().dashboardEyebrow">
-            <button [class.is-active]="!isDashboardEditMode()" type="button" [attr.aria-current]="!isDashboardEditMode() ? 'page' : null" (click)="showOverview()">
+            <button [class.is-active]="!isDashboardEditMode() && !isPersonalDataEditMode()" type="button" [attr.aria-current]="!isDashboardEditMode() && !isPersonalDataEditMode() ? 'page' : null" (click)="showOverview()">
               <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
               <span>{{ copy().overview }}</span>
             </button>
@@ -725,13 +743,15 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
               <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
               <span>{{ copy().updateRegistration }}</span>
             </button>
-            <a routerLink="/meus-dados-pessoais">
+            <button type="button" [class.is-active]="isPersonalDataEditMode()" [attr.aria-current]="isPersonalDataEditMode() ? 'page' : null" (click)="editPersonalData()">
               <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
               <span>{{ copy().updatePersonalData }}</span>
-            </a>
+            </button>
           </aside>
           <div class="grid">
-            @if (isDashboardEditMode()) {
+            @if (isPersonalDataEditMode()) {
+              <app-personal-data [embedded]="true" />
+            } @else if (isDashboardEditMode()) {
               @if (!isResponsibleAdult()) {
                 <article class="card card-body blocked-card">
                   <span class="badge">{{ copy().blocked }}</span>
@@ -994,19 +1014,39 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
                 </form>
               }
             } @else {
-              <div class="grid grid-3">
-                <article class="card card-body"><span class="badge">{{ copy().active }}</span><h3>{{ copy().weeklyPlan }}</h3><p class="muted">{{ copy().scheduledVisits }}</p></article>
-                <article class="card card-body"><span class="badge">{{ copy().today }}</span><h3>{{ copy().nextVisit }}</h3><p class="muted">Ana Silva, 15:00</p></article>
-                <article class="card card-body"><span class="badge">{{ copy().pending }}</span><h3>{{ copy().messages }}</h3><p class="muted">{{ copy().unansweredMessages }}</p></article>
-              </div>
-              <div class="table-like">
-                @for (visit of visits; track visit.time) {
-                  <article>
-                    <strong>{{ visit.person }}</strong>
-                    <span class="muted">{{ visit.task }}</span>
-                    <span class="badge">{{ visit.time }}</span>
-                  </article>
-                }
+              <div class="dashboard-board-grid">
+                <article class="card dashboard-board dashboard-board--match">
+                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">recommend</span>
+                  <div>
+                    <span class="badge">{{ copy().comingSoon }}</span>
+                    <h3>{{ copy().caregiverSuggestionBoard }}</h3>
+                    <p class="muted">{{ copy().caregiverSuggestionText }}</p>
+                  </div>
+                </article>
+                <article class="card dashboard-board dashboard-board--history">
+                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">history</span>
+                  <div>
+                    <span class="badge">{{ copy().comingSoon }}</span>
+                    <h3>{{ copy().serviceHistoryBoard }}</h3>
+                    <p class="muted">{{ copy().serviceHistoryText }}</p>
+                  </div>
+                </article>
+                <article class="card dashboard-board dashboard-board--favorites">
+                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">favorite</span>
+                  <div>
+                    <span class="badge">{{ copy().comingSoon }}</span>
+                    <h3>{{ copy().favoritesBoard }}</h3>
+                    <p class="muted">{{ copy().favoritesText }}</p>
+                  </div>
+                </article>
+                <article class="card dashboard-board dashboard-board--messages">
+                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">forum</span>
+                  <div>
+                    <span class="badge">{{ copy().comingSoon }}</span>
+                    <h3>{{ copy().caregiverMessagesBoard }}</h3>
+                    <p class="muted">{{ copy().caregiverMessagesText }}</p>
+                  </div>
+                </article>
               </div>
             }
           </div>
@@ -1174,6 +1214,83 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
     .dashboard-nav .material-symbols-rounded {
       flex: 0 0 22px;
       font-size: 22px;
+    }
+
+    .dashboard-board-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .dashboard-board {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 16px;
+      align-items: flex-start;
+      min-height: 190px;
+      padding: 24px;
+      border-left-width: 5px;
+    }
+
+    .dashboard-board h3,
+    .dashboard-board p {
+      margin: 0;
+    }
+
+    .dashboard-board h3 {
+      margin-top: 12px;
+      color: var(--color-ink);
+      font-size: 1.22rem;
+    }
+
+    .dashboard-board p {
+      margin-top: 8px;
+      line-height: 1.55;
+    }
+
+    .dashboard-board__icon {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      border-radius: 16px;
+      font-size: 28px;
+    }
+
+    .dashboard-board--match {
+      border-color: #15803d;
+    }
+
+    .dashboard-board--match .dashboard-board__icon {
+      background: #ddf4e4;
+      color: #15803d;
+    }
+
+    .dashboard-board--history {
+      border-color: #2563eb;
+    }
+
+    .dashboard-board--history .dashboard-board__icon {
+      background: #f4f8ff;
+      color: #2563eb;
+    }
+
+    .dashboard-board--favorites {
+      border-color: #d97757;
+    }
+
+    .dashboard-board--favorites .dashboard-board__icon {
+      background: #fff4ef;
+      color: #d97757;
+    }
+
+    .dashboard-board--messages {
+      border-color: #7c3aed;
+    }
+
+    .dashboard-board--messages .dashboard-board__icon {
+      background: #f5f3ff;
+      color: #7c3aed;
     }
 
     .modal-backdrop {
@@ -1598,6 +1715,11 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
         position: static;
       }
 
+      .dashboard-board-grid,
+      .dashboard-board {
+        grid-template-columns: 1fr;
+      }
+
       .span-2 {
         grid-column: auto;
       }
@@ -1619,6 +1741,7 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly hasSubmitted = signal(false);
   protected readonly showFamilyForm = signal(false);
   protected readonly isDashboardEditMode = signal(false);
+  protected readonly isPersonalDataEditMode = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly message = signal('');
   protected readonly memberEntryIds = signal<string[]>(['member-1']);
@@ -1708,6 +1831,16 @@ export class FamilyDashboardComponent implements OnInit {
     this.message.set('');
     this.hasSubmitted.set(false);
     this.isDashboardEditMode.set(true);
+    this.isPersonalDataEditMode.set(false);
+    this.showFamilyForm.set(false);
+  }
+
+  protected editPersonalData(): void {
+    this.errorMessage.set('');
+    this.message.set('');
+    this.hasSubmitted.set(false);
+    this.isDashboardEditMode.set(false);
+    this.isPersonalDataEditMode.set(true);
     this.showFamilyForm.set(false);
   }
 
@@ -1716,6 +1849,7 @@ export class FamilyDashboardComponent implements OnInit {
     this.message.set('');
     this.hasSubmitted.set(false);
     this.isDashboardEditMode.set(false);
+    this.isPersonalDataEditMode.set(false);
   }
 
   protected openFamilyInvite(): void {
@@ -1746,6 +1880,7 @@ export class FamilyDashboardComponent implements OnInit {
     this.errorMessage.set('');
     this.message.set('');
     this.isDashboardEditMode.set(false);
+    this.isPersonalDataEditMode.set(false);
     this.showFamilyForm.set(false);
   }
 
@@ -1775,6 +1910,7 @@ export class FamilyDashboardComponent implements OnInit {
       await this.loadAccount(false);
       this.showFamilyForm.set(false);
       this.isDashboardEditMode.set(false);
+      this.isPersonalDataEditMode.set(false);
       this.message.set(this.copy().saved);
     } catch (error) {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'save'));

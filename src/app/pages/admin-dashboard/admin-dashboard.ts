@@ -80,20 +80,36 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
                 <button class="button-secondary" type="button" (click)="loadData()">Atualizar</button>
               </div>
 
-              <div class="admin-filter-line">
-                <button type="button" [class.is-active]="reviewFilter() === 'all'" (click)="reviewFilter.set('all')">Todos</button>
-                <button type="button" [class.is-active]="reviewFilter() === 'pending'" (click)="reviewFilter.set('pending')">Pendentes</button>
-                <button type="button" [class.is-active]="reviewFilter() === 'analysing'" (click)="reviewFilter.set('analysing')">Em análise</button>
-                <button type="button" [class.is-active]="reviewFilter() === 'approved'" (click)="reviewFilter.set('approved')">Aprovados</button>
-                <button type="button" [class.is-active]="reviewFilter() === 'rejected'" (click)="reviewFilter.set('rejected')">Rejeitados</button>
+              <div class="admin-filter-group">
+                <span>Estado</span>
+                <div class="admin-filter-line">
+                  <button type="button" [class.is-active]="reviewFilter() === 'all'" (click)="reviewFilter.set('all')">Todos</button>
+                  <button type="button" [class.is-active]="reviewFilter() === 'pending'" (click)="reviewFilter.set('pending')">Pendentes</button>
+                  <button type="button" [class.is-active]="reviewFilter() === 'analysing'" (click)="reviewFilter.set('analysing')">Em análise</button>
+                  <button type="button" [class.is-active]="reviewFilter() === 'approved'" (click)="reviewFilter.set('approved')">Aprovados</button>
+                  <button type="button" [class.is-active]="reviewFilter() === 'rejected'" (click)="reviewFilter.set('rejected')">Rejeitados</button>
+                </div>
+              </div>
+
+              <div class="admin-filter-group">
+                <span>Tipo de cadastro</span>
+                <div class="admin-filter-line">
+                  <button type="button" [class.is-active]="profileTypeFilter() === 'all'" (click)="profileTypeFilter.set('all')">Todos</button>
+                  <button type="button" [class.is-active]="profileTypeFilter() === 'family'" (click)="profileTypeFilter.set('family')">Família</button>
+                  <button type="button" [class.is-active]="profileTypeFilter() === 'caregiver'" (click)="profileTypeFilter.set('caregiver')">Cuidador</button>
+                </div>
               </div>
 
               <div class="table-like admin-table">
                 @for (item of filteredReviewQueue(); track item.type + item.id) {
                   <article>
                     <strong>{{ item.fullName }}</strong>
-                    <span class="muted">{{ profileTypeLabel(item.type) }} · {{ item.district }} · {{ statusLabel(item.status) }}</span>
-                    <a class="badge" [routerLink]="['/admin/revisoes', item.type, item.id]">Abrir</a>
+                    <span class="admin-row-meta">
+                      <span class="profile-chip" [class.profile-chip--family]="item.type === 'family'" [class.profile-chip--caregiver]="item.type === 'caregiver'">{{ profileTypeLabel(item.type) }}</span>
+                      <span class="muted">{{ item.district }}</span>
+                      <span class="status-chip" [class.status-chip--pending]="item.status === 'pending'" [class.status-chip--analysing]="item.status === 'analysing'" [class.status-chip--approved]="item.status === 'approved'" [class.status-chip--rejected]="item.status === 'rejected'">{{ statusLabel(item.status) }}</span>
+                    </span>
+                    <a class="btn btn-secondary button-small" [routerLink]="['/admin/revisoes', item.type, item.id]">Abrir</a>
                   </article>
                 } @empty {
                   <article>
@@ -283,6 +299,18 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
       cursor: not-allowed;
     }
 
+    .admin-filter-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-filter-group > span {
+      color: var(--color-muted);
+      font-size: 0.82rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
     .admin-filter-line {
       display: flex;
       flex-wrap: wrap;
@@ -305,6 +333,57 @@ type AdminSection = 'overview' | 'reviews' | 'admins' | 'future';
       border-color: var(--color-primary);
       background: var(--color-primary);
       color: #fff;
+    }
+
+    .admin-row-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .profile-chip,
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .profile-chip--family {
+      background: #f5f3ff;
+      color: #6d28d9;
+    }
+
+    .profile-chip--caregiver {
+      background: #ecfeff;
+      color: #0e7490;
+    }
+
+    .status-chip--pending {
+      background: #fffbea;
+      color: #8a5b00;
+    }
+
+    .status-chip--analysing {
+      background: #f4f8ff;
+      color: #1d4ed8;
+    }
+
+    .status-chip--approved {
+      background: #edf9ef;
+      color: #146b37;
+    }
+
+    .status-chip--rejected {
+      background: #fff4ef;
+      color: #873a28;
     }
 
     .check-line {
@@ -376,6 +455,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly errorMessage = signal('');
   protected readonly activeSection = signal<AdminSection>('overview');
   protected readonly reviewFilter = signal<'all' | ReviewQueueItem['status']>('all');
+  protected readonly profileTypeFilter = signal<'all' | ReviewQueueItem['type']>('all');
   protected readonly menuItems = computed(() => [
     {
       id: 'overview' as const,
@@ -407,12 +487,13 @@ export class AdminDashboardComponent implements OnInit {
     },
   ]);
   protected readonly filteredReviewQueue = computed(() => {
-    const filter = this.reviewFilter();
-    if (filter === 'all') {
-      return this.reviewQueue();
-    }
+    const statusFilter = this.reviewFilter();
+    const profileTypeFilter = this.profileTypeFilter();
 
-    return this.reviewQueue().filter((item) => item.status === filter);
+    return this.reviewQueue().filter((item) =>
+      (statusFilter === 'all' || item.status === statusFilter) &&
+      (profileTypeFilter === 'all' || item.type === profileTypeFilter),
+    );
   });
 
   async ngOnInit(): Promise<void> {

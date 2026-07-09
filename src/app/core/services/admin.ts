@@ -148,7 +148,6 @@ export class AdminService {
       .filter((item): item is ReviewQueueItem => !!item);
 
     return [...caregivers, ...families]
-      .filter((item) => item.status === 'pending' || item.status === 'analysing')
       .sort((a, b) => this.timeValue(a.requestedAt) - this.timeValue(b.requestedAt))
       .slice(0, 80);
   }

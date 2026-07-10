@@ -138,8 +138,12 @@ const FAMILY_COPY = {
     possibleMatches: 'Possíveis',
     nearMatches: 'Quase compatíveis',
     compatibility: 'compatibilidade',
+    compatibilityPercentLabel: 'Percentual de compatibilidade',
     pricePoints: 'Preço',
     overBudget: 'Acima do orçamento',
+    priceTierGood: 'Dentro do orçamento',
+    priceTierWarning: 'Até 30% acima do orçamento',
+    priceTierDanger: 'Mais de 30% acima do orçamento',
     matchTipsTitle: 'Como melhorar a compatibilidade',
     matchTipsText: 'Pequenos ajustes podem aumentar o número de cuidadores compatíveis sem perder segurança.',
     matchTipBudget: 'Reveja o orçamento: valores até 10% acima ainda podem ser considerados parcialmente compatíveis.',
@@ -307,8 +311,12 @@ const FAMILY_COPY = {
     possibleMatches: 'Possible',
     nearMatches: 'Almost compatible',
     compatibility: 'compatibility',
+    compatibilityPercentLabel: 'Compatibility percentage',
     pricePoints: 'Price',
     overBudget: 'Over budget',
+    priceTierGood: 'Within budget',
+    priceTierWarning: 'Up to 30% over budget',
+    priceTierDanger: 'More than 30% over budget',
     matchTipsTitle: 'How to improve compatibility',
     matchTipsText: 'Small adjustments can increase the number of compatible caregivers without losing safety.',
     matchTipBudget: 'Review the budget: values up to 10% above can still be considered partially compatible.',
@@ -417,15 +425,11 @@ interface FamilyCaregiverMatch {
   total: number;
   percentage: number;
   priceScore: number;
+  priceTier: 1 | 2 | 3;
   isOverBudget: boolean;
   matchedServices: number;
   matchedDays: number;
   matchedPeriods: number;
-}
-
-interface MatchTip {
-  icon: string;
-  text: string;
 }
 
 type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
@@ -1090,7 +1094,16 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
                   @if (allCaregiverMatches().length) {
                     <div class="caregiver-card-grid">
                       @for (match of allCaregiverMatches(); track match.uid) {
-                        <article class="caregiver-match-card" [class.caregiver-match-card--near]="match.percentage < 50">
+                        <article class="caregiver-match-card">
+                          <div
+                            class="compatibility-band"
+                            [class.compatibility-band--low]="match.percentage < 50"
+                            [class.compatibility-band--medium]="match.percentage >= 50 && match.percentage < 75"
+                            [class.compatibility-band--high]="match.percentage >= 75"
+                          >
+                            <span>{{ copy().compatibilityPercentLabel }}</span>
+                            <strong>{{ match.percentage }}%</strong>
+                          </div>
                           <div class="caregiver-photo" aria-hidden="true">
                             @if (match.photoUrl) {
                               <img [src]="match.photoUrl" [alt]="match.name" />
@@ -1098,14 +1111,19 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
                               <span>{{ caregiverInitials(match.name) }}</span>
                             }
                           </div>
-                          <div>
+                          <div class="caregiver-card-content">
                             <h3>{{ match.name }}</h3>
                             <p>{{ match.location || '-' }}</p>
-                            @if (match.isOverBudget) {
-                              <small>{{ copy().overBudget }}</small>
-                            }
+                            <span
+                              class="price-indicator"
+                              [class.price-indicator--good]="match.priceTier === 1"
+                              [class.price-indicator--warning]="match.priceTier === 2"
+                              [class.price-indicator--danger]="match.priceTier === 3"
+                              [attr.aria-label]="priceTierLabel(match.priceTier)"
+                            >
+                              {{ priceSymbols(match.priceTier) }}
+                            </span>
                           </div>
-                          <strong>{{ match.percentage }}%</strong>
                         </article>
                       }
                     </div>
@@ -1173,31 +1191,6 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
               </button>
             </div>
           </form>
-        </section>
-      </div>
-    }
-
-    @if (isMatchTipsModalOpen()) {
-      <div class="modal-backdrop" (click)="closeMatchTips()">
-        <section class="invite-modal match-tips-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'match-tips-title'" (click)="$event.stopPropagation()">
-          <div class="invite-modal__header">
-            <div>
-              <p class="eyebrow">{{ copy().caregiverSuggestionBoard }}</p>
-              <h2 id="match-tips-title">{{ copy().matchTipsTitle }}</h2>
-            </div>
-            <button class="icon-button" type="button" [attr.aria-label]="copy().close" (click)="closeMatchTips()">
-              <span class="material-symbols-rounded" aria-hidden="true">close</span>
-            </button>
-          </div>
-          <p class="muted">{{ copy().matchTipsText }}</p>
-          <div class="match-tip-list">
-            @for (tip of dynamicMatchTips(); track tip.text) {
-              <article>
-                <span class="material-symbols-rounded" aria-hidden="true">{{ tip.icon }}</span>
-                <p>{{ tip.text }}</p>
-              </article>
-            }
-          </div>
         </section>
       </div>
     }
@@ -1335,10 +1328,10 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
 
     .caregiver-match-card {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      gap: 12px;
-      align-items: center;
-      padding: 16px;
+      grid-template-columns: minmax(116px, 1fr) minmax(0, 2fr);
+      grid-template-rows: 52px minmax(116px, 1fr);
+      min-height: 208px;
+      overflow: hidden;
       border: 1px solid rgba(220, 233, 216, 0.9);
       border-radius: 16px;
       background: #fff;
@@ -1352,46 +1345,50 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
 
     .caregiver-match-card h3 {
       color: var(--color-ink);
-      font-size: 1rem;
+      font-size: 1.02rem;
     }
 
     .caregiver-match-card p {
       margin-top: 4px;
       color: var(--color-muted);
-      font-size: 0.86rem;
     }
 
-    .caregiver-match-card > strong {
-      color: var(--color-primary-strong);
-      font-size: 1.04rem;
-    }
-
-    .caregiver-match-card small {
-      display: inline-block;
-      margin-top: 6px;
-      padding: 4px 7px;
-      border-radius: 999px;
-      background: #fff4ef;
-      color: #9a4a31;
-      font-size: 0.7rem;
-      font-weight: 900;
-    }
-
-    .caregiver-match-card--near {
-      border-style: dashed;
-      background: #fffaf0;
+    .caregiver-card-content {
+      display: grid;
+      align-content: center;
+      gap: 7px;
+      padding: 18px 18px 18px 16px;
     }
 
     .caregiver-photo {
       display: grid;
-      width: 52px;
-      height: 52px;
       place-items: center;
-      border-radius: 50%;
       background: var(--color-primary-soft);
       color: var(--color-primary-strong);
+      font-size: 1.35rem;
       font-weight: 950;
       overflow: hidden;
+    }
+
+    .compatibility-band {
+      display: flex;
+      grid-column: 1 / -1;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      color: #fff;
+    }
+
+    .compatibility-band span {
+      font-size: 0.68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .compatibility-band strong {
+      font-size: 1.05rem;
+      font-weight: 950;
     }
 
     .caregiver-photo img {
@@ -1400,15 +1397,52 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
       object-fit: cover;
     }
 
+    .compatibility-band--low {
+      background: #b83232;
+    }
+
+    .compatibility-band--medium {
+      background: #f59e0b;
+    }
+
+    .compatibility-band--high {
+      background: #15803d;
+    }
+
+    .price-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      min-width: 36px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 950;
+    }
+
+    .price-indicator--good {
+      background: #ddf4e4;
+      color: #15803d;
+    }
+
+    .price-indicator--warning {
+      background: #fffbea;
+      color: #a16207;
+    }
+
+    .price-indicator--danger {
+      background: #fff4ef;
+      color: #b83232;
+    }
+
     .dashboard-empty-state {
       display: grid;
       gap: 12px;
       justify-items: start;
       padding: 28px;
-      border: 1px solid rgba(220, 233, 216, 0.9);
       border-radius: 18px;
       background: #fff;
-      box-shadow: var(--shadow-card);
     }
 
     .dashboard-empty-state > span {
@@ -1429,13 +1463,10 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
 
     .dashboard-empty-state h2 {
       color: var(--color-ink);
-      font-size: 1.25rem;
     }
 
     .dashboard-empty-state p {
-      max-width: 620px;
       color: var(--color-muted);
-      line-height: 1.6;
     }
 
     .modal-backdrop {
@@ -1522,38 +1553,6 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
       gap: 12px;
       justify-content: flex-end;
       margin-top: 4px;
-    }
-
-    .match-tip-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .match-tip-list article {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 12px;
-      align-items: center;
-      padding: 14px;
-      border: 1px solid rgba(220, 233, 216, 0.9);
-      border-radius: 14px;
-      background: #f8fbf6;
-    }
-
-    .match-tip-list span {
-      display: grid;
-      width: 42px;
-      height: 42px;
-      place-items: center;
-      border-radius: 12px;
-      background: var(--color-primary-soft);
-      color: var(--color-primary-strong);
-    }
-
-    .match-tip-list p {
-      margin: 0;
-      color: var(--color-muted);
-      line-height: 1.45;
     }
 
     .snackbar {
@@ -1903,11 +1902,14 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
         position: static;
       }
 
-      .dashboard-board-grid,
-      .dashboard-board,
-      .caregiver-card-grid,
-      .caregiver-match-card {
+      .caregiver-card-grid {
         grid-template-columns: 1fr;
+      }
+
+      .caregiver-match-card {
+        grid-template-columns: minmax(92px, 1fr) minmax(0, 2fr);
+        grid-template-rows: 48px minmax(112px, 1fr);
+        min-height: 188px;
       }
 
       .span-2 {
@@ -1942,16 +1944,8 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly isSubmittingInvite = signal(false);
   protected readonly inviteSubmitted = signal(false);
   protected readonly inviteEmailError = signal('');
-  protected readonly isMatchTipsModalOpen = signal(false);
   protected readonly dashboardView = signal<FamilyDashboardView>('overview');
   protected readonly allCaregiverMatches = signal<FamilyCaregiverMatch[]>([]);
-  protected readonly caregiverMatches = signal<FamilyCaregiverMatch[]>([]);
-  protected readonly bestCaregiverMatch = computed(() => this.caregiverMatches()[0] ?? null);
-  protected readonly compatibleMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage > 70));
-  protected readonly possibleMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 50 && match.percentage <= 70));
-  protected readonly nearMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 40 && match.percentage < 50));
-  protected readonly aboveThresholdMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 50));
-  protected readonly dynamicMatchTips = computed(() => this.buildDynamicMatchTips());
 
   protected readonly countries = computed(() =>
     getCountries()
@@ -2108,14 +2102,6 @@ export class FamilyDashboardComponent implements OnInit {
     this.inviteSubmitted.set(false);
     this.inviteEmailError.set('');
     this.isInviteModalOpen.set(true);
-  }
-
-  protected openMatchTips(): void {
-    this.isMatchTipsModalOpen.set(true);
-  }
-
-  protected closeMatchTips(): void {
-    this.isMatchTipsModalOpen.set(false);
   }
 
   protected closeFamilyInvite(): void {
@@ -2320,7 +2306,6 @@ export class FamilyDashboardComponent implements OnInit {
     const familyProfile = account?.familyProfile;
     if (!familyProfile?.completed) {
       this.allCaregiverMatches.set([]);
-      this.caregiverMatches.set([]);
       return;
     }
 
@@ -2335,12 +2320,8 @@ export class FamilyDashboardComponent implements OnInit {
         .filter((match): match is FamilyCaregiverMatch => !!match)
         .sort((first, second) => second.percentage - first.percentage || second.score - first.score);
       this.allCaregiverMatches.set(matches);
-      this.caregiverMatches.set(
-        matches.filter((match) => match.percentage >= 40),
-      );
     } catch (error) {
       this.allCaregiverMatches.set([]);
-      this.caregiverMatches.set([]);
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'read'));
     }
   }
@@ -2390,6 +2371,7 @@ export class FamilyDashboardComponent implements OnInit {
       total,
       percentage: total > 0 ? Math.round((score / total) * 100) : 0,
       priceScore,
+      priceTier: this.priceTier(familyBudget.amount, caregiverRate),
       isOverBudget: hasComparableRate && caregiverRate > familyBudget.amount,
       matchedServices,
       matchedDays,
@@ -2406,37 +2388,18 @@ export class FamilyDashboardComponent implements OnInit {
       .join('') || 'C';
   }
 
-  private buildDynamicMatchTips(): MatchTip[] {
-    const familyProfile = this.account()?.familyProfile;
-    const matches = this.allCaregiverMatches();
-    if (!familyProfile || matches.length === 0) {
-      return [{ icon: 'tune', text: this.copy().matchTipDefault }];
-    }
+  protected priceSymbols(priceTier: 1 | 2 | 3): string {
+    return '$'.repeat(priceTier);
+  }
 
-    const tips: MatchTip[] = [];
-    const priceIsWeak = matches.every((match) => match.priceScore < 3) ||
-      matches.filter((match) => match.isOverBudget).length / matches.length >= 0.5;
-    if (priceIsWeak) {
-      tips.push({ icon: 'euro', text: this.copy().matchTipBudget });
+  protected priceTierLabel(priceTier: 1 | 2 | 3): string {
+    if (priceTier === 1) {
+      return this.copy().priceTierGood;
     }
-
-    const serviceTotal = this.weightedServiceTotal(familyProfile.careNeeds.services ?? []);
-    const bestServiceScore = Math.max(...matches.map((match) => match.matchedServices), 0);
-    if (serviceTotal > 0 && bestServiceScore / serviceTotal < 0.65) {
-      tips.push({ icon: 'checklist', text: this.copy().matchTipServices });
+    if (priceTier === 2) {
+      return this.copy().priceTierWarning;
     }
-
-    const requiredDays = familyProfile.careNeeds.weekDays?.length ?? 0;
-    const requiredPeriods = familyProfile.careNeeds.periods?.length ?? 0;
-    const bestDayScore = Math.max(...matches.map((match) => match.matchedDays), 0);
-    const bestPeriodScore = Math.max(...matches.map((match) => match.matchedPeriods), 0);
-    const daysAreWeak = requiredDays > 0 && bestDayScore / requiredDays < 0.65;
-    const periodsAreWeak = requiredPeriods > 0 && bestPeriodScore / requiredPeriods < 0.65;
-    if (daysAreWeak || periodsAreWeak) {
-      tips.push({ icon: 'event_available', text: this.copy().matchTipSchedule });
-    }
-
-    return tips.length ? tips : [{ icon: 'tips_and_updates', text: this.copy().matchTipDefault }];
+    return this.copy().priceTierDanger;
   }
 
   private caregiverRateForBudgetPeriod(rates: Record<string, unknown>, period: string): number {
@@ -2514,6 +2477,19 @@ export class FamilyDashboardComponent implements OnInit {
       return 1;
     }
     return 0;
+  }
+
+  private priceTier(budgetAmount: number, caregiverRate: number): 1 | 2 | 3 {
+    if (!budgetAmount || !caregiverRate) {
+      return 3;
+    }
+    if (caregiverRate <= budgetAmount) {
+      return 1;
+    }
+    if ((caregiverRate - budgetAmount) / budgetAmount <= 0.3) {
+      return 2;
+    }
+    return 3;
   }
 
   private weightedServiceScore(familyServices: string[], caregiverServices: string[]): number {

@@ -10,7 +10,7 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { firebaseAuth, firebaseStorage, firestoreDb } from '../firebase/firebase.config';
@@ -369,6 +369,18 @@ export class Auth {
     }
 
     return snapshot.data() as CaregiverProfileDocument;
+  }
+
+  async getCaregivers(): Promise<CaregiverProfileDocument[]> {
+    const snapshot = await this.withTimeout(
+      getDocs(collection(firestoreDb, 'caregivers')),
+      'Não foi possível carregar os cuidadores. Verifique a ligação e tente novamente.',
+    );
+
+    return snapshot.docs.map((caregiverDoc) => ({
+      uid: caregiverDoc.id,
+      ...caregiverDoc.data(),
+    }));
   }
 
   getCaregiverApprovalSummary(

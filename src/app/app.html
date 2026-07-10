@@ -65,7 +65,7 @@
                 @if (photoMessage()) {
                   <small class="account-feedback">{{ photoMessage() }}</small>
                 }
-                <button type="button" role="menuitem" (click)="goToPersonalData()">{{ shellCopy().personalData }}</button>
+                <button type="button" role="menuitem" (click)="goToFavorites()">{{ shellCopy().favorites }}</button>
                 <hr />
                 <p>{{ shellCopy().chooseProfile }}</p>
                 @if (hasCaregiverProfile()) {

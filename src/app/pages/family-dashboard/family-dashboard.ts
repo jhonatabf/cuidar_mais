@@ -6,7 +6,7 @@ import {
   type CountryCode,
 } from 'libphonenumber-js';
 
-import { Auth, FamilyRegistration, UserAccount } from '../../core/services/auth';
+import { Auth, CaregiverProfileDocument, FamilyRegistration, UserAccount } from '../../core/services/auth';
 import { AppLocale, LocaleService } from '../../core/services/locale';
 import { PersonalDataComponent } from '../personal-data/personal-data';
 
@@ -130,6 +130,22 @@ const FAMILY_COPY = {
     unansweredMessages: '2 por responder',
     caregiverSuggestionBoard: 'Sugestão de cuidador',
     caregiverSuggestionText: 'Perfis recomendados serão exibidos aqui de acordo com os critérios de match.',
+    noCaregiverSuggestion: 'Não existe sugestão baseada nos critérios da família.',
+    changeCriteria: 'Alterar critérios',
+    improveMatchTips: 'Dicas para melhorar compatibilidade',
+    matchCounter: 'matches acima de 50%',
+    compatibleMatches: 'Compatíveis',
+    possibleMatches: 'Possíveis',
+    nearMatches: 'Quase compatíveis',
+    compatibility: 'compatibilidade',
+    pricePoints: 'Preço',
+    overBudget: 'Acima do orçamento',
+    matchTipsTitle: 'Como melhorar a compatibilidade',
+    matchTipsText: 'Pequenos ajustes podem aumentar o número de cuidadores compatíveis sem perder segurança.',
+    matchTipBudget: 'Reveja o orçamento: valores até 10% acima ainda podem ser considerados parcialmente compatíveis.',
+    matchTipSchedule: 'Adicione mais dias ou horários possíveis para aumentar a disponibilidade cruzada.',
+    matchTipServices: 'Selecione apenas os cuidados realmente necessários para evitar restringir demais o match.',
+    matchTipDefault: 'Complete ou reveja os critérios da família para tornar as sugestões mais precisas.',
     serviceHistoryBoard: 'Histórico de serviço',
     serviceHistoryText: 'Cuidadores vistos, contactados ou contratados pela família ficarão disponíveis neste histórico.',
     favoritesBoard: 'Favoritos',
@@ -137,6 +153,9 @@ const FAMILY_COPY = {
     caregiverMessagesBoard: 'Mensagens dos cuidadores',
     caregiverMessagesText: 'As conversas trocadas com cuidadores aparecerão aqui.',
     comingSoon: 'Em preparação',
+    activeCaregivers: 'Cuidadores no mesmo distrito',
+    registeredCaregiversCounter: 'cuidadores no mesmo distrito',
+    activeCaregiversEmpty: 'Ainda não existem cuidadores cadastrados no mesmo distrito.',
     close: 'Fechar mensagem',
     validationAdult: 'É necessário ser maior de idade para cadastrar uma família.',
     validationHousehold: 'Informe o nome da família ou casa.',
@@ -280,6 +299,22 @@ const FAMILY_COPY = {
     unansweredMessages: '2 unanswered',
     caregiverSuggestionBoard: 'Caregiver suggestion',
     caregiverSuggestionText: 'Recommended profiles will appear here according to matching criteria.',
+    noCaregiverSuggestion: 'There is no suggestion based on the family criteria.',
+    changeCriteria: 'Change criteria',
+    improveMatchTips: 'Tips to improve compatibility',
+    matchCounter: 'matches above 50%',
+    compatibleMatches: 'Compatible',
+    possibleMatches: 'Possible',
+    nearMatches: 'Almost compatible',
+    compatibility: 'compatibility',
+    pricePoints: 'Price',
+    overBudget: 'Over budget',
+    matchTipsTitle: 'How to improve compatibility',
+    matchTipsText: 'Small adjustments can increase the number of compatible caregivers without losing safety.',
+    matchTipBudget: 'Review the budget: values up to 10% above can still be considered partially compatible.',
+    matchTipSchedule: 'Add more possible days or times to increase overlapping availability.',
+    matchTipServices: 'Select only the care that is truly required to avoid restricting the match too much.',
+    matchTipDefault: 'Complete or review the family criteria to make suggestions more accurate.',
     serviceHistoryBoard: 'Service history',
     serviceHistoryText: 'Caregivers viewed, contacted or hired by the family will be listed in this history.',
     favoritesBoard: 'Favourites',
@@ -287,6 +322,9 @@ const FAMILY_COPY = {
     caregiverMessagesBoard: 'Caregiver messages',
     caregiverMessagesText: 'Messages exchanged with caregivers will appear here.',
     comingSoon: 'In preparation',
+    activeCaregivers: 'Caregivers in the same district',
+    registeredCaregiversCounter: 'caregivers in the same district',
+    activeCaregiversEmpty: 'There are no registered caregivers in the same district yet.',
     close: 'Close message',
     validationAdult: 'You must be an adult to register a family.',
     validationHousehold: 'Enter the family or household name.',
@@ -369,6 +407,28 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
     'Acesso por transporte público': 'Public transport access',
   },
 };
+
+interface FamilyCaregiverMatch {
+  uid: string;
+  name: string;
+  location: string;
+  photoUrl: string;
+  score: number;
+  total: number;
+  percentage: number;
+  priceScore: number;
+  isOverBudget: boolean;
+  matchedServices: number;
+  matchedDays: number;
+  matchedPeriods: number;
+}
+
+interface MatchTip {
+  icon: string;
+  text: string;
+}
+
+type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
 
 @Component({
   selector: 'app-family-dashboard',
@@ -723,15 +783,19 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       <section class="page family-dashboard-page">
         <div class="dashboard-shell">
           <aside class="card dashboard-nav" [attr.aria-label]="copy().dashboardEyebrow">
-            <button [class.is-active]="!isDashboardEditMode() && !isPersonalDataEditMode()" type="button" [attr.aria-current]="!isDashboardEditMode() && !isPersonalDataEditMode() ? 'page' : null" (click)="showOverview()">
+            <button [class.is-active]="isOverviewActive()" type="button" [attr.aria-current]="isOverviewActive() ? 'page' : null" (click)="showOverview()">
               <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
               <span>{{ copy().overview }}</span>
             </button>
-            <button type="button">
+            <button [class.is-active]="isDashboardSectionActive('favorites')" type="button" [attr.aria-current]="isDashboardSectionActive('favorites') ? 'page' : null" (click)="showDashboardSection('favorites')">
+              <span class="material-symbols-rounded" aria-hidden="true">favorite</span>
+              <span>{{ copy().favoritesBoard }}</span>
+            </button>
+            <button [class.is-active]="isDashboardSectionActive('messages')" type="button" [attr.aria-current]="isDashboardSectionActive('messages') ? 'page' : null" (click)="showDashboardSection('messages')">
               <span class="material-symbols-rounded" aria-hidden="true">forum</span>
               <span>{{ copy().caregiverMessages }}</span>
             </button>
-            <button type="button">
+            <button [class.is-active]="isDashboardSectionActive('interested')" type="button" [attr.aria-current]="isDashboardSectionActive('interested') ? 'page' : null" (click)="showDashboardSection('interested')">
               <span class="material-symbols-rounded" aria-hidden="true">volunteer_activism</span>
               <span>{{ copy().interestedCaregivers }}</span>
             </button>
@@ -1014,40 +1078,48 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
                 </form>
               }
             } @else {
-              <div class="dashboard-board-grid">
-                <article class="card dashboard-board dashboard-board--match">
-                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">recommend</span>
-                  <div>
-                    <span class="badge">{{ copy().comingSoon }}</span>
-                    <h3>{{ copy().caregiverSuggestionBoard }}</h3>
-                    <p class="muted">{{ copy().caregiverSuggestionText }}</p>
+              @if (dashboardView() === 'overview') {
+                <section class="active-caregivers-section">
+                  <div class="section-title compact-title">
+                    <span class="material-symbols-rounded" aria-hidden="true">groups</span>
+                    <div>
+                      <h2>{{ copy().activeCaregivers }}</h2>
+                      <p>{{ allCaregiverMatches().length }} {{ copy().registeredCaregiversCounter }}</p>
+                    </div>
                   </div>
-                </article>
-                <article class="card dashboard-board dashboard-board--history">
-                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">history</span>
-                  <div>
-                    <span class="badge">{{ copy().comingSoon }}</span>
-                    <h3>{{ copy().serviceHistoryBoard }}</h3>
-                    <p class="muted">{{ copy().serviceHistoryText }}</p>
-                  </div>
-                </article>
-                <article class="card dashboard-board dashboard-board--favorites">
-                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">favorite</span>
-                  <div>
-                    <span class="badge">{{ copy().comingSoon }}</span>
-                    <h3>{{ copy().favoritesBoard }}</h3>
-                    <p class="muted">{{ copy().favoritesText }}</p>
-                  </div>
-                </article>
-                <article class="card dashboard-board dashboard-board--messages">
-                  <span class="dashboard-board__icon material-symbols-rounded" aria-hidden="true">forum</span>
-                  <div>
-                    <span class="badge">{{ copy().comingSoon }}</span>
-                    <h3>{{ copy().caregiverMessagesBoard }}</h3>
-                    <p class="muted">{{ copy().caregiverMessagesText }}</p>
-                  </div>
-                </article>
-              </div>
+                  @if (allCaregiverMatches().length) {
+                    <div class="caregiver-card-grid">
+                      @for (match of allCaregiverMatches(); track match.uid) {
+                        <article class="caregiver-match-card" [class.caregiver-match-card--near]="match.percentage < 50">
+                          <div class="caregiver-photo" aria-hidden="true">
+                            @if (match.photoUrl) {
+                              <img [src]="match.photoUrl" [alt]="match.name" />
+                            } @else {
+                              <span>{{ caregiverInitials(match.name) }}</span>
+                            }
+                          </div>
+                          <div>
+                            <h3>{{ match.name }}</h3>
+                            <p>{{ match.location || '-' }}</p>
+                            @if (match.isOverBudget) {
+                              <small>{{ copy().overBudget }}</small>
+                            }
+                          </div>
+                          <strong>{{ match.percentage }}%</strong>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="muted">{{ copy().activeCaregiversEmpty }}</p>
+                  }
+                </section>
+              } @else {
+                <section class="dashboard-empty-state">
+                  <span class="material-symbols-rounded" aria-hidden="true">{{ dashboardSectionIcon() }}</span>
+                  <h2>{{ dashboardSectionTitle() }}</h2>
+                  <p>{{ dashboardSectionText() }}</p>
+                </section>
+              }
             }
           </div>
         </div>
@@ -1101,6 +1173,31 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
               </button>
             </div>
           </form>
+        </section>
+      </div>
+    }
+
+    @if (isMatchTipsModalOpen()) {
+      <div class="modal-backdrop" (click)="closeMatchTips()">
+        <section class="invite-modal match-tips-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'match-tips-title'" (click)="$event.stopPropagation()">
+          <div class="invite-modal__header">
+            <div>
+              <p class="eyebrow">{{ copy().caregiverSuggestionBoard }}</p>
+              <h2 id="match-tips-title">{{ copy().matchTipsTitle }}</h2>
+            </div>
+            <button class="icon-button" type="button" [attr.aria-label]="copy().close" (click)="closeMatchTips()">
+              <span class="material-symbols-rounded" aria-hidden="true">close</span>
+            </button>
+          </div>
+          <p class="muted">{{ copy().matchTipsText }}</p>
+          <div class="match-tip-list">
+            @for (tip of dynamicMatchTips(); track tip.text) {
+              <article>
+                <span class="material-symbols-rounded" aria-hidden="true">{{ tip.icon }}</span>
+                <p>{{ tip.text }}</p>
+              </article>
+            }
+          </div>
         </section>
       </div>
     }
@@ -1216,81 +1313,129 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       font-size: 22px;
     }
 
-    .dashboard-board-grid {
+    .active-caregivers-section {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .dashboard-board {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
       gap: 16px;
-      align-items: flex-start;
-      min-height: 190px;
-      padding: 24px;
-      border-left-width: 5px;
     }
 
-    .dashboard-board h3,
-    .dashboard-board p {
+    .compact-title {
+      align-items: center;
+    }
+
+    .compact-title > span {
+      font-family: 'Material Symbols Rounded';
+      font-size: 22px;
+    }
+
+    .caregiver-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .caregiver-match-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid rgba(220, 233, 216, 0.9);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow-card);
+    }
+
+    .caregiver-match-card h3,
+    .caregiver-match-card p {
       margin: 0;
     }
 
-    .dashboard-board h3 {
-      margin-top: 12px;
+    .caregiver-match-card h3 {
       color: var(--color-ink);
-      font-size: 1.22rem;
+      font-size: 1rem;
     }
 
-    .dashboard-board p {
-      margin-top: 8px;
-      line-height: 1.55;
+    .caregiver-match-card p {
+      margin-top: 4px;
+      color: var(--color-muted);
+      font-size: 0.86rem;
     }
 
-    .dashboard-board__icon {
+    .caregiver-match-card > strong {
+      color: var(--color-primary-strong);
+      font-size: 1.04rem;
+    }
+
+    .caregiver-match-card small {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: #fff4ef;
+      color: #9a4a31;
+      font-size: 0.7rem;
+      font-weight: 900;
+    }
+
+    .caregiver-match-card--near {
+      border-style: dashed;
+      background: #fffaf0;
+    }
+
+    .caregiver-photo {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
+      font-weight: 950;
+      overflow: hidden;
+    }
+
+    .caregiver-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .dashboard-empty-state {
+      display: grid;
+      gap: 12px;
+      justify-items: start;
+      padding: 28px;
+      border: 1px solid rgba(220, 233, 216, 0.9);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: var(--shadow-card);
+    }
+
+    .dashboard-empty-state > span {
       display: grid;
       width: 52px;
       height: 52px;
       place-items: center;
       border-radius: 16px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
       font-size: 28px;
     }
 
-    .dashboard-board--match {
-      border-color: #15803d;
+    .dashboard-empty-state h2,
+    .dashboard-empty-state p {
+      margin: 0;
     }
 
-    .dashboard-board--match .dashboard-board__icon {
-      background: #ddf4e4;
-      color: #15803d;
+    .dashboard-empty-state h2 {
+      color: var(--color-ink);
+      font-size: 1.25rem;
     }
 
-    .dashboard-board--history {
-      border-color: #2563eb;
-    }
-
-    .dashboard-board--history .dashboard-board__icon {
-      background: #f4f8ff;
-      color: #2563eb;
-    }
-
-    .dashboard-board--favorites {
-      border-color: #d97757;
-    }
-
-    .dashboard-board--favorites .dashboard-board__icon {
-      background: #fff4ef;
-      color: #d97757;
-    }
-
-    .dashboard-board--messages {
-      border-color: #7c3aed;
-    }
-
-    .dashboard-board--messages .dashboard-board__icon {
-      background: #f5f3ff;
-      color: #7c3aed;
+    .dashboard-empty-state p {
+      max-width: 620px;
+      color: var(--color-muted);
+      line-height: 1.6;
     }
 
     .modal-backdrop {
@@ -1347,6 +1492,17 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       cursor: pointer;
     }
 
+    .icon-button--compact {
+      flex-basis: 38px;
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+    }
+
+    .icon-button--compact .material-symbols-rounded {
+      font-size: 20px;
+    }
+
     .invite-form.show-validation-errors input:required:invalid,
     .invite-form.show-validation-errors input[type='email']:invalid,
     .invite-form input.field-invalid {
@@ -1366,6 +1522,38 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       gap: 12px;
       justify-content: flex-end;
       margin-top: 4px;
+    }
+
+    .match-tip-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .match-tip-list article {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid rgba(220, 233, 216, 0.9);
+      border-radius: 14px;
+      background: #f8fbf6;
+    }
+
+    .match-tip-list span {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary-strong);
+    }
+
+    .match-tip-list p {
+      margin: 0;
+      color: var(--color-muted);
+      line-height: 1.45;
     }
 
     .snackbar {
@@ -1716,7 +1904,9 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
       }
 
       .dashboard-board-grid,
-      .dashboard-board {
+      .dashboard-board,
+      .caregiver-card-grid,
+      .caregiver-match-card {
         grid-template-columns: 1fr;
       }
 
@@ -1752,6 +1942,16 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly isSubmittingInvite = signal(false);
   protected readonly inviteSubmitted = signal(false);
   protected readonly inviteEmailError = signal('');
+  protected readonly isMatchTipsModalOpen = signal(false);
+  protected readonly dashboardView = signal<FamilyDashboardView>('overview');
+  protected readonly allCaregiverMatches = signal<FamilyCaregiverMatch[]>([]);
+  protected readonly caregiverMatches = signal<FamilyCaregiverMatch[]>([]);
+  protected readonly bestCaregiverMatch = computed(() => this.caregiverMatches()[0] ?? null);
+  protected readonly compatibleMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage > 70));
+  protected readonly possibleMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 50 && match.percentage <= 70));
+  protected readonly nearMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 40 && match.percentage < 50));
+  protected readonly aboveThresholdMatches = computed(() => this.caregiverMatches().filter((match) => match.percentage >= 50));
+  protected readonly dynamicMatchTips = computed(() => this.buildDynamicMatchTips());
 
   protected readonly countries = computed(() =>
     getCountries()
@@ -1830,6 +2030,7 @@ export class FamilyDashboardComponent implements OnInit {
     this.errorMessage.set('');
     this.message.set('');
     this.hasSubmitted.set(false);
+    this.dashboardView.set('overview');
     this.isDashboardEditMode.set(true);
     this.isPersonalDataEditMode.set(false);
     this.showFamilyForm.set(false);
@@ -1839,6 +2040,7 @@ export class FamilyDashboardComponent implements OnInit {
     this.errorMessage.set('');
     this.message.set('');
     this.hasSubmitted.set(false);
+    this.dashboardView.set('overview');
     this.isDashboardEditMode.set(false);
     this.isPersonalDataEditMode.set(true);
     this.showFamilyForm.set(false);
@@ -1848,8 +2050,56 @@ export class FamilyDashboardComponent implements OnInit {
     this.errorMessage.set('');
     this.message.set('');
     this.hasSubmitted.set(false);
+    this.dashboardView.set('overview');
     this.isDashboardEditMode.set(false);
     this.isPersonalDataEditMode.set(false);
+  }
+
+  protected showDashboardSection(view: FamilyDashboardView): void {
+    this.errorMessage.set('');
+    this.message.set('');
+    this.hasSubmitted.set(false);
+    this.dashboardView.set(view);
+    this.isDashboardEditMode.set(false);
+    this.isPersonalDataEditMode.set(false);
+  }
+
+  protected isOverviewActive(): boolean {
+    return !this.isDashboardEditMode() && !this.isPersonalDataEditMode() && this.dashboardView() === 'overview';
+  }
+
+  protected isDashboardSectionActive(view: FamilyDashboardView): boolean {
+    return !this.isDashboardEditMode() && !this.isPersonalDataEditMode() && this.dashboardView() === view;
+  }
+
+  protected dashboardSectionIcon(): string {
+    const icons: Record<FamilyDashboardView, string> = {
+      overview: 'groups',
+      favorites: 'favorite',
+      messages: 'forum',
+      interested: 'volunteer_activism',
+    };
+    return icons[this.dashboardView()];
+  }
+
+  protected dashboardSectionTitle(): string {
+    const titles: Record<FamilyDashboardView, string> = {
+      overview: this.copy().activeCaregivers,
+      favorites: this.copy().favoritesBoard,
+      messages: this.copy().caregiverMessagesBoard,
+      interested: this.copy().interestedCaregivers,
+    };
+    return titles[this.dashboardView()];
+  }
+
+  protected dashboardSectionText(): string {
+    const texts: Record<FamilyDashboardView, string> = {
+      overview: this.copy().activeCaregiversEmpty,
+      favorites: this.copy().favoritesText,
+      messages: this.copy().caregiverMessagesText,
+      interested: this.copy().caregiverSuggestionText,
+    };
+    return texts[this.dashboardView()];
   }
 
   protected openFamilyInvite(): void {
@@ -1858,6 +2108,14 @@ export class FamilyDashboardComponent implements OnInit {
     this.inviteSubmitted.set(false);
     this.inviteEmailError.set('');
     this.isInviteModalOpen.set(true);
+  }
+
+  protected openMatchTips(): void {
+    this.isMatchTipsModalOpen.set(true);
+  }
+
+  protected closeMatchTips(): void {
+    this.isMatchTipsModalOpen.set(false);
   }
 
   protected closeFamilyInvite(): void {
@@ -2054,7 +2312,312 @@ export class FamilyDashboardComponent implements OnInit {
     this.loadEmergencyPhone(account);
     this.syncUsePersonalLocation(account);
     this.showFamilyForm.set(!account?.familyProfile?.completed || account.familyProfileStatus === 'draft');
+    await this.loadCaregiverMatches(account);
     this.isLoading.set(false);
+  }
+
+  private async loadCaregiverMatches(account: UserAccount | null): Promise<void> {
+    const familyProfile = account?.familyProfile;
+    if (!familyProfile?.completed) {
+      this.allCaregiverMatches.set([]);
+      this.caregiverMatches.set([]);
+      return;
+    }
+
+    try {
+      const caregivers = await this.auth.getCaregivers();
+      const familyDistrict = this.normalizedText(familyProfile.location?.district || account?.location?.district || '');
+      const sameDistrictCaregivers = familyDistrict
+        ? caregivers.filter((caregiver) => this.normalizedText(this.caregiverDistrict(caregiver)) === familyDistrict)
+        : [];
+      const matches = sameDistrictCaregivers
+        .map((caregiver) => this.calculateCaregiverMatch(familyProfile, caregiver))
+        .filter((match): match is FamilyCaregiverMatch => !!match)
+        .sort((first, second) => second.percentage - first.percentage || second.score - first.score);
+      this.allCaregiverMatches.set(matches);
+      this.caregiverMatches.set(
+        matches.filter((match) => match.percentage >= 40),
+      );
+    } catch (error) {
+      this.allCaregiverMatches.set([]);
+      this.caregiverMatches.set([]);
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'read'));
+    }
+  }
+
+  private calculateCaregiverMatch(
+    familyProfile: UserAccount['familyProfile'],
+    caregiver: CaregiverProfileDocument,
+  ): FamilyCaregiverMatch | null {
+    if (!familyProfile) {
+      return null;
+    }
+
+    const publicProfile = this.recordValue(caregiver, 'publicProfile');
+    const caregiverRates = this.recordValue(publicProfile, 'rates');
+    const familyBudget = familyProfile.budget;
+    const caregiverRate = this.caregiverRateForBudgetPeriod(caregiverRates, familyBudget.period);
+    const hasComparableRate = caregiverRate > 0 && familyBudget.amount > 0;
+    const priceScore = hasComparableRate ? this.priceScore(familyBudget.amount, caregiverRate) : 0;
+
+    const familyServices = familyProfile.careNeeds.services ?? [];
+    const familyDays = familyProfile.careNeeds.weekDays ?? [];
+    const familyPeriods = familyProfile.careNeeds.periods ?? [];
+    const caregiverServices = this.stringArrayValue(publicProfile, 'serviceTypes');
+    const caregiverAvailability = this.recordValue(publicProfile, 'availability');
+    const caregiverDays = this.stringArrayValue(caregiverAvailability, 'weekDays');
+    const caregiverPeriods = this.stringArrayValue(caregiverAvailability, 'periods');
+    const caregiverAvailabilityTypes = this.stringArrayValue(caregiverAvailability, 'availabilityTypes');
+    const matchedServices = this.weightedServiceScore(familyServices, caregiverServices);
+    const serviceTotal = this.weightedServiceTotal(familyServices);
+    const matchedDays = this.intersectionCount(familyDays, caregiverDays);
+    const matchedPeriods = this.intersectionCount(familyPeriods, caregiverPeriods);
+    const periodScore = matchedPeriods * 2;
+    const periodTotal = familyPeriods.length * 2;
+    const preferredCareMatch = this.preferredCareMatches(
+      familyProfile.careNeeds.preferredCareType,
+      caregiverAvailabilityTypes,
+    ) ? 1 : 0;
+    const total = 3 + serviceTotal + familyDays.length + periodTotal + 1;
+    const score = priceScore + matchedServices + matchedDays + periodScore + preferredCareMatch;
+
+    return {
+      uid: this.stringValue(caregiver, 'uid'),
+      name: this.stringValue(publicProfile, 'fullName') || this.stringValue(caregiver, 'email') || 'Cuidador',
+      location: this.caregiverLocation(publicProfile),
+      photoUrl: this.caregiverPhotoUrl(caregiver),
+      score,
+      total,
+      percentage: total > 0 ? Math.round((score / total) * 100) : 0,
+      priceScore,
+      isOverBudget: hasComparableRate && caregiverRate > familyBudget.amount,
+      matchedServices,
+      matchedDays,
+      matchedPeriods,
+    };
+  }
+
+  protected caregiverInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'C';
+  }
+
+  private buildDynamicMatchTips(): MatchTip[] {
+    const familyProfile = this.account()?.familyProfile;
+    const matches = this.allCaregiverMatches();
+    if (!familyProfile || matches.length === 0) {
+      return [{ icon: 'tune', text: this.copy().matchTipDefault }];
+    }
+
+    const tips: MatchTip[] = [];
+    const priceIsWeak = matches.every((match) => match.priceScore < 3) ||
+      matches.filter((match) => match.isOverBudget).length / matches.length >= 0.5;
+    if (priceIsWeak) {
+      tips.push({ icon: 'euro', text: this.copy().matchTipBudget });
+    }
+
+    const serviceTotal = this.weightedServiceTotal(familyProfile.careNeeds.services ?? []);
+    const bestServiceScore = Math.max(...matches.map((match) => match.matchedServices), 0);
+    if (serviceTotal > 0 && bestServiceScore / serviceTotal < 0.65) {
+      tips.push({ icon: 'checklist', text: this.copy().matchTipServices });
+    }
+
+    const requiredDays = familyProfile.careNeeds.weekDays?.length ?? 0;
+    const requiredPeriods = familyProfile.careNeeds.periods?.length ?? 0;
+    const bestDayScore = Math.max(...matches.map((match) => match.matchedDays), 0);
+    const bestPeriodScore = Math.max(...matches.map((match) => match.matchedPeriods), 0);
+    const daysAreWeak = requiredDays > 0 && bestDayScore / requiredDays < 0.65;
+    const periodsAreWeak = requiredPeriods > 0 && bestPeriodScore / requiredPeriods < 0.65;
+    if (daysAreWeak || periodsAreWeak) {
+      tips.push({ icon: 'event_available', text: this.copy().matchTipSchedule });
+    }
+
+    return tips.length ? tips : [{ icon: 'tips_and_updates', text: this.copy().matchTipDefault }];
+  }
+
+  private caregiverRateForBudgetPeriod(rates: Record<string, unknown>, period: string): number {
+    const rateKeyByPeriod: Record<string, string> = {
+      'Por hora': 'hourlyRate',
+      'Por turno': 'shiftRate',
+      'Por dia': 'dayRate',
+      'Por mês': 'monthlyRate',
+    };
+    const directValue = this.numberValue(rates, rateKeyByPeriod[period] ?? '');
+    if (directValue > 0) {
+      return directValue;
+    }
+
+    const hourlyRate = this.numberValue(rates, 'hourlyRate');
+    const shiftRate = this.numberValue(rates, 'shiftRate');
+    const dayRate = this.numberValue(rates, 'dayRate');
+    const monthlyRate = this.numberValue(rates, 'monthlyRate');
+    const estimatedHourlyRate =
+      hourlyRate ||
+      (shiftRate ? shiftRate / 4 : 0) ||
+      (dayRate ? dayRate / 8 : 0) ||
+      (monthlyRate ? monthlyRate / 160 : 0);
+
+    switch (period) {
+      case 'Por hora':
+        return estimatedHourlyRate;
+      case 'Por turno':
+        return shiftRate || estimatedHourlyRate * 4;
+      case 'Por dia':
+        return dayRate || estimatedHourlyRate * 8;
+      case 'Por semana':
+        return dayRate ? dayRate * 5 : estimatedHourlyRate * 40;
+      case 'Por mês':
+        return monthlyRate || estimatedHourlyRate * 160;
+      default:
+        return estimatedHourlyRate;
+    }
+  }
+
+  private caregiverLocation(publicProfile: Record<string, unknown>): string {
+    return [this.stringValue(publicProfile, 'county'), this.stringValue(publicProfile, 'district')]
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  private caregiverDistrict(caregiver: CaregiverProfileDocument): string {
+    const publicProfile = this.recordValue(caregiver, 'publicProfile');
+    return this.stringValue(publicProfile, 'district') || this.stringValue(caregiver, 'district');
+  }
+
+  private caregiverPhotoUrl(caregiver: CaregiverProfileDocument): string {
+    const profilePhoto = this.recordValue(caregiver, 'profilePhoto');
+    const publicProfile = this.recordValue(caregiver, 'publicProfile');
+    return this.stringValue(profilePhoto, 'downloadUrl') ||
+      this.stringValue(publicProfile, 'photoUrl') ||
+      this.stringValue(caregiver, 'photoURL');
+  }
+
+  private numberValue(source: Record<string, unknown>, key: string): number {
+    const value = source[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  }
+
+  private priceScore(budgetAmount: number, caregiverRate: number): number {
+    if (caregiverRate <= budgetAmount) {
+      return 3;
+    }
+
+    const differenceRatio = (caregiverRate - budgetAmount) / budgetAmount;
+    if (differenceRatio <= 0.1) {
+      return 2;
+    }
+    if (differenceRatio <= 0.2) {
+      return 1;
+    }
+    return 0;
+  }
+
+  private weightedServiceScore(familyServices: string[], caregiverServices: string[]): number {
+    return familyServices
+      .reduce((total, service) => {
+        if (caregiverServices.includes(service)) {
+          return total + this.serviceWeight(service);
+        }
+
+        if (this.hasEquivalentService(service, caregiverServices)) {
+          return total + this.serviceWeight(service) * 0.5;
+        }
+
+        return total;
+      }, 0);
+  }
+
+  private weightedServiceTotal(familyServices: string[]): number {
+    return familyServices.reduce((total, service) => total + this.serviceWeight(service), 0);
+  }
+
+  private serviceWeight(service: string): number {
+    const essentialServices = new Set([
+      'Higiene pessoal',
+      'Administração de medicação',
+      'Mobilidade reduzida',
+      'Acompanhamento noturno',
+      'Cuidados paliativos',
+      'Alzheimer',
+      'Demência',
+    ]);
+    const optionalServices = new Set([
+      'Companhia',
+      'Limpeza doméstica leve',
+    ]);
+
+    if (essentialServices.has(service)) {
+      return 2;
+    }
+    if (optionalServices.has(service)) {
+      return 0.5;
+    }
+    return 1;
+  }
+
+  private hasEquivalentService(familyService: string, caregiverServices: string[]): boolean {
+    const equivalentServices: Record<string, string[]> = {
+      Companhia: ['Acompanhamento a consultas'],
+      'Acompanhamento a consultas': ['Companhia'],
+      'Mobilidade reduzida': ['Acompanhamento a consultas'],
+      'Preparação de refeições': ['Limpeza doméstica leve'],
+      Alzheimer: ['Demência'],
+      Demência: ['Alzheimer'],
+    };
+
+    return (equivalentServices[familyService] ?? []).some((service) => caregiverServices.includes(service));
+  }
+
+  private preferredCareMatches(preferredCareType: string, availabilityTypes: string[]): boolean {
+    const expectedTypes: Record<string, string[]> = {
+      Pontual: ['Serviços pontuais'],
+      'Recorrente semanal': ['Part-time', 'Full-time', 'Serviços pontuais'],
+      Diário: ['Full-time', 'Part-time', 'Interno'],
+      Noite: ['Pernoita', 'Interno'],
+      '24 horas': ['Interno', 'Full-time'],
+      Interno: ['Interno'],
+    };
+    return (expectedTypes[preferredCareType] ?? []).some((type) => availabilityTypes.includes(type));
+  }
+
+  private intersectionCount(first: string[], second: string[]): number {
+    return first.filter((item) => second.includes(item)).length;
+  }
+
+  private recordValue(source: unknown, key: string): Record<string, unknown> {
+    if (!source || typeof source !== 'object') {
+      return {};
+    }
+    const value = (source as Record<string, unknown>)[key];
+    return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  }
+
+  private stringArrayValue(source: unknown, key: string): string[] {
+    if (!source || typeof source !== 'object') {
+      return [];
+    }
+    const value = (source as Record<string, unknown>)[key];
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  }
+
+  private stringValue(source: unknown, key: string): string {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+    const value = (source as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value : '';
+  }
+
+  private normalizedText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 
   private syncMemberEntries(account: UserAccount | null): void {

@@ -56,8 +56,8 @@ service cloud.firestore {
 
     match /caregivers/{uid} {
       allow create: if isOwner(uid);
-      allow get: if isOwner(uid) || isActiveAdmin();
-      allow list: if isActiveAdmin();
+      allow get: if signedIn() || isActiveAdmin();
+      allow list: if signedIn() || isActiveAdmin();
       allow update: if isOwner(uid) || canReview();
       allow delete: if false;
     }

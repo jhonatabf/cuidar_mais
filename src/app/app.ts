@@ -29,7 +29,7 @@ const SHELL_COPY = {
     helpLinks: ['Perguntas frequentes', 'Termos', 'Política de privacidade'],
     updatingPhoto: 'A atualizar foto...',
     changeProfilePhoto: 'Alterar foto de perfil',
-    personalData: 'Meus dados pessoais',
+    favorites: 'Favoritos',
     chooseProfile: 'Escolher perfil',
     caregiverDashboard: 'Dashboard cuidador',
     familyDashboard: 'Dashboard família',
@@ -61,7 +61,7 @@ const SHELL_COPY = {
     helpLinks: ['Frequently asked questions', 'Terms', 'Privacy policy'],
     updatingPhoto: 'Updating photo...',
     changeProfilePhoto: 'Change profile photo',
-    personalData: 'My personal data',
+    favorites: 'Favourites',
     chooseProfile: 'Choose profile',
     caregiverDashboard: 'Caregiver dashboard',
     familyDashboard: 'Family dashboard',
@@ -203,9 +203,9 @@ export class App implements OnInit, OnDestroy {
     await this.router.navigateByUrl('/dashboard/familia');
   }
 
-  protected async goToPersonalData(): Promise<void> {
+  protected async goToFavorites(): Promise<void> {
     this.closeAccountMenu();
-    await this.router.navigateByUrl('/meus-dados-pessoais');
+    await this.router.navigateByUrl('/dashboard/familia');
   }
 
   protected async logout(): Promise<void> {

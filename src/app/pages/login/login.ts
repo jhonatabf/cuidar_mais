@@ -56,7 +56,7 @@ const LOGIN_COPY = {
         </button>
         <div class="auth-separator"><span>{{ copy().separator }}</span></div>
         <button class="btn btn-secondary google-auth-button" type="button" [disabled]="isGoogleSubmitting()" (click)="signInWithGoogle()">
-          <span aria-hidden="true">G</span>
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true" />
           {{ isGoogleSubmitting() ? copy().googleSubmitting : copy().googleSubmit }}
         </button>
         <a class="btn btn-register" routerLink="/cadastro" [queryParams]="{ redirectTo: redirectTo() }">{{ copy().createAccount }}</a>

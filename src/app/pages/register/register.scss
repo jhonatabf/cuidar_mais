@@ -87,15 +87,9 @@
 .google-auth-button {
   gap: 10px;
 
-  span {
-    display: inline-grid;
+  img {
     width: 24px;
     height: 24px;
-    place-items: center;
-    border-radius: 50%;
-    background: #fff;
-    color: #2563eb;
-    font-weight: 950;
   }
 }
 

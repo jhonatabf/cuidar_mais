@@ -96,7 +96,7 @@ const REGISTER_COPY = {
       <form class="card card-body form-grid register-form" [class.show-validation-errors]="hasSubmitted()" novalidate (submit)="onSubmit($event)">
         @if (!isGoogleAccount()) {
           <button class="btn btn-secondary google-auth-button" type="button" [disabled]="isGoogleSubmitting()" (click)="startGoogleSignup()">
-            <span aria-hidden="true">G</span>
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true" />
             {{ isGoogleSubmitting() ? copy().googleCreating : copy().googleCreate }}
           </button>
           <div class="auth-separator"><span>{{ copy().separator }}</span></div>

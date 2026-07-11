@@ -135,7 +135,7 @@ const PERSONAL_DATA_COPY = {
               </div>
             </div>
             <div class="form-grid two-columns">
-              <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input type="email" name="email" required readonly [value]="email()" /></label>
+              <label><span class="label-line">{{ copy().email }} <strong>*</strong></span><input class="readonly-input" type="email" name="email" required readonly aria-readonly="true" [value]="email()" /></label>
             </div>
             <div class="check-stack">
               <label>
@@ -689,7 +689,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     const phoneNational = this.textValue(formData, 'phone');
 
     return {
-      email: this.embedded() ? this.email() : this.textValue(formData, 'email'),
+      email: this.email(),
       fullName: this.textValue(formData, 'fullName'),
       birthDate: this.textValue(formData, 'birthDate'),
       gender: this.textValue(formData, 'gender'),

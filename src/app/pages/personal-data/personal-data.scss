@@ -324,6 +324,12 @@ select {
   outline: none;
 }
 
+.readonly-input {
+  background: #f8fafc;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
 input:focus,
 select:focus {
   border-color: var(--color-primary);

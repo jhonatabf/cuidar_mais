@@ -258,8 +258,8 @@ export class AdminService {
       }
 
       const data = snapshot.data();
-      if (this.getFamilyReviewStatus(data) !== 'pending') {
-        throw new FirebaseError('failed-precondition', 'Este cadastro já está em análise ou decidido.');
+      if (this.getFamilyReviewStatus(data) === 'analysing') {
+        throw new FirebaseError('failed-precondition', 'Este cadastro já está em análise.');
       }
 
       transaction.update(userRef, {
@@ -267,6 +267,7 @@ export class AdminService {
         'familyReview.status': 'analysing',
         'familyReview.lockedBy': admin.uid,
         'familyReview.lockedAt': serverTimestamp(),
+        'familyReview.rejectionReason': null,
         updatedAt: serverTimestamp(),
       });
     });

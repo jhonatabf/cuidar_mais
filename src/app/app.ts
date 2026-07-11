@@ -264,7 +264,7 @@ export class App implements OnInit, OnDestroy {
     }
 
     const summary = await this.auth.getProfileSummary(user.uid);
-    const userAvatarUrl = summary.account?.profilePhoto?.downloadUrl ?? '';
+    const userAvatarUrl = summary.account?.profilePhoto?.downloadUrl || summary.account?.photoURL || '';
 
     this.displayName.set(summary.account?.fullName || user.displayName || user.email || this.shellCopy().userFallback);
     this.avatarUrl.set(userAvatarUrl || user.photoURL || '');

@@ -35,8 +35,8 @@ import { Auth } from '../../core/services/auth';
             <p class="muted">Bloqueado por: {{ item()?.lockedBy || 'ninguém' }}</p>
           </div>
           <div class="detail-actions">
-            @if (permissions().canReview && item()?.status === 'pending') {
-              <button class="button" type="button" (click)="startReview()">Iniciar análise</button>
+            @if (permissions().canReview && canStartReview()) {
+              <button class="button" type="button" (click)="startReview()">{{ item()?.type === 'family' && item()?.status !== 'pending' ? 'Rever cadastro' : 'Iniciar análise' }}</button>
             }
             @if (permissions().canUnlockReview && item()?.status === 'analysing') {
               <button class="button-secondary" type="button" (click)="unlockReview()">Destravar</button>
@@ -335,6 +335,14 @@ export class AdminReviewDetailComponent implements OnInit {
       await this.admin.unlockReview(this.reviewType(), this.reviewId());
       this.message.set('Análise destravada.');
     });
+  }
+
+  protected canStartReview(): boolean {
+    const item = this.item();
+    if (!item) {
+      return false;
+    }
+    return item.type === 'family' ? item.status !== 'analysing' : item.status === 'pending';
   }
 
   protected async logout(): Promise<void> {

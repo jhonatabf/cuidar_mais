@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { FirebaseError } from 'firebase/app';
 import {
+  GoogleAuthProvider,
   User,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   reload,
   sendEmailVerification,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile,
 } from 'firebase/auth';
@@ -246,6 +248,8 @@ export interface UserAccount {
   }) | null;
   profilePhoto?: UserProfilePhoto | null;
   profilePhotoName?: string;
+  photoURL?: string;
+  photoProvider?: 'google';
   emailVerified?: boolean;
 }
 
@@ -322,8 +326,73 @@ export class Auth {
     return credential.user;
   }
 
+  async completeGoogleAccount(data: {
+    accountType: string;
+    fullName: string;
+    birthDate: string;
+    nif: string;
+    documentType: string;
+    idDocument: string;
+  }): Promise<User> {
+    const user = await this.getCurrentUser();
+    if (!user) {
+      throw new FirebaseError('auth/requires-recent-login', 'É necessário iniciar sessão com Google para completar o cadastro.');
+    }
+
+    await updateProfile(user, { displayName: data.fullName });
+    await setDoc(
+      doc(firestoreDb, 'users', user.uid),
+      {
+        uid: user.uid,
+        email: user.email ?? '',
+        fullName: data.fullName,
+        birthDate: data.birthDate,
+        private: {
+          nif: data.nif,
+          documentType: data.documentType,
+          idDocument: data.idDocument,
+        },
+        role: data.accountType === 'Cuidador' ? 'caregiver' : 'family',
+        roles: {
+          caregiver: data.accountType === 'Cuidador',
+          family: data.accountType !== 'Cuidador',
+        },
+        caregiverProfileStatus: data.accountType === 'Cuidador' ? 'pending' : null,
+        familyProfileStatus: data.accountType === 'Cuidador' ? null : 'draft',
+        familyReview:
+          data.accountType === 'Cuidador'
+            ? null
+            : {
+                status: 'draft',
+                requestedAt: null,
+                lockedBy: null,
+                lockedAt: null,
+                decidedBy: null,
+                decidedAt: null,
+                rejectionReason: null,
+        },
+        photoURL: user.photoURL ?? '',
+        photoProvider: user.photoURL ? 'google' : null,
+        emailVerified: user.emailVerified,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return user;
+  }
+
   async signIn(email: string, password: string): Promise<User> {
     const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    await this.syncEmailVerificationStatus(credential.user);
+    return credential.user;
+  }
+
+  async signInWithGoogle(): Promise<User> {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await signInWithPopup(firebaseAuth, provider);
     await this.syncEmailVerificationStatus(credential.user);
     return credential.user;
   }
@@ -377,10 +446,26 @@ export class Auth {
       'Não foi possível carregar os cuidadores. Verifique a ligação e tente novamente.',
     );
 
-    return snapshot.docs.map((caregiverDoc) => ({
-      uid: caregiverDoc.id,
-      ...caregiverDoc.data(),
+    return Promise.all(snapshot.docs.map(async (caregiverDoc) => {
+      const uid = caregiverDoc.id;
+
+      const caregiverData = caregiverDoc.data();
+      const storagePhotoUrl = await this.getPublicProfilePhotoUrl(uid);
+
+      return {
+        uid,
+        ...caregiverData,
+        photoURL: storagePhotoUrl || (typeof caregiverData['photoURL'] === 'string' ? caregiverData['photoURL'] : ''),
+      };
     }));
+  }
+
+  private async getPublicProfilePhotoUrl(uid: string): Promise<string> {
+    try {
+      return await getDownloadURL(ref(firebaseStorage, `users/${uid}/profile/profile.jpg`));
+    } catch {
+      return '';
+    }
   }
 
   getCaregiverApprovalSummary(
@@ -554,19 +639,19 @@ export class Auth {
           roles: {
             family: true,
           },
-          familyProfileStatus: 'pending',
+          familyProfileStatus: 'approved',
           familyProfile: {
             ...data,
             completed: true,
             submittedAt: serverTimestamp(),
           },
           familyReview: {
-            status: 'pending',
+            status: 'approved',
             requestedAt: serverTimestamp(),
             lockedBy: null,
             lockedAt: null,
-            decidedBy: null,
-            decidedAt: null,
+            decidedBy: 'automatic',
+            decidedAt: serverTimestamp(),
             rejectionReason: null,
           },
           updatedAt: serverTimestamp(),
@@ -675,6 +760,7 @@ export class Auth {
     }
 
     const isNewProfile = !existingProfile;
+    const publicPhotoUrl = account.profilePhoto?.downloadUrl || account.photoURL || user.photoURL || '';
     const persistedTrainingItems = await this.withTimeout(
       this.uploadCaregiverTrainingCertificates(uid, data.training.items),
       'Não foi possível enviar os certificados. Verifique a ligação e tente novamente.',
@@ -707,6 +793,7 @@ export class Auth {
             uid,
             email: user.email ?? account.email,
             status: 'pending',
+            photoURL: publicPhotoUrl,
             approvalDate: isNewProfile ? null : existingProfile['approvalDate'] ?? null,
             approvalUserId: null,
             approvalStatus: 'pending',
@@ -722,6 +809,7 @@ export class Auth {
             },
             publicProfile: {
               fullName: account.fullName,
+              photoUrl: publicPhotoUrl,
               gender: account.gender,
               nationality: account.nationality,
               district: account.location?.district,
@@ -1084,6 +1172,12 @@ export class Auth {
       'auth/requires-recent-login': 'Por segurança, inicie sessão novamente para continuar.',
       'auth/network-request-failed': 'Não foi possível ligar ao serviço. Verifique a internet e tente novamente.',
       'auth/unauthorized-domain': 'Este domínio não está autorizado para autenticação. Contacte o suporte.',
+      'auth/operation-not-allowed': 'O início de sessão com Google ainda não está ativo no Firebase. Ative o provedor Google em Authentication > Sign-in method.',
+      'auth/popup-closed-by-user': 'A janela do Google foi fechada antes de concluir o início de sessão.',
+      'auth/popup-blocked': 'O navegador bloqueou a janela do Google. Permita pop-ups para continuar.',
+      'auth/cancelled-popup-request': 'Já existe uma janela de autenticação aberta. Feche-a e tente novamente.',
+      'auth/account-exists-with-different-credential': 'Este email já existe com outro método de início de sessão.',
+      'auth/web-storage-unsupported': 'O navegador bloqueou o armazenamento necessário para autenticação. Ative cookies/armazenamento local e tente novamente.',
       unauthenticated: 'A sua sessão expirou. Inicie sessão novamente.',
       'permission-denied': this.permissionDeniedMessage(context),
       'not-found': 'Não encontrámos a informação solicitada.',

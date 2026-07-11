@@ -14,6 +14,9 @@ const LOGIN_COPY = {
     passwordPlaceholder: 'A sua palavra-passe',
     submitting: 'A entrar...',
     submit: 'Entrar',
+    googleSubmitting: 'A entrar com Google...',
+    googleSubmit: 'Continuar com Google',
+    separator: 'ou',
     createAccount: 'Criar conta',
   },
   'en-GB': {
@@ -25,6 +28,9 @@ const LOGIN_COPY = {
     passwordPlaceholder: 'Your password',
     submitting: 'Signing in...',
     submit: 'Sign in',
+    googleSubmitting: 'Signing in with Google...',
+    googleSubmit: 'Continue with Google',
+    separator: 'or',
     createAccount: 'Create account',
   },
 } as const;
@@ -48,6 +54,11 @@ const LOGIN_COPY = {
         <button class="btn btn-login" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? copy().submitting : copy().submit }}
         </button>
+        <div class="auth-separator"><span>{{ copy().separator }}</span></div>
+        <button class="btn btn-secondary google-auth-button" type="button" [disabled]="isGoogleSubmitting()" (click)="signInWithGoogle()">
+          <span aria-hidden="true">G</span>
+          {{ isGoogleSubmitting() ? copy().googleSubmitting : copy().googleSubmit }}
+        </button>
         <a class="btn btn-register" routerLink="/cadastro" [queryParams]="{ redirectTo: redirectTo() }">{{ copy().createAccount }}</a>
       </form>
     </section>
@@ -61,6 +72,7 @@ export class LoginComponent {
   protected readonly localeService = inject(LocaleService);
 
   protected readonly isSubmitting = signal(false);
+  protected readonly isGoogleSubmitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly redirectTo = signal(this.route.snapshot.queryParamMap.get('redirectTo') ?? '');
 
@@ -94,6 +106,28 @@ export class LoginComponent {
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'login'));
     } finally {
       this.isSubmitting.set(false);
+    }
+  }
+
+  protected async signInWithGoogle(): Promise<void> {
+    this.errorMessage.set('');
+    this.isGoogleSubmitting.set(true);
+    try {
+      const user = await this.auth.signInWithGoogle();
+      const account = await this.auth.getUserAccount(user.uid);
+      if (!account) {
+        await this.router.navigate(['/cadastro'], {
+          queryParams: { redirectTo: this.redirectTo() },
+        });
+        return;
+      }
+
+      const redirectTo = this.redirectTo() || (await this.auth.getPostLoginRedirect(user.uid));
+      await this.router.navigateByUrl(redirectTo);
+    } catch (error) {
+      this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'login'));
+    } finally {
+      this.isGoogleSubmitting.set(false);
     }
   }
 

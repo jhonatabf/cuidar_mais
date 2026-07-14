@@ -194,7 +194,6 @@ export interface UserPersonalData {
     documentType: string;
     idDocument: string;
     address: string;
-    postalCode: string;
     criminalRecordNoPending: boolean;
     documents?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocument>>;
     documentUploads?: Partial<Record<UserPrivateDocumentKind, UserPrivateDocumentUpload>>;
@@ -204,6 +203,7 @@ export interface UserPersonalData {
     country: string;
     district: string;
     county: string;
+    parish: string;
   };
 }
 
@@ -234,6 +234,7 @@ export interface UserAccount {
     country?: string;
     district?: string;
     county?: string;
+    parish?: string;
   };
   role?: 'caregiver' | 'family';
   roles?: {
@@ -814,6 +815,7 @@ export class Auth {
               nationality: account.nationality,
               district: account.location?.district,
               county: account.location?.county,
+              parish: account.location?.parish,
               travelRadius: data.mobility.travelRadius,
               summary: data.professional.summary,
               experienceYears: data.professional.experienceYears,
@@ -970,10 +972,10 @@ export class Auth {
       { value: account?.private?.nif, label: 'NIF' },
       { value: account?.private?.documentType, label: 'Tipo de documento' },
       { value: account?.private?.idDocument, label: 'Documento de identificação' },
-      { value: account?.private?.postalCode, label: 'Código Postal' },
       { value: account?.location?.countryCode ?? (account?.location ? 'PT' : ''), label: 'País' },
       { value: account?.location?.district, label: 'Distrito' },
       { value: account?.location?.county, label: 'Concelho' },
+      { value: account?.location?.parish, label: 'Freguesia' },
     ];
 
     if (!isFamilyAccount) {

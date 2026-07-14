@@ -19,6 +19,28 @@ import { TermsService, TermsType } from '../../core/services/terms';
 import { isValidPortugueseNif, normalizePortugueseNif } from '../../core/validators/portuguese-nif';
 
 const PRIVATE_DOCUMENT_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const GEO_API_BASE_URL = 'https://json.geoapi.pt';
+
+const PORTUGAL_DISTRICTS: Record<string, string[]> = {
+  Aveiro: ['Águeda', 'Albergaria-a-Velha', 'Anadia', 'Arouca', 'Aveiro', 'Castelo de Paiva', 'Espinho', 'Estarreja', 'Ílhavo', 'Mealhada', 'Murtosa', 'Oliveira de Azeméis', 'Oliveira do Bairro', 'Ovar', 'Santa Maria da Feira', 'São João da Madeira', 'Sever do Vouga', 'Vagos', 'Vale de Cambra'],
+  Beja: ['Aljustrel', 'Almodôvar', 'Alvito', 'Barrancos', 'Beja', 'Castro Verde', 'Cuba', 'Ferreira do Alentejo', 'Mértola', 'Moura', 'Odemira', 'Ourique', 'Serpa', 'Vidigueira'],
+  Braga: ['Amares', 'Barcelos', 'Braga', 'Cabeceiras de Basto', 'Celorico de Basto', 'Esposende', 'Fafe', 'Guimarães', 'Póvoa de Lanhoso', 'Terras de Bouro', 'Vieira do Minho', 'Vila Nova de Famalicão', 'Vila Verde', 'Vizela'],
+  Bragança: ['Alfândega da Fé', 'Bragança', 'Carrazeda de Ansiães', 'Freixo de Espada à Cinta', 'Macedo de Cavaleiros', 'Miranda do Douro', 'Mirandela', 'Mogadouro', 'Torre de Moncorvo', 'Vila Flor', 'Vimioso', 'Vinhais'],
+  'Castelo Branco': ['Belmonte', 'Castelo Branco', 'Covilhã', 'Fundão', 'Idanha-a-Nova', 'Oleiros', 'Penamacor', 'Proença-a-Nova', 'Sertã', 'Vila de Rei', 'Vila Velha de Ródão'],
+  Coimbra: ['Arganil', 'Cantanhede', 'Coimbra', 'Condeixa-a-Nova', 'Figueira da Foz', 'Góis', 'Lousã', 'Mira', 'Miranda do Corvo', 'Montemor-o-Velho', 'Oliveira do Hospital', 'Pampilhosa da Serra', 'Penacova', 'Penela', 'Soure', 'Tábua', 'Vila Nova de Poiares'],
+  Évora: ['Alandroal', 'Arraiolos', 'Borba', 'Estremoz', 'Évora', 'Montemor-o-Novo', 'Mora', 'Mourão', 'Portel', 'Redondo', 'Reguengos de Monsaraz', 'Vendas Novas', 'Viana do Alentejo', 'Vila Viçosa'],
+  Faro: ['Albufeira', 'Alcoutim', 'Aljezur', 'Castro Marim', 'Faro', 'Lagoa', 'Lagos', 'Loulé', 'Monchique', 'Olhão', 'Portimão', 'São Brás de Alportel', 'Silves', 'Tavira', 'Vila do Bispo', 'Vila Real de Santo António'],
+  Guarda: ['Aguiar da Beira', 'Almeida', 'Celorico da Beira', 'Figueira de Castelo Rodrigo', 'Fornos de Algodres', 'Gouveia', 'Guarda', 'Manteigas', 'Mêda', 'Pinhel', 'Sabugal', 'Seia', 'Trancoso', 'Vila Nova de Foz Côa'],
+  Leiria: ['Alcobaça', 'Alvaiázere', 'Ansião', 'Batalha', 'Bombarral', 'Caldas da Rainha', 'Castanheira de Pêra', 'Figueiró dos Vinhos', 'Leiria', 'Marinha Grande', 'Nazaré', 'Óbidos', 'Pedrógão Grande', 'Peniche', 'Pombal', 'Porto de Mós'],
+  Lisboa: ['Alenquer', 'Amadora', 'Arruda dos Vinhos', 'Azambuja', 'Cadaval', 'Cascais', 'Lisboa', 'Loures', 'Lourinhã', 'Mafra', 'Odivelas', 'Oeiras', 'Sintra', 'Sobral de Monte Agraço', 'Torres Vedras', 'Vila Franca de Xira'],
+  Portalegre: ['Alter do Chão', 'Arronches', 'Avis', 'Campo Maior', 'Castelo de Vide', 'Crato', 'Elvas', 'Fronteira', 'Gavião', 'Marvão', 'Monforte', 'Nisa', 'Ponte de Sor', 'Portalegre', 'Sousel'],
+  Porto: ['Amarante', 'Baião', 'Felgueiras', 'Gondomar', 'Lousada', 'Maia', 'Marco de Canaveses', 'Matosinhos', 'Paços de Ferreira', 'Paredes', 'Penafiel', 'Porto', 'Póvoa de Varzim', 'Santo Tirso', 'Trofa', 'Valongo', 'Vila do Conde', 'Vila Nova de Gaia'],
+  Santarém: ['Abrantes', 'Alcanena', 'Almeirim', 'Alpiarça', 'Benavente', 'Cartaxo', 'Chamusca', 'Constância', 'Coruche', 'Entroncamento', 'Ferreira do Zêzere', 'Golegã', 'Mação', 'Ourém', 'Rio Maior', 'Salvaterra de Magos', 'Santarém', 'Sardoal', 'Tomar', 'Torres Novas', 'Vila Nova da Barquinha'],
+  Setúbal: ['Alcácer do Sal', 'Alcochete', 'Almada', 'Barreiro', 'Grândola', 'Moita', 'Montijo', 'Palmela', 'Santiago do Cacém', 'Seixal', 'Sesimbra', 'Setúbal', 'Sines'],
+  'Viana do Castelo': ['Arcos de Valdevez', 'Caminha', 'Melgaço', 'Monção', 'Paredes de Coura', 'Ponte da Barca', 'Ponte de Lima', 'Valença', 'Viana do Castelo', 'Vila Nova de Cerveira'],
+  'Vila Real': ['Alijó', 'Boticas', 'Chaves', 'Mesão Frio', 'Mondim de Basto', 'Montalegre', 'Murça', 'Peso da Régua', 'Ribeira de Pena', 'Sabrosa', 'Santa Marta de Penaguião', 'Valpaços', 'Vila Pouca de Aguiar', 'Vila Real'],
+  Viseu: ['Armamar', 'Carregal do Sal', 'Castro Daire', 'Cinfães', 'Lamego', 'Mangualde', 'Moimenta da Beira', 'Mortágua', 'Nelas', 'Oliveira de Frades', 'Penalva do Castelo', 'Penedono', 'Resende', 'Santa Comba Dão', 'São João da Pesqueira', 'São Pedro do Sul', 'Sátão', 'Sernancelhe', 'Tabuaço', 'Tarouca', 'Tondela', 'Vila Nova de Paiva', 'Viseu', 'Vouzela'],
+};
 
 const OPERATING_COUNTRIES = [
   {
@@ -48,7 +70,7 @@ const PERSONAL_DATA_COPY = {
     citizenCard: 'Cartão de Cidadão português', passport: 'Passaporte', residencePermit: 'Título de residência emitido em Portugal', otherPortugueseId: 'Outro documento emitido em Portugal',
     frontPhoto: 'Foto da frente', backPhoto: 'Foto do verso', currentFile: 'Ficheiro atual',
     location: 'Localização', locationHelp: 'Esta localização será usada pelos seus perfis na plataforma.',
-    country: 'País', district: 'Distrito', county: 'Concelho', postalCode: 'Código postal', address: 'Morada completa', addressPlaceholder: 'Rua, número, localidade', addressProof: 'Foto do comprovativo de morada',
+    country: 'País', district: 'Distrito', county: 'Concelho', parish: 'Freguesia', address: 'Morada completa', addressPlaceholder: 'Rua, número, localidade', addressProof: 'Foto do comprovativo de morada',
     criminal: 'Registo criminal', criminalHelp: 'Declaração e comprovativo necessários para validação de segurança.',
     criminalDeclaration: 'Declaro que não possuo qualquer pendência criminal', criminalCertificate: 'Foto do certificado de registo criminal',
     saving: 'A guardar...', save: 'Guardar dados pessoais', close: 'Fechar mensagem',
@@ -79,7 +101,7 @@ const PERSONAL_DATA_COPY = {
     citizenCard: 'Portuguese Citizen Card', passport: 'Passport', residencePermit: 'Residence permit issued in Portugal', otherPortugueseId: 'Other document issued in Portugal',
     frontPhoto: 'Front image', backPhoto: 'Back image', currentFile: 'Current file',
     location: 'Location', locationHelp: 'This location will be used by your profiles on the platform.',
-    country: 'Country', district: 'District', county: 'Municipality', postalCode: 'Postcode', address: 'Full address', addressPlaceholder: 'Street, number, town or city', addressProof: 'Address proof image',
+    country: 'Country', district: 'District', county: 'Municipality', parish: 'Parish', address: 'Full address', addressPlaceholder: 'Street, number or locality', addressProof: 'Address proof image',
     criminal: 'Criminal record', criminalHelp: 'A declaration and supporting document are required for security checks.',
     criminalDeclaration: 'I declare that I have no pending criminal matters', criminalCertificate: 'Criminal record certificate image',
     saving: 'Saving...', save: 'Save personal details', close: 'Close message',
@@ -250,9 +272,30 @@ const PERSONAL_DATA_COPY = {
                 }
               </select>
             </label>
-            <label><span class="label-line">{{ copy().district }} <strong>*</strong></span><input name="district" required placeholder="Lisboa" [value]="locationValue('district')" /></label>
-            <label><span class="label-line">{{ copy().county }} <strong>*</strong></span><input name="county" required placeholder="Oeiras" [value]="locationValue('county')" /></label>
-            <label><span class="label-line">{{ copy().postalCode }} <strong>*</strong></span><input name="postalCode" required placeholder="0000-000" [value]="privateValue('postalCode')" /></label>
+            <label><span class="label-line">{{ copy().district }} <strong>*</strong></span>
+              <select name="district" required [value]="selectedDistrict()" (change)="onDistrictChange($event)">
+                <option value="">{{ copy().select }}</option>
+                @for (district of districtOptions(); track district) {
+                  <option [value]="district">{{ district }}</option>
+                }
+              </select>
+            </label>
+            <label><span class="label-line">{{ copy().county }} <strong>*</strong></span>
+              <select name="county" required [value]="selectedCounty()" (change)="onCountyChange($event)">
+                <option value="">{{ copy().select }}</option>
+                @for (county of countyOptions(); track county) {
+                  <option [value]="county">{{ county }}</option>
+                }
+              </select>
+            </label>
+            <label><span class="label-line">{{ copy().parish }} <strong>*</strong></span>
+              <select name="parish" required [value]="selectedParish()" [disabled]="!selectedCounty()" (change)="onParishChange($event)">
+                <option value="">{{ copy().select }}</option>
+                @for (parish of parishOptions(); track parish) {
+                  <option [value]="parish">{{ parish }}</option>
+                }
+              </select>
+            </label>
             <label class="span-2"><span class="label-line">{{ copy().address }} <small>{{ copy().private }}</small></span><input name="address" [placeholder]="copy().addressPlaceholder" [value]="privateValue('address')" /></label>
             @if (!isFamilyAccount()) {
               <label class="span-2"><span class="label-line">{{ copy().addressProof }} <strong>*</strong> <small>{{ copy().private }}</small></span>
@@ -377,6 +420,11 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
   protected readonly phoneCountry = signal<CountryCode>('PT');
   protected readonly nationalPhone = signal('');
   protected readonly documentType = signal('');
+  protected readonly selectedDistrict = signal('');
+  protected readonly selectedCounty = signal('');
+  protected readonly selectedParish = signal('');
+  protected readonly countyOptions = signal<string[]>([]);
+  protected readonly parishOptions = signal<string[]>([]);
   protected readonly termsAccepted = signal(false);
   protected readonly privacyAccepted = signal(false);
   protected readonly termsModalOpen = signal(false);
@@ -386,6 +434,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
   protected readonly isLoadingTerms = signal(false);
   protected readonly hasReadTermsToEnd = signal(false);
   private lockedScrollY = 0;
+  private readonly parishCache = new Map<string, string[]>();
   private readonly previousBodyStyle = {
     position: '',
     top: '',
@@ -411,6 +460,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
       name: country.labels[this.localeService.locale()],
     })),
   );
+  protected readonly districtOptions = computed(() => Object.keys(PORTUGAL_DISTRICTS));
   protected readonly isRequiredStep = computed(() => !!this.redirectTo());
   protected readonly snackbarKind = computed<'error' | 'success' | 'info'>(() => {
     if (this.errorMessage()) return 'error';
@@ -464,6 +514,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     this.privacyAccepted.set(account?.acceptedPrivacy === true);
     this.documentType.set(account?.private?.documentType ?? '');
     this.loadPhone(account);
+    await this.loadLocation(account);
   }
 
   ngOnDestroy(): void {
@@ -542,11 +593,11 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     return typeof value === 'string' ? value : '';
   }
 
-  protected privateValue(key: 'nif' | 'documentType' | 'idDocument' | 'address' | 'postalCode'): string {
+  protected privateValue(key: 'nif' | 'documentType' | 'idDocument' | 'address'): string {
     return this.account()?.private?.[key] ?? '';
   }
 
-  protected locationValue(key: 'district' | 'county'): string {
+  protected locationValue(key: 'district' | 'county' | 'parish'): string {
     return this.account()?.location?.[key] ?? '';
   }
 
@@ -576,6 +627,26 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
 
   protected onDocumentTypeChange(event: Event): void {
     this.documentType.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected onDistrictChange(event: Event): void {
+    const district = (event.target as HTMLSelectElement).value;
+    this.selectedDistrict.set(district);
+    this.selectedCounty.set('');
+    this.selectedParish.set('');
+    this.countyOptions.set(PORTUGAL_DISTRICTS[district] ?? []);
+    this.parishOptions.set([]);
+  }
+
+  protected onCountyChange(event: Event): void {
+    const county = (event.target as HTMLSelectElement).value;
+    this.selectedCounty.set(county);
+    this.selectedParish.set('');
+    void this.loadParishOptions(county);
+  }
+
+  protected onParishChange(event: Event): void {
+    this.selectedParish.set((event.target as HTMLSelectElement).value);
   }
 
   protected isPassportDocument(): boolean {
@@ -705,7 +776,6 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
         documentType: this.textValue(formData, 'documentType'),
         idDocument: this.textValue(formData, 'idDocument'),
         address: this.textValue(formData, 'address'),
-        postalCode: this.textValue(formData, 'postalCode'),
         criminalRecordNoPending: this.isFamilyAccount() ? true : formData.has('criminalRecordNoPending'),
         documents: this.account()?.private?.documents ?? {},
         documentUploads: await this.privateDocumentUploads(formData),
@@ -715,6 +785,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
         country: this.operatingCountryName(this.textValue(formData, 'countryCode')),
         district: this.textValue(formData, 'district'),
         county: this.textValue(formData, 'county'),
+        parish: this.textValue(formData, 'parish'),
       },
     };
   }
@@ -733,7 +804,7 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
       { key: 'countryCode', label: copy.country },
       { key: 'district', label: copy.district },
       { key: 'county', label: copy.county },
-      { key: 'postalCode', label: copy.postalCode },
+      { key: 'parish', label: copy.parish },
     ];
 
     if (!this.embedded()) {
@@ -904,6 +975,74 @@ export class PersonalDataComponent implements OnInit, OnDestroy {
     }
 
     this.nationalPhone.set(account?.phone ?? '');
+  }
+
+  private async loadLocation(account: UserAccount | null): Promise<void> {
+    const district = this.optionFor(account?.location?.district ?? '', this.districtOptions());
+    const counties = district ? PORTUGAL_DISTRICTS[district] ?? [] : [];
+    const county = this.optionFor(account?.location?.county ?? '', counties);
+
+    this.selectedDistrict.set(district);
+    this.countyOptions.set(counties);
+    this.selectedCounty.set(county);
+
+    if (!county) {
+      this.selectedParish.set('');
+      this.parishOptions.set([]);
+      return;
+    }
+
+    await this.loadParishOptions(county);
+    this.selectedParish.set(this.optionFor(account?.location?.parish ?? '', this.parishOptions()));
+  }
+
+  private async loadParishOptions(county: string): Promise<void> {
+    this.parishOptions.set([]);
+    if (!county) {
+      return;
+    }
+
+    const cachedParishes = this.parishCache.get(county);
+    if (cachedParishes) {
+      this.parishOptions.set(cachedParishes);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${GEO_API_BASE_URL}/municipio/${encodeURIComponent(county)}/freguesias`);
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json() as { freguesias?: unknown };
+      const parishes = Array.isArray(data.freguesias)
+        ? data.freguesias
+          .filter((parish): parish is string => typeof parish === 'string')
+          .sort((first, second) => first.localeCompare(second, 'pt-PT'))
+        : [];
+
+      this.parishCache.set(county, parishes);
+      this.parishOptions.set(parishes);
+    } catch {
+      this.parishOptions.set([]);
+    }
+  }
+
+  private optionFor(value: string, options: string[]): string {
+    const normalizedValue = this.normalizedText(value);
+    if (!normalizedValue) {
+      return '';
+    }
+
+    return options.find((option) => this.normalizedText(option) === normalizedValue) ?? '';
+  }
+
+  private normalizedText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 
   private normalizedPhone(formData: FormData): string {

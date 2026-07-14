@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { User } from 'firebase/auth';
 import { Subscription } from 'rxjs';
@@ -29,6 +29,7 @@ const SHELL_COPY = {
     helpLinks: ['Perguntas frequentes', 'Termos', 'Política de privacidade'],
     updatingPhoto: 'A atualizar foto...',
     changeProfilePhoto: 'Alterar foto de perfil',
+    updatePersonalData: 'Atualizar dados pessoais',
     favorites: 'Favoritos',
     chooseProfile: 'Escolher perfil',
     caregiverDashboard: 'Dashboard cuidador',
@@ -61,6 +62,7 @@ const SHELL_COPY = {
     helpLinks: ['Frequently asked questions', 'Terms', 'Privacy policy'],
     updatingPhoto: 'Updating photo...',
     changeProfilePhoto: 'Change profile photo',
+    updatePersonalData: 'Update personal details',
     favorites: 'Favourites',
     chooseProfile: 'Choose profile',
     caregiverDashboard: 'Caregiver dashboard',
@@ -90,6 +92,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly localeService = inject(LocaleService);
   private unsubscribeAuth?: () => void;
   private routeSubscription?: Subscription;
+
+  @ViewChild('accountMenuRoot') private accountMenuRoot?: ElementRef<HTMLElement>;
 
   protected readonly user = signal<User | null>(null);
   protected readonly displayName = signal('');
@@ -153,6 +157,21 @@ export class App implements OnInit, OnDestroy {
     this.closeAccountMenu();
   }
 
+  @HostListener('document:click', ['$event'])
+  protected closeAccountMenuOnOutsideClick(event: MouseEvent): void {
+    if (!this.accountMenuOpen()) {
+      return;
+    }
+
+    const target = event.target;
+    const menuRoot = this.accountMenuRoot?.nativeElement;
+    if (target instanceof Node && menuRoot?.contains(target)) {
+      return;
+    }
+
+    this.closeAccountMenu();
+  }
+
   @HostListener('window:resize')
   protected closeMobileMenuOnDesktop(): void {
     if (window.innerWidth > 1200) {
@@ -206,6 +225,11 @@ export class App implements OnInit, OnDestroy {
   protected async goToFavorites(): Promise<void> {
     this.closeAccountMenu();
     await this.router.navigateByUrl('/dashboard/familia');
+  }
+
+  protected async goToPersonalData(): Promise<void> {
+    this.closeAccountMenu();
+    await this.router.navigateByUrl('/meus-dados-pessoais');
   }
 
   protected async logout(): Promise<void> {

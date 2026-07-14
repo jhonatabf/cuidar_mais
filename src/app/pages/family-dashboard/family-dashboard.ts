@@ -157,9 +157,18 @@ const FAMILY_COPY = {
     caregiverMessagesBoard: 'Mensagens dos cuidadores',
     caregiverMessagesText: 'As conversas trocadas com cuidadores aparecerão aqui.',
     comingSoon: 'Em preparação',
-    activeCaregivers: 'Cuidadores no mesmo distrito',
-    registeredCaregiversCounter: 'cuidadores no mesmo distrito',
-    activeCaregiversEmpty: 'Ainda não existem cuidadores cadastrados no mesmo distrito.',
+    activeCaregivers: 'Cuidadores disponíveis',
+    registeredCaregiversCounter: 'cuidadores encontrados',
+    activeCaregiversEmpty: 'Não existem cuidadores para os filtros selecionados.',
+    caregiverSearchDistrict: 'Distrito',
+    caregiverSearchCounty: 'Concelho',
+    caregiverSearchParish: 'Freguesia',
+    allCounties: 'Todos os concelhos',
+    allParishes: 'Todas as freguesias',
+    caregiverSearchHint: 'Por padrão, são exibidos cuidadores do distrito cadastrado na família.',
+    caregiverPagination: (start: number, end: number, total: number) => `A exibir ${start}-${end} de ${total} cuidadores`,
+    previousPage: 'Anterior',
+    nextPage: 'Seguinte',
     close: 'Fechar mensagem',
     validationAdult: 'É necessário ser maior de idade para cadastrar uma família.',
     validationHousehold: 'Informe o nome da família ou casa.',
@@ -330,9 +339,18 @@ const FAMILY_COPY = {
     caregiverMessagesBoard: 'Caregiver messages',
     caregiverMessagesText: 'Messages exchanged with caregivers will appear here.',
     comingSoon: 'In preparation',
-    activeCaregivers: 'Caregivers in the same district',
-    registeredCaregiversCounter: 'caregivers in the same district',
-    activeCaregiversEmpty: 'There are no registered caregivers in the same district yet.',
+    activeCaregivers: 'Available caregivers',
+    registeredCaregiversCounter: 'caregivers found',
+    activeCaregiversEmpty: 'There are no caregivers for the selected filters.',
+    caregiverSearchDistrict: 'District',
+    caregiverSearchCounty: 'Municipality',
+    caregiverSearchParish: 'Parish',
+    allCounties: 'All municipalities',
+    allParishes: 'All parishes',
+    caregiverSearchHint: 'By default, caregivers from the family registered district are shown.',
+    caregiverPagination: (start: number, end: number, total: number) => `Showing ${start}-${end} of ${total} caregivers`,
+    previousPage: 'Previous',
+    nextPage: 'Next',
     close: 'Close message',
     validationAdult: 'You must be an adult to register a family.',
     validationHousehold: 'Enter the family or household name.',
@@ -416,10 +434,39 @@ const FAMILY_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
   },
 };
 
+const ALL_COUNTIES_VALUE = '__all__';
+const ALL_PARISHES_VALUE = '__all__';
+const CAREGIVERS_PER_PAGE = 12;
+const GEO_API_BASE_URL = 'https://json.geoapi.pt';
+
+const PORTUGAL_DISTRICTS: Record<string, string[]> = {
+  Aveiro: ['Águeda', 'Albergaria-a-Velha', 'Anadia', 'Arouca', 'Aveiro', 'Castelo de Paiva', 'Espinho', 'Estarreja', 'Ílhavo', 'Mealhada', 'Murtosa', 'Oliveira de Azeméis', 'Oliveira do Bairro', 'Ovar', 'Santa Maria da Feira', 'São João da Madeira', 'Sever do Vouga', 'Vagos', 'Vale de Cambra'],
+  Beja: ['Aljustrel', 'Almodôvar', 'Alvito', 'Barrancos', 'Beja', 'Castro Verde', 'Cuba', 'Ferreira do Alentejo', 'Mértola', 'Moura', 'Odemira', 'Ourique', 'Serpa', 'Vidigueira'],
+  Braga: ['Amares', 'Barcelos', 'Braga', 'Cabeceiras de Basto', 'Celorico de Basto', 'Esposende', 'Fafe', 'Guimarães', 'Póvoa de Lanhoso', 'Terras de Bouro', 'Vieira do Minho', 'Vila Nova de Famalicão', 'Vila Verde', 'Vizela'],
+  Bragança: ['Alfândega da Fé', 'Bragança', 'Carrazeda de Ansiães', 'Freixo de Espada à Cinta', 'Macedo de Cavaleiros', 'Miranda do Douro', 'Mirandela', 'Mogadouro', 'Torre de Moncorvo', 'Vila Flor', 'Vimioso', 'Vinhais'],
+  'Castelo Branco': ['Belmonte', 'Castelo Branco', 'Covilhã', 'Fundão', 'Idanha-a-Nova', 'Oleiros', 'Penamacor', 'Proença-a-Nova', 'Sertã', 'Vila de Rei', 'Vila Velha de Ródão'],
+  Coimbra: ['Arganil', 'Cantanhede', 'Coimbra', 'Condeixa-a-Nova', 'Figueira da Foz', 'Góis', 'Lousã', 'Mira', 'Miranda do Corvo', 'Montemor-o-Velho', 'Oliveira do Hospital', 'Pampilhosa da Serra', 'Penacova', 'Penela', 'Soure', 'Tábua', 'Vila Nova de Poiares'],
+  Évora: ['Alandroal', 'Arraiolos', 'Borba', 'Estremoz', 'Évora', 'Montemor-o-Novo', 'Mora', 'Mourão', 'Portel', 'Redondo', 'Reguengos de Monsaraz', 'Vendas Novas', 'Viana do Alentejo', 'Vila Viçosa'],
+  Faro: ['Albufeira', 'Alcoutim', 'Aljezur', 'Castro Marim', 'Faro', 'Lagoa', 'Lagos', 'Loulé', 'Monchique', 'Olhão', 'Portimão', 'São Brás de Alportel', 'Silves', 'Tavira', 'Vila do Bispo', 'Vila Real de Santo António'],
+  Guarda: ['Aguiar da Beira', 'Almeida', 'Celorico da Beira', 'Figueira de Castelo Rodrigo', 'Fornos de Algodres', 'Gouveia', 'Guarda', 'Manteigas', 'Mêda', 'Pinhel', 'Sabugal', 'Seia', 'Trancoso', 'Vila Nova de Foz Côa'],
+  Leiria: ['Alcobaça', 'Alvaiázere', 'Ansião', 'Batalha', 'Bombarral', 'Caldas da Rainha', 'Castanheira de Pêra', 'Figueiró dos Vinhos', 'Leiria', 'Marinha Grande', 'Nazaré', 'Óbidos', 'Pedrógão Grande', 'Peniche', 'Pombal', 'Porto de Mós'],
+  Lisboa: ['Alenquer', 'Amadora', 'Arruda dos Vinhos', 'Azambuja', 'Cadaval', 'Cascais', 'Lisboa', 'Loures', 'Lourinhã', 'Mafra', 'Odivelas', 'Oeiras', 'Sintra', 'Sobral de Monte Agraço', 'Torres Vedras', 'Vila Franca de Xira'],
+  Portalegre: ['Alter do Chão', 'Arronches', 'Avis', 'Campo Maior', 'Castelo de Vide', 'Crato', 'Elvas', 'Fronteira', 'Gavião', 'Marvão', 'Monforte', 'Nisa', 'Ponte de Sor', 'Portalegre', 'Sousel'],
+  Porto: ['Amarante', 'Baião', 'Felgueiras', 'Gondomar', 'Lousada', 'Maia', 'Marco de Canaveses', 'Matosinhos', 'Paços de Ferreira', 'Paredes', 'Penafiel', 'Porto', 'Póvoa de Varzim', 'Santo Tirso', 'Trofa', 'Valongo', 'Vila do Conde', 'Vila Nova de Gaia'],
+  Santarém: ['Abrantes', 'Alcanena', 'Almeirim', 'Alpiarça', 'Benavente', 'Cartaxo', 'Chamusca', 'Constância', 'Coruche', 'Entroncamento', 'Ferreira do Zêzere', 'Golegã', 'Mação', 'Ourém', 'Rio Maior', 'Salvaterra de Magos', 'Santarém', 'Sardoal', 'Tomar', 'Torres Novas', 'Vila Nova da Barquinha'],
+  Setúbal: ['Alcácer do Sal', 'Alcochete', 'Almada', 'Barreiro', 'Grândola', 'Moita', 'Montijo', 'Palmela', 'Santiago do Cacém', 'Seixal', 'Sesimbra', 'Setúbal', 'Sines'],
+  'Viana do Castelo': ['Arcos de Valdevez', 'Caminha', 'Melgaço', 'Monção', 'Paredes de Coura', 'Ponte da Barca', 'Ponte de Lima', 'Valença', 'Viana do Castelo', 'Vila Nova de Cerveira'],
+  'Vila Real': ['Alijó', 'Boticas', 'Chaves', 'Mesão Frio', 'Mondim de Basto', 'Montalegre', 'Murça', 'Peso da Régua', 'Ribeira de Pena', 'Sabrosa', 'Santa Marta de Penaguião', 'Valpaços', 'Vila Pouca de Aguiar', 'Vila Real'],
+  Viseu: ['Armamar', 'Carregal do Sal', 'Castro Daire', 'Cinfães', 'Lamego', 'Mangualde', 'Moimenta da Beira', 'Mortágua', 'Nelas', 'Oliveira de Frades', 'Penalva do Castelo', 'Penedono', 'Resende', 'Santa Comba Dão', 'São João da Pesqueira', 'São Pedro do Sul', 'Sátão', 'Sernancelhe', 'Tabuaço', 'Tarouca', 'Tondela', 'Vila Nova de Paiva', 'Viseu', 'Vouzela'],
+};
+
 interface FamilyCaregiverMatch {
   uid: string;
   name: string;
   location: string;
+  district: string;
+  county: string;
+  parish: string;
   photoUrl: string;
   score: number;
   total: number;
@@ -811,10 +858,6 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
               <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
               <span>{{ copy().updateRegistration }}</span>
             </button>
-            <button type="button" [class.is-active]="isPersonalDataEditMode()" [attr.aria-current]="isPersonalDataEditMode() ? 'page' : null" (click)="editPersonalData()">
-              <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
-              <span>{{ copy().updatePersonalData }}</span>
-            </button>
           </aside>
           <div class="grid">
             @if (isPersonalDataEditMode()) {
@@ -1088,12 +1131,41 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
                     <span class="material-symbols-rounded" aria-hidden="true">groups</span>
                     <div>
                       <h2>{{ copy().activeCaregivers }}</h2>
-                      <p>{{ allCaregiverMatches().length }} {{ copy().registeredCaregiversCounter }}</p>
+                      <p>{{ filteredCaregiverMatches().length }} {{ copy().registeredCaregiversCounter }}</p>
                     </div>
                   </div>
-                  @if (allCaregiverMatches().length) {
+                  <div class="form-grid three-columns" [attr.aria-label]="copy().activeCaregivers">
+                    <label>
+                      <span class="label-line">{{ copy().caregiverSearchDistrict }}</span>
+                      <select [value]="selectedCaregiverDistrict()" (change)="onCaregiverDistrictChange($event)">
+                        @for (district of caregiverDistrictOptions(); track district) {
+                          <option [value]="district">{{ district }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      <span class="label-line">{{ copy().caregiverSearchCounty }}</span>
+                      <select [value]="selectedCaregiverCounty()" (change)="onCaregiverCountyChange($event)">
+                        <option [value]="allCountiesValue">{{ copy().allCounties }}</option>
+                        @for (county of caregiverCountyOptions(); track county) {
+                          <option [value]="county">{{ county }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      <span class="label-line">{{ copy().caregiverSearchParish }}</span>
+                      <select [value]="selectedCaregiverParish()" [disabled]="selectedCaregiverCounty() === allCountiesValue" (change)="onCaregiverParishChange($event)">
+                        <option [value]="allParishesValue">{{ copy().allParishes }}</option>
+                        @for (parish of caregiverParishOptions(); track parish) {
+                          <option [value]="parish">{{ parish }}</option>
+                        }
+                      </select>
+                    </label>
+                    <p class="muted span-3">{{ copy().caregiverSearchHint }}</p>
+                  </div>
+                  @if (filteredCaregiverMatches().length) {
                     <div class="caregiver-card-grid">
-                      @for (match of allCaregiverMatches(); track match.uid) {
+                      @for (match of paginatedCaregiverMatches(); track match.uid) {
                         <article class="caregiver-match-card">
                           <div
                             class="compatibility-band"
@@ -1125,6 +1197,20 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
                             </span>
                           </div>
                         </article>
+                      }
+                    </div>
+                    <div class="form-actions" style="margin-top: 12px;" aria-label="Paginação dos cuidadores">
+                      <span>{{ caregiverPaginationLabel() }}</span>
+                      @if (caregiverTotalPages() > 1) {
+                        <div>
+                          <button class="icon-button icon-button--compact" type="button" [disabled]="caregiverCurrentPage() <= 1" [attr.aria-label]="copy().previousPage" (click)="goToCaregiverPage(caregiverCurrentPage() - 1)">
+                            <span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>
+                          </button>
+                          <strong>{{ caregiverCurrentPage() }} / {{ caregiverTotalPages() }}</strong>
+                          <button class="icon-button icon-button--compact" type="button" [disabled]="caregiverCurrentPage() >= caregiverTotalPages()" [attr.aria-label]="copy().nextPage" (click)="goToCaregiverPage(caregiverCurrentPage() + 1)">
+                            <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+                          </button>
+                        </div>
                       }
                     </div>
                   } @else {
@@ -1926,6 +2012,9 @@ type FamilyDashboardView = 'overview' | 'favorites' | 'messages' | 'interested';
 export class FamilyDashboardComponent implements OnInit {
   private readonly auth = inject(Auth);
   private readonly localeService = inject(LocaleService);
+  private caregiverFilterInitialized = false;
+  private readonly caregiverCountyCache = new Map<string, string[]>();
+  private readonly caregiverParishCache = new Map<string, string[]>();
 
   protected readonly account = signal<UserAccount | null>(null);
   protected readonly isLoading = signal(true);
@@ -1946,6 +2035,12 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly inviteEmailError = signal('');
   protected readonly dashboardView = signal<FamilyDashboardView>('overview');
   protected readonly allCaregiverMatches = signal<FamilyCaregiverMatch[]>([]);
+  protected readonly selectedCaregiverDistrict = signal('');
+  protected readonly selectedCaregiverCounty = signal(ALL_COUNTIES_VALUE);
+  protected readonly selectedCaregiverParish = signal(ALL_PARISHES_VALUE);
+  protected readonly caregiverCountyOptions = signal<string[]>([]);
+  protected readonly caregiverParishOptions = signal<string[]>([]);
+  protected readonly caregiverCurrentPage = signal(1);
 
   protected readonly countries = computed(() =>
     getCountries()
@@ -1963,6 +2058,41 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly snackbarKind = computed<'error' | 'success'>(() => this.errorMessage() ? 'error' : 'success');
   protected readonly snackbarMessage = computed(() => this.errorMessage() || this.message());
   protected readonly snackbarIcon = computed(() => this.snackbarKind() === 'error' ? 'error' : 'check_circle');
+  protected readonly caregiverDistrictOptions = computed(() => Object.keys(PORTUGAL_DISTRICTS));
+  protected readonly filteredCaregiverMatches = computed(() => {
+    const district = this.normalizedText(this.selectedCaregiverDistrict());
+    const county = this.normalizedText(this.selectedCaregiverCounty());
+    const parish = this.normalizedText(this.selectedCaregiverParish());
+
+    return this.allCaregiverMatches().filter((match) => {
+      const matchesDistrict = !district || this.normalizedText(match.district) === district;
+      const matchesCounty = this.selectedCaregiverCounty() === ALL_COUNTIES_VALUE ||
+        !county ||
+        this.normalizedText(match.county) === county;
+      const matchesParish = this.selectedCaregiverParish() === ALL_PARISHES_VALUE ||
+        !parish ||
+        this.normalizedText(match.parish) === parish;
+      return matchesDistrict && matchesCounty && matchesParish;
+    });
+  });
+  protected readonly caregiverTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredCaregiverMatches().length / CAREGIVERS_PER_PAGE)),
+  );
+  protected readonly paginatedCaregiverMatches = computed(() => {
+    const page = Math.min(this.caregiverCurrentPage(), this.caregiverTotalPages());
+    const start = (page - 1) * CAREGIVERS_PER_PAGE;
+    return this.filteredCaregiverMatches().slice(start, start + CAREGIVERS_PER_PAGE);
+  });
+  protected readonly caregiverPaginationLabel = computed(() => {
+    const total = this.filteredCaregiverMatches().length;
+    if (!total) {
+      return '';
+    }
+
+    const start = (Math.min(this.caregiverCurrentPage(), this.caregiverTotalPages()) - 1) * CAREGIVERS_PER_PAGE + 1;
+    const end = Math.min(start + CAREGIVERS_PER_PAGE - 1, total);
+    return this.copy().caregiverPagination(start, end, total);
+  });
 
   protected readonly relationOptions = ['Filho/a', 'Cônjuge', 'Irmão/ã', 'Neto/a', 'Responsável legal', 'Outro'];
   protected readonly ageGroups = ['Menos de 18', '18 a 59', '60 a 74', '75 a 84', '85+'];
@@ -1970,6 +2100,8 @@ export class FamilyDashboardComponent implements OnInit {
   protected readonly weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
   protected readonly periods = ['Manhã', 'Tarde', 'Noite'];
   protected readonly budgetPeriods = ['Por hora', 'Por turno', 'Por dia', 'Por semana', 'Por mês'];
+  protected readonly allCountiesValue = ALL_COUNTIES_VALUE;
+  protected readonly allParishesValue = ALL_PARISHES_VALUE;
   protected readonly careNeedOptions = [
     'Companhia',
     'Higiene pessoal',
@@ -2018,6 +2150,34 @@ export class FamilyDashboardComponent implements OnInit {
 
   protected onUsePersonalLocationChange(event: Event): void {
     this.usePersonalLocation.set((event.target as HTMLInputElement).checked);
+  }
+
+  protected onCaregiverDistrictChange(event: Event): void {
+    const district = (event.target as HTMLSelectElement).value;
+    this.selectedCaregiverDistrict.set(district);
+    this.selectedCaregiverCounty.set(ALL_COUNTIES_VALUE);
+    this.selectedCaregiverParish.set(ALL_PARISHES_VALUE);
+    this.caregiverParishOptions.set([]);
+    this.caregiverCurrentPage.set(1);
+    void this.loadCaregiverCountyOptions(district);
+  }
+
+  protected onCaregiverCountyChange(event: Event): void {
+    const county = (event.target as HTMLSelectElement).value;
+    this.selectedCaregiverCounty.set(county);
+    this.selectedCaregiverParish.set(ALL_PARISHES_VALUE);
+    this.caregiverCurrentPage.set(1);
+    void this.loadCaregiverParishOptions(county);
+  }
+
+  protected onCaregiverParishChange(event: Event): void {
+    this.selectedCaregiverParish.set((event.target as HTMLSelectElement).value);
+    this.caregiverCurrentPage.set(1);
+  }
+
+  protected goToCaregiverPage(page: number): void {
+    const nextPage = Math.min(Math.max(page, 1), this.caregiverTotalPages());
+    this.caregiverCurrentPage.set(nextPage);
   }
 
   protected editFamilyProfile(): void {
@@ -2297,9 +2457,101 @@ export class FamilyDashboardComponent implements OnInit {
     this.syncMemberEntries(account);
     this.loadEmergencyPhone(account);
     this.syncUsePersonalLocation(account);
+    this.syncCaregiverLocationFilter(account);
     this.showFamilyForm.set(!account?.familyProfile?.completed || account.familyProfileStatus === 'draft');
     await this.loadCaregiverMatches(account);
     this.isLoading.set(false);
+  }
+
+  private syncCaregiverLocationFilter(account: UserAccount | null): void {
+    if (this.caregiverFilterInitialized) {
+      return;
+    }
+
+    const familyDistrict = account?.familyProfile?.location?.district || account?.location?.district || '';
+    const district = this.districtOptionFor(familyDistrict) || this.caregiverDistrictOptions()[0] || '';
+    this.selectedCaregiverDistrict.set(district);
+    this.selectedCaregiverCounty.set(ALL_COUNTIES_VALUE);
+    this.selectedCaregiverParish.set(ALL_PARISHES_VALUE);
+    this.caregiverParishOptions.set([]);
+    this.caregiverCurrentPage.set(1);
+    this.caregiverFilterInitialized = true;
+    void this.loadCaregiverCountyOptions(district);
+  }
+
+  private async loadCaregiverCountyOptions(district: string): Promise<void> {
+    const fallbackCounties = PORTUGAL_DISTRICTS[district] ?? [];
+    this.caregiverCountyOptions.set(fallbackCounties);
+
+    if (!district) {
+      return;
+    }
+
+    const cachedCounties = this.caregiverCountyCache.get(district);
+    if (cachedCounties) {
+      this.caregiverCountyOptions.set(cachedCounties);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${GEO_API_BASE_URL}/distrito/${encodeURIComponent(district)}/municipios`);
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json() as { municipios?: Array<{ nome?: unknown }> };
+      const apiCounties = (data.municipios ?? [])
+        .map((county) => typeof county.nome === 'string' ? county.nome : '')
+        .filter(Boolean)
+        .sort((first, second) => first.localeCompare(second, 'pt-PT'));
+
+      if (apiCounties.length) {
+        this.caregiverCountyCache.set(district, apiCounties);
+        this.caregiverCountyOptions.set(apiCounties);
+      }
+    } catch {
+      this.caregiverCountyOptions.set(fallbackCounties);
+    }
+  }
+
+  private async loadCaregiverParishOptions(county: string): Promise<void> {
+    this.caregiverParishOptions.set([]);
+
+    if (!county || county === ALL_COUNTIES_VALUE) {
+      return;
+    }
+
+    const cachedParishes = this.caregiverParishCache.get(county);
+    if (cachedParishes) {
+      this.caregiverParishOptions.set(cachedParishes);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${GEO_API_BASE_URL}/municipio/${encodeURIComponent(county)}/freguesias`);
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json() as { freguesias?: unknown };
+      const apiParishes = Array.isArray(data.freguesias)
+        ? data.freguesias
+          .filter((parish): parish is string => typeof parish === 'string')
+          .sort((first, second) => first.localeCompare(second, 'pt-PT'))
+        : [];
+
+      if (apiParishes.length) {
+        this.caregiverParishCache.set(county, apiParishes);
+        this.caregiverParishOptions.set(apiParishes);
+      }
+    } catch {
+      this.caregiverParishOptions.set([]);
+    }
+  }
+
+  private districtOptionFor(value: string): string {
+    const normalizedValue = this.normalizedText(value);
+    return this.caregiverDistrictOptions().find((district) => this.normalizedText(district) === normalizedValue) ?? '';
   }
 
   private async loadCaregiverMatches(account: UserAccount | null): Promise<void> {
@@ -2311,15 +2563,12 @@ export class FamilyDashboardComponent implements OnInit {
 
     try {
       const caregivers = await this.auth.getCaregivers();
-      const familyDistrict = this.normalizedText(familyProfile.location?.district || account?.location?.district || '');
-      const sameDistrictCaregivers = familyDistrict
-        ? caregivers.filter((caregiver) => this.normalizedText(this.caregiverDistrict(caregiver)) === familyDistrict)
-        : [];
-      const matches = sameDistrictCaregivers
+      const matches = caregivers
         .map((caregiver) => this.calculateCaregiverMatch(familyProfile, caregiver))
         .filter((match): match is FamilyCaregiverMatch => !!match)
         .sort((first, second) => second.percentage - first.percentage || second.score - first.score);
       this.allCaregiverMatches.set(matches);
+      this.caregiverCurrentPage.set(1);
     } catch (error) {
       this.allCaregiverMatches.set([]);
       this.errorMessage.set(this.auth.getFirebaseErrorMessage(error, 'read'));
@@ -2366,6 +2615,9 @@ export class FamilyDashboardComponent implements OnInit {
       uid: this.stringValue(caregiver, 'uid'),
       name: this.stringValue(publicProfile, 'fullName') || this.stringValue(caregiver, 'email') || 'Cuidador',
       location: this.caregiverLocation(publicProfile),
+      district: this.caregiverDistrict(caregiver),
+      county: this.caregiverCounty(caregiver),
+      parish: this.caregiverParish(caregiver),
       photoUrl: this.caregiverPhotoUrl(caregiver),
       score,
       total,
@@ -2449,6 +2701,19 @@ export class FamilyDashboardComponent implements OnInit {
   private caregiverDistrict(caregiver: CaregiverProfileDocument): string {
     const publicProfile = this.recordValue(caregiver, 'publicProfile');
     return this.stringValue(publicProfile, 'district') || this.stringValue(caregiver, 'district');
+  }
+
+  private caregiverCounty(caregiver: CaregiverProfileDocument): string {
+    const publicProfile = this.recordValue(caregiver, 'publicProfile');
+    return this.stringValue(publicProfile, 'county') || this.stringValue(caregiver, 'county');
+  }
+
+  private caregiverParish(caregiver: CaregiverProfileDocument): string {
+    const publicProfile = this.recordValue(caregiver, 'publicProfile');
+    return this.stringValue(publicProfile, 'parish') ||
+      this.stringValue(publicProfile, 'freguesia') ||
+      this.stringValue(caregiver, 'parish') ||
+      this.stringValue(caregiver, 'freguesia');
   }
 
   private caregiverPhotoUrl(caregiver: CaregiverProfileDocument): string {

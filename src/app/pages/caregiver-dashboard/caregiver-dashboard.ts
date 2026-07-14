@@ -84,10 +84,6 @@ import { Auth } from '../../core/services/auth';
               <span>Perfil bloqueado</span>
             </button>
           }
-          <a routerLink="/meus-dados-pessoais">
-            <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
-            <span>Atualizar dados pessoais</span>
-          </a>
         </aside>
         <div class="grid">
           <div class="grid dashboard-summary">

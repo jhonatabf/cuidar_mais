@@ -43,7 +43,7 @@
           <span class="header-cta__short">{{ shellCopy().enter }}</span>
         </a>
       } @else {
-        <div class="account-menu">
+        <div #accountMenuRoot class="account-menu">
           <button class="account-trigger" type="button" (click)="toggleAccountMenu()" [attr.aria-expanded]="accountMenuOpen()">
             <span class="account-avatar" aria-hidden="true">
               @if (avatarUrl()) {
@@ -65,6 +65,7 @@
                 @if (photoMessage()) {
                   <small class="account-feedback">{{ photoMessage() }}</small>
                 }
+                <button type="button" role="menuitem" (click)="goToPersonalData()">{{ shellCopy().updatePersonalData }}</button>
                 <button type="button" role="menuitem" (click)="goToFavorites()">{{ shellCopy().favorites }}</button>
                 <hr />
                 <p>{{ shellCopy().chooseProfile }}</p>
